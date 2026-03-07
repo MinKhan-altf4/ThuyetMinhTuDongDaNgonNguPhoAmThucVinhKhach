@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace VisitorAPI.Controllers
+namespace API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
@@ -12,8 +12,8 @@ namespace VisitorAPI.Controllers
             var visitors = new List<string>
             {
                 "Nguyen Van A",
-                "Tran Van B",
-                "Le Thi C"
+                "Tran Thi B",
+                "Le Van C"
             };
 
             return Ok(visitors);
