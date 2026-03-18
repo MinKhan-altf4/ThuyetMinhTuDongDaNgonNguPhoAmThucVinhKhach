@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vị Sài Gòn — Tour Ẩm Thực</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a0f00;
+    --paper: #fdf6ec;
+    --warm: #c8692a;
+    --gold: #d4a017;
+    --accent: #8b2500;
+    --muted: #7a6652;
+    --card: #fff9f0;
+    --border: #e8d5b7;
+    --green: #2d6a4f;
+    --map-bg: #f0e8d8;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.5;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--accent);
+    color: var(--paper);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.02em;
+  }
+  .logo span { color: var(--gold); font-style: italic; }
+  .header-info {
+    font-size: 0.78rem;
+    opacity: 0.8;
+    text-align: right;
+    line-height: 1.5;
+  }
+
+  /* LAYOUT */
+  .app {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    height: calc(100vh - 64px);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 1.25rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #fdf0e0, #fff9f0);
+  }
+  .sidebar-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+  .search-bar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.45rem 0.75rem;
+  }
+  .search-bar input {
+    border: none;
+    outline: none;
+    font-family: inherit;
+    font-size: 0.85rem;
+    flex: 1;
+    background: transparent;
+    color: var(--ink);
+  }
+  .search-bar svg { color: var(--muted); flex-shrink: 0; }
+
+  .filters {
+    display: flex;
+    gap: 0.4rem;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.3rem 0.85rem;
+    font-size: 0.75rem;
+    font-family: inherit;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    background: var(--warm);
+    color: white;
+    border-color: var(--warm);
+  }
+
+  .poi-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 0.75rem;
+  }
+  .poi-list::-webkit-scrollbar { width: 4px; }
+  .poi-list::-webkit-scrollbar-track { background: transparent; }
+  .poi-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .poi-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 0.6rem;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .poi-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+    background: var(--border);
+    transition: background 0.2s;
+  }
+  .poi-card:hover { box-shadow: 0 4px 20px rgba(200,105,42,0.12); transform: translateX(2px); }
+  .poi-card.active { border-color: var(--warm); box-shadow: 0 4px 20px rgba(200,105,42,0.2); }
+  .poi-card.active::before { background: var(--warm); }
+
+  .poi-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.4rem;
+  }
+  .poi-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    line-height: 1.3;
+    color: var(--ink);
+    flex: 1;
+  }
+  .poi-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    margin-left: 0.5rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .badge-pho { background: #fff3cd; color: #856404; }
+  .badge-bun { background: #d1ecf1; color: #0c5460; }
+  .badge-com { background: #d4edda; color: #155724; }
+  .badge-snack { background: #f8d7da; color: #721c24; }
+  .badge-cafe { background: #e2d9f3; color: #432874; }
+
+  .poi-addr {
+    font-size: 0.75rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-bottom: 0.5rem;
+  }
+  .poi-meta {
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+  .poi-meta span {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .stars { color: var(--gold); letter-spacing: -1px; }
+  .price { color: var(--green); font-weight: 600; }
+
+  .audio-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.7rem;
+    color: var(--warm);
+    font-weight: 500;
+  }
+  .audio-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--warm);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* MAP AREA */
+  .map-area {
+    position: relative;
+    background: var(--map-bg);
+    overflow: hidden;
+  }
+
+  /* SVG Map */
+  #map-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Map streets */
+  .street { stroke: #e0d0b8; stroke-width: 2; fill: none; }
+  .main-street { stroke: #c8b090; stroke-width: 5; fill: none; }
+  .river { fill: #a8d4e8; stroke: #7ab8d4; stroke-width: 1; opacity: 0.7; }
+  .block { fill: #ede0cc; stroke: #ddd0b0; stroke-width: 0.5; }
+  .park { fill: #c8e6c9; opacity: 0.6; }
+  .label-street {
+    font-family: 'Be Vietnam Pro', sans-serif;
+    font-size: 10px;
+    fill: #9a8060;
+  }
+  .district-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    fill: rgba(139,37,0,0.15);
+    font-weight: 700;
+  }
+
+  /* POI Markers */
+  .poi-marker {
+    cursor: pointer;
+    transition: transform 0.2s;
+    transform-origin: center bottom;
+  }
+  .poi-marker:hover { transform: scale(1.2); }
+  .poi-marker.active { transform: scale(1.3); }
+  .marker-pin { transition: filter 0.2s; }
+  .poi-marker.active .marker-pin { filter: drop-shadow(0 4px 8px rgba(200,105,42,0.6)); }
+
+  /* INFO PANEL */
+  .info-panel {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: white;
+    border-top: 2px solid var(--warm);
+    padding: 1.25rem 1.5rem;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
+    z-index: 50;
+    max-height: 55%;
+    overflow-y: auto;
+  }
+  .info-panel.open { transform: translateY(0); }
+  .info-panel-inner { display: grid; grid-template-columns: 1fr auto; gap: 1rem; }
+  .info-close {
+    background: var(--border);
+    border: none;
+    border-radius: 50%;
+    width: 28px; height: 28px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted);
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .info-close:hover { background: var(--warm); color: white; }
+
+  .info-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.4rem;
+    color: var(--accent);
+    margin-bottom: 0.25rem;
+  }
+  .info-subtitle {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .info-desc {
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: #3a2a1a;
+    margin-bottom: 1rem;
+  }
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .info-stat {
+    background: var(--paper);
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    text-align: center;
+  }
+  .info-stat-val {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--warm);
+    display: block;
+  }
+  .info-stat-label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-top: 0.1rem;
+    display: block;
+  }
+
+  /* AUDIO PLAYER */
+  .audio-player {
+    background: linear-gradient(135deg, var(--accent), #5a1800);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    color: white;
+    margin-bottom: 0.75rem;
+  }
+  .audio-player-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+  .audio-title {
+    font-size: 0.8rem;
+    opacity: 0.85;
+  }
+  .audio-label {
+    font-size: 0.65rem;
+    background: rgba(255,255,255,0.2);
+    padding: 0.2rem 0.5rem;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+  .audio-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .btn-play {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.4);
+    color: white;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    transition: all 0.2s;
+  }
+  .btn-play:hover { background: rgba(255,255,255,0.35); }
+  .btn-play.playing { background: rgba(255,255,255,0.3); }
+  .audio-progress-wrap {
+    flex: 1;
+  }
+  .audio-progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    overflow: hidden;
+    cursor: pointer;
+    margin-bottom: 0.3rem;
+  }
+  .audio-progress-fill {
+    height: 100%;
+    background: var(--gold);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.5s linear;
+  }
+  .audio-time {
+    font-size: 0.65rem;
+    opacity: 0.7;
+  }
+
+  /* Waveform animation */
+  .waveform {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 20px;
+  }
+  .wave-bar {
+    width: 3px;
+    background: rgba(255,255,255,0.6);
+    border-radius: 2px;
+    animation: wave 1.2s ease-in-out infinite;
+  }
+  .wave-bar:nth-child(1) { animation-delay: 0s; height: 8px; }
+  .wave-bar:nth-child(2) { animation-delay: 0.15s; height: 14px; }
+  .wave-bar:nth-child(3) { animation-delay: 0.3s; height: 18px; }
+  .wave-bar:nth-child(4) { animation-delay: 0.45s; height: 12px; }
+  .wave-bar:nth-child(5) { animation-delay: 0.6s; height: 20px; }
+  .wave-bar:nth-child(6) { animation-delay: 0.75s; height: 10px; }
+  .wave-bar:nth-child(7) { animation-delay: 0.9s; height: 16px; }
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+    50% { transform: scaleY(1); opacity: 1; }
+  }
+  .waveform.paused .wave-bar { animation-play-state: paused; }
+
+  /* Specialties */
+  .specialties {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+  }
+  .spec-tag {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  /* MAP CONTROLS */
+  .map-controls {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 40;
+  }
+  .map-btn {
+    width: 36px; height: 36px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    color: var(--ink);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+  }
+  .map-btn:hover { background: var(--warm); color: white; border-color: var(--warm); }
+
+  /* Tour Route */
+  .tour-info {
+    position: absolute;
+    top: 1rem; left: 1rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+    z-index: 40;
+    min-width: 200px;
+  }
+  .tour-info h3 {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.9rem;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+  }
+  .tour-stat-row {
+    display: flex;
+    gap: 1rem;
+  }
+  .tour-stat {
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .tour-stat strong {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  /* Notification */
+  .notification {
+    position: fixed;
+    top: 80px;
+    right: 1rem;
+    background: var(--accent);
+    color: white;
+    border-radius: 12px;
+    padding: 0.85rem 1.25rem;
+    max-width: 300px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    z-index: 200;
+    transform: translateX(120%);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .notification.show { transform: translateX(0); }
+  .notif-title {
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  /* Legend */
+  .legend {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.7rem;
+    z-index: 40;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .legend-title {
+    font-weight: 700;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-bottom: 0.25rem;
+    color: var(--muted);
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  @media (max-width: 768px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 50vh 1fr; }
+    .sidebar { border-right: none; border-top: 1px solid var(--border); order: 2; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Vị <span>Sài Gòn</span></div>
+  <div class="header-info">
+    Tour Ẩm Thực Quận 4<br>
+    Hồ Chí Minh · 8 điểm dừng
+  </div>
+</header>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>🗺 Danh sách quán</h2>
+      <div class="search-bar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Tìm tên quán, món ăn...">
+      </div>
+    </div>
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">Tất cả</button>
+      <button class="filter-btn" data-filter="pho">Phở</button>
+      <button class="filter-btn" data-filter="bun">Bún</button>
+      <button class="filter-btn" data-filter="com">Cơm</button>
+      <button class="filter-btn" data-filter="snack">Ăn vặt</button>
+      <button class="filter-btn" data-filter="cafe">Cà phê</button>
+    </div>
+    <div class="poi-list" id="poiList"></div>
+  </aside>
+
+  <!-- MAP -->
+  <main class="map-area">
+    <svg id="map-svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
+      <!-- Background -->
+      <rect width="800" height="600" fill="#f0e8d8"/>
+
+      <!-- Sông Sài Gòn (right side) -->
+      <path class="river" d="M750,0 Q780,100 760,200 Q740,300 770,400 Q790,500 750,600 L800,600 L800,0 Z"/>
+      <text x="760" y="120" class="label-street" transform="rotate(80,760,120)">Sông Sài Gòn</text>
+
+      <!-- District label watermark -->
+      <text x="400" y="320" class="district-label" text-anchor="middle">QUẬN 4</text>
+
+      <!-- City blocks -->
+      <rect class="block" x="50" y="50" width="120" height="80" rx="4"/>
+      <rect class="block" x="190" y="50" width="100" height="80" rx="4"/>
+      <rect class="block" x="310" y="50" width="130" height="80" rx="4"/>
+      <rect class="block" x="460" y="50" width="110" height="80" rx="4"/>
+      <rect class="block" x="590" y="50" width="120" height="80" rx="4"/>
+
+      <rect class="block" x="50" y="160" width="90" height="100" rx="4"/>
+      <rect class="block" x="160" y="160" width="130" height="100" rx="4"/>
+      <rect class="block" x="310" y="160" width="100" height="100" rx="4"/>
+      <rect class="block" x="430" y="160" width="140" height="100" rx="4"/>
+      <rect class="block" x="590" y="160" width="120" height="100" rx="4"/>
+
+      <rect class="block" x="50" y="290" width="110" height="90" rx="4"/>
+      <rect class="block" x="180" y="290" width="110" height="90" rx="4"/>
+      <rect class="block" x="310" y="290" width="120" height="90" rx="4"/>
+      <rect class="block" x="450" y="290" width="120" height="90" rx="4"/>
+      <rect class="block" x="590" y="290" width="120" height="90" rx="4"/>
+
+      <rect class="block" x="50" y="410" width="130" height="100" rx="4"/>
+      <rect class="block" x="200" y="410" width="100" height="100" rx="4"/>
+      <rect class="block" x="320" y="410" width="130" height="100" rx="4"/>
+      <rect class="block" x="470" y="410" width="100" height="100" rx="4"/>
+      <rect class="block" x="590" y="410" width="120" height="100" rx="4"/>
+
+      <rect class="block" x="50" y="530" width="120" height="60" rx="4"/>
+      <rect class="block" x="190" y="530" width="140" height="60" rx="4"/>
+      <rect class="block" x="350" y="530" width="120" height="60" rx="4"/>
+      <rect class="block" x="490" y="530" width="120" height="60" rx="4"/>
+      <rect class="block" x="630" y="530" width="80" height="60" rx="4"/>
+
+      <!-- Park -->
+      <rect class="park" x="460" y="50" width="110" height="80" rx="4"/>
+      <text x="515" y="92" text-anchor="middle" font-size="9" fill="#2d6a4f">Công viên</text>
+
+      <!-- Main streets -->
+      <line class="main-street" x1="0" y1="140" x2="750" y2="140"/>
+      <line class="main-street" x1="0" y1="270" x2="750" y2="270"/>
+      <line class="main-street" x1="0" y1="400" x2="750" y2="400"/>
+      <line class="main-street" x1="150" y1="0" x2="150" y2="600"/>
+      <line class="main-street" x1="300" y1="0" x2="300" y2="600"/>
+      <line class="main-street" x1="450" y1="0" x2="450" y2="600"/>
+      <line class="main-street" x1="590" y1="0" x2="590" y2="600"/>
+
+      <!-- Minor streets -->
+      <line class="street" x1="0" y1="50" x2="750" y2="50"/>
+      <line class="street" x1="0" y1="520" x2="750" y2="520"/>
+      <line class="street" x1="80" y1="0" x2="80" y2="600"/>
+      <line class="street" x1="380" y1="0" x2="380" y2="600"/>
+      <line class="street" x1="520" y1="0" x2="520" y2="600"/>
+
+      <!-- Street labels -->
+      <text x="400" y="130" text-anchor="middle" class="label-street">Đường Nguyễn Tất Thành</text>
+      <text x="400" y="260" text-anchor="middle" class="label-street">Đường Bến Vân Đồn</text>
+      <text x="400" y="390" text-anchor="middle" class="label-street">Đường Hoàng Diệu</text>
+      <text x="140" y="350" text-anchor="middle" class="label-street" transform="rotate(-90,140,350)">Đ. Khánh Hội</text>
+      <text x="290" y="350" text-anchor="middle" class="label-street" transform="rotate(-90,290,350)">Đ. Tôn Thất Thuyết</text>
+      <text x="440" y="350" text-anchor="middle" class="label-street" transform="rotate(-90,440,350)">Đ. Đoàn Văn Bơ</text>
+
+      <!-- Route line (connecting POIs) -->
+      <polyline id="tour-route" fill="none" stroke="#c8692a" stroke-width="2.5" stroke-dasharray="8,4" opacity="0.6"
+        points="100,95 200,175 160,310 350,175 520,95 620,180 500,340 360,460"/>
+
+      <!-- POI Markers will be injected by JS -->
+      <g id="markers-layer"></g>
+    </svg>
+
+    <!-- Tour info overlay -->
+    <div class="tour-info">
+      <h3>🍜 Tour Quận 4</h3>
+      <div class="tour-stat-row">
+        <div class="tour-stat"><strong>8</strong>Quán nổi tiếng</div>
+        <div class="tour-stat"><strong>~4km</strong>Lộ trình</div>
+        <div class="tour-stat"><strong>3-4h</strong>Thời gian</div>
+      </div>
+    </div>
+
+    <!-- Map controls -->
+    <div class="map-controls">
+      <button class="map-btn" title="Phóng to" onclick="zoomMap(1.2)">+</button>
+      <button class="map-btn" title="Thu nhỏ" onclick="zoomMap(0.8)">−</button>
+      <button class="map-btn" title="Đặt lại" onclick="resetZoom()">⊙</button>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-title">Chú giải</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e05a1a"></div> Phở / Bún</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#2d6a4f"></div> Cơm / Lẩu</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#8b2500"></div> Ăn vặt</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#432874"></div> Cà phê</div>
+      <div class="legend-item">
+        <svg width="20" height="6"><line x1="0" y1="3" x2="20" y2="3" stroke="#c8692a" stroke-width="2" stroke-dasharray="6,3"/></svg>
+        Lộ trình tour
+      </div>
+    </div>
+
+    <!-- Info Panel -->
+    <div class="info-panel" id="infoPanel">
+      <div class="info-panel-inner">
+        <div id="infoPanelContent"></div>
+        <button class="info-close" onclick="closePanel()">✕</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Notification -->
+<div class="notification" id="notification">
+  <div class="notif-title" id="notifTitle">📍 Bạn đã đến nơi!</div>
+  <div id="notifBody">Thuyết minh audio đang tự động phát...</div>
+</div>
+
+<script>
+// ===== DATABASE =====
+const POIS = [
+  {
+    id: 1,
+    name: "Phở Tàu Bay Quận 4",
+    address: "104 Nguyễn Tất Thành, Q.4",
+    category: "pho",
+    badge: "badge-pho",
+    badgeLabel: "Phở",
+    rating: 4.8,
+    reviews: 1243,
+    price: "45,000–75,000₫",
+    open: "05:30–14:00",
+    founded: "1954",
+    color: "#e05a1a",
+    x: 100, y: 95,
+    specialties: ["Phở bò tái", "Phở gà", "Quẩy nóng"],
+    description: "Phở Tàu Bay là một trong những quán phở lâu đời nhất Sài Gòn, nổi tiếng với nước dùng trong vắt, ngọt thanh từ xương bò hầm 12 tiếng. Khách từ mọi miền đất nước và du khách quốc tế đều ghé thưởng thức.",
+    audio: {
+      title: "Thuyết minh: Phở Tàu Bay",
+      duration: "1:45",
+      text: "Quán phở hơn 70 năm tuổi này là ký ức ẩm thực của biết bao thế hệ người Sài Gòn. Nước dùng được hầm từ xương ống bò tươi, với gừng nướng và hành tây thơm lừng từ 3 giờ sáng mỗi ngày..."
+    }
+  },
+  {
+    id: 2,
+    name: "Bún Mắm Cô Út",
+    address: "23 Khánh Hội, Q.4",
+    category: "bun",
+    badge: "badge-bun",
+    badgeLabel: "Bún",
+    rating: 4.7,
+    reviews: 876,
+    price: "50,000–90,000₫",
+    open: "10:00–21:00",
+    founded: "1987",
+    color: "#0c5460",
+    x: 200, y: 175,
+    specialties: ["Bún mắm hải sản", "Bún thịt nướng", "Chả giò"],
+    description: "Hương vị bún mắm miền Tây đích thực giữa lòng Sài Gòn. Cô Út mang theo bí quyết gia truyền từ Cần Thơ lên, tạo nên tô bún mắm đậm đà với tôm, mực, cá lóc tươi.",
+    audio: {
+      title: "Thuyết minh: Bún Mắm Cô Út",
+      duration: "1:30",
+      text: "Từ những năm 1987, cô Út Hương đã mang hương vị miền Tây sông nước lên đất Sài Gòn. Mắm cá linh được ủ theo phương pháp truyền thống, tạo nền hương vị độc đáo không thể tìm thấy ở nơi nào khác..."
+    }
+  },
+  {
+    id: 3,
+    name: "Cơm Tấm Bà Năm",
+    address: "15 Bến Vân Đồn, Q.4",
+    category: "com",
+    badge: "badge-com",
+    badgeLabel: "Cơm",
+    rating: 4.9,
+    reviews: 2150,
+    price: "35,000–65,000₫",
+    open: "06:00–22:00",
+    founded: "1975",
+    color: "#155724",
+    x: 160, y: 310,
+    specialties: ["Cơm tấm sườn bì chả", "Bì cuốn", "Nước dừa tươi"],
+    description: "Biểu tượng cơm tấm Sài Gòn với hơn 50 năm lịch sử. Sườn được ướp với công thức bí mật, nướng trên than hoa cho màu vàng óng, mùi thơm lan tỏa cả con hẻm.",
+    audio: {
+      title: "Thuyết minh: Cơm Tấm Bà Năm",
+      duration: "2:00",
+      text: "Đây là một trong những quán cơm tấm lâu đời nhất Quận 4. Bà Năm bắt đầu gánh cơm từ năm 1975, trải qua bao thăng trầm lịch sử, quán vẫn giữ nguyên hương vị và tâm huyết người Sài Gòn đích thực..."
+    }
+  },
+  {
+    id: 4,
+    name: "Bánh Mì Huỳnh Hoa",
+    address: "26 Lê Thị Riêng, Q.4",
+    category: "snack",
+    badge: "badge-snack",
+    badgeLabel: "Ăn vặt",
+    rating: 4.6,
+    reviews: 3400,
+    price: "25,000–50,000₫",
+    open: "06:00–23:30",
+    founded: "1985",
+    color: "#721c24",
+    x: 350, y: 175,
+    specialties: ["Bánh mì thịt nguội", "Pate thịt", "Bánh mì trứng"],
+    description: "Ổ bánh mì nhân đầy ắp, thịt nguội tự làm, pate béo ngậy — Huỳnh Hoa từ lâu đã trở thành điểm check-in không thể bỏ qua khi đến Sài Gòn. Hàng dài mỗi buổi sáng là minh chứng.",
+    audio: {
+      title: "Thuyết minh: Bánh Mì Huỳnh Hoa",
+      duration: "1:20",
+      text: "Bánh mì Huỳnh Hoa nổi tiếng với nhân thịt chất cao cả gang tay. Thịt nguội, chả lụa, pate đều được sản xuất tại chỗ mỗi ngày theo công thức gia truyền từ năm 1985. Không có gì tuyệt hơn một ổ bánh mì nóng giòn vào buổi sáng Sài Gòn..."
+    }
+  },
+  {
+    id: 5,
+    name: "Lẩu Mắm Đầu Phố",
+    address: "89 Đoàn Văn Bơ, Q.4",
+    category: "com",
+    badge: "badge-com",
+    badgeLabel: "Lẩu",
+    rating: 4.5,
+    reviews: 652,
+    price: "120,000–280,000₫/người",
+    open: "10:30–22:30",
+    founded: "2008",
+    color: "#155724",
+    x: 520, y: 95,
+    specialties: ["Lẩu mắm miền Tây", "Cá kèo nướng", "Rau đồng"],
+    description: "Thương hiệu lẩu mắm uy tín với hơn 15 năm phục vụ thực khách. Nồi mắm được nấu từ mắm cá đồng ủ 6 tháng, ăn kèm rau đồng tươi và cá kèo nướng thơm lừng.",
+    audio: {
+      title: "Thuyết minh: Lẩu Mắm Đầu Phố",
+      duration: "1:50",
+      text: "Lẩu mắm là linh hồn ẩm thực miền Tây. Tại đây, nồi mắm được giữ lửa liu riu, bốc khói thơm ngào ngạt với đủ loại cá đồng, tôm đất, thịt ba rọi. Thực khách tự tay bỏ rau, cá vào nồi — cảm giác ấm cúng như bữa cơm gia đình..."
+    }
+  },
+  {
+    id: 6,
+    name: "Cà Phê Sài Gòn Xưa",
+    address: "5 Hoàng Diệu, Q.4",
+    category: "cafe",
+    badge: "badge-cafe",
+    badgeLabel: "Cà phê",
+    rating: 4.4,
+    reviews: 487,
+    price: "20,000–45,000₫",
+    open: "06:30–22:00",
+    founded: "1968",
+    color: "#432874",
+    x: 620, y: 180,
+    specialties: ["Cà phê kho", "Bạc xỉu", "Bánh tiêu"],
+    description: "Quán cà phê vợt hơn 55 năm tuổi, lưu giữ không gian và hương vị Sài Gòn những năm 60-70. Cà phê được pha bằng vợt vải theo kỹ thuật truyền thống, đậm đà và thơm béo.",
+    audio: {
+      title: "Thuyết minh: Cà Phê Sài Gòn Xưa",
+      duration: "1:40",
+      text: "Bước vào đây, bạn như lạc vào Sài Gòn của những năm 1960 — với đèn vàng ấm, tiếng nhạc boléro khẽ vang, và mùi cà phê rang xay hòa với khói bếp than. Ông Ba, chủ quán, vẫn ngày ngày tự tay pha cà phê vợt theo cách cha ông truyền lại..."
+    }
+  },
+  {
+    id: 7,
+    name: "Bún Bò Bà Phượng",
+    address: "34 Tôn Thất Thuyết, Q.4",
+    category: "bun",
+    badge: "badge-bun",
+    badgeLabel: "Bún",
+    rating: 4.7,
+    reviews: 918,
+    price: "45,000–80,000₫",
+    open: "06:00–14:00",
+    founded: "1993",
+    color: "#0c5460",
+    x: 500, y: 340,
+    specialties: ["Bún bò Huế", "Chả cua", "Huyết heo"],
+    description: "Tô bún bò nồng ấm vị sả, ruốc và sả ớt cay thơm. Bà Phượng gốc Huế mang theo bí quyết nấu nước dùng đậm đà, không bột ngọt, chỉ từ nguyên liệu tự nhiên.",
+    audio: {
+      title: "Thuyết minh: Bún Bò Bà Phượng",
+      duration: "1:35",
+      text: "Bún bò Huế của bà Phượng nức tiếng Quận 4 với nước dùng cay thơm đặc trưng xứ Huế. Bí quyết nằm ở mắm ruốc chuẩn và sả ớt phi thơm — tạo màu đỏ sẫm óng ánh và mùi hương quyến rũ từ đầu hẻm..."
+    }
+  },
+  {
+    id: 8,
+    name: "Chè Cô Loan",
+    address: "67 Nguyễn Khoái, Q.4",
+    category: "snack",
+    badge: "badge-snack",
+    badgeLabel: "Ăn vặt",
+    rating: 4.6,
+    reviews: 1067,
+    price: "15,000–35,000₫",
+    open: "14:00–23:00",
+    founded: "2001",
+    color: "#721c24",
+    x: 360, y: 460,
+    specialties: ["Chè ba màu", "Chè đậu đỏ bánh lọt", "Sâm bổ lượng"],
+    description: "Thiên đường chè Sài Gòn giữa lòng Quận 4. Hơn 30 loại chè khác nhau, nguyên liệu được chọn lọc tươi mỗi ngày, không chất bảo quản. Nổi tiếng nhất là chè ba màu và sâm bổ lượng mát lạnh.",
+    audio: {
+      title: "Thuyết minh: Chè Cô Loan",
+      duration: "1:15",
+      text: "Ngon nhất là những chiều Sài Gòn nắng nóng, ghé vào Chè Cô Loan làm ly sâm bổ lượng mát lạnh. Cô Loan tự tay làm thạch từ sáng sớm, hạt é ngâm đúng giờ, nước đường thốt nốt thơm dịu — tất cả tạo nên vị ngon khó quên..."
+    }
+  }
+];
+
+// ===== STATE =====
+let currentPOI = null;
+let audioInterval = null;
+let audioProgress = 0;
+let isPlaying = false;
+let currentFilter = 'all';
+let filteredPOIs = [...POIS];
+
+// ===== RENDER SIDEBAR =====
+function renderPOIList(pois) {
+  const list = document.getElementById('poiList');
+  list.innerHTML = pois.map(p => `
+    <div class="poi-card ${currentPOI?.id === p.id ? 'active' : ''}" 
+         id="card-${p.id}" 
+         onclick="selectPOI(${p.id})">
+      <div class="poi-card-top">
+        <div class="poi-name">${p.name}</div>
+        <span class="poi-badge ${p.badge}">${p.badgeLabel}</span>
+      </div>
+      <div class="poi-addr">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        ${p.address}
+      </div>
+      <div class="poi-meta">
+        <span><span class="stars">${'★'.repeat(Math.floor(p.rating))}</span> ${p.rating}</span>
+        <span>${p.reviews} đánh giá</span>
+        <span class="price">${p.price}</span>
+        <span>${p.open}</span>
+      </div>
+      ${currentPOI?.id === p.id ? `
+      <div style="margin-top:0.5rem">
+        <span class="audio-indicator">
+          <span class="audio-dot"></span> Audio đang phát
+        </span>
+      </div>` : ''}
+    </div>
+  `).join('');
+}
+
+// ===== RENDER MARKERS =====
+function renderMarkers() {
+  const layer = document.getElementById('markers-layer');
+  layer.innerHTML = POIS.map(p => `
+    <g class="poi-marker ${currentPOI?.id === p.id ? 'active' : ''}" 
+       id="marker-${p.id}"
+       onclick="selectPOI(${p.id})"
+       transform="translate(${p.x},${p.y})">
+      <!-- Shadow -->
+      <ellipse cx="0" cy="8" rx="10" ry="4" fill="rgba(0,0,0,0.15)"/>
+      <!-- Pin body -->
+      <g class="marker-pin">
+        <circle cx="0" cy="-18" r="14" fill="${p.color}" stroke="white" stroke-width="2.5"/>
+        <path d="M-7,0 Q0,16 0,16 Q0,16 7,0 Z" fill="${p.color}"/>
+        <!-- Number -->
+        <text x="0" y="-14" text-anchor="middle" font-size="11" fill="white" font-weight="700" font-family="Be Vietnam Pro">${p.id}</text>
+        ${currentPOI?.id === p.id ? `
+        <circle cx="0" cy="-18" r="18" fill="none" stroke="${p.color}" stroke-width="2" opacity="0.5">
+          <animate attributeName="r" values="14;22;14" dur="1.5s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0.5;0;0.5" dur="1.5s" repeatCount="indefinite"/>
+        </circle>` : ''}
+      </g>
+    </g>
+  `).join('');
+}
+
+// ===== SELECT POI =====
+function selectPOI(id) {
+  const poi = POIS.find(p => p.id === id);
+  if (!poi) return;
+  currentPOI = poi;
+
+  renderPOIList(filteredPOIs);
+  renderMarkers();
+  openInfoPanel(poi);
+  showNotification(poi);
+  startAudio(poi);
+
+  // Scroll card into view
+  setTimeout(() => {
+    const card = document.getElementById(`card-${id}`);
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, 100);
+}
+
+// ===== INFO PANEL =====
+function openInfoPanel(poi) {
+  const panel = document.getElementById('infoPanel');
+  const content = document.getElementById('infoPanelContent');
+
+  content.innerHTML = `
+    <div class="info-name">${poi.name}</div>
+    <div class="info-subtitle">
+      <span class="poi-badge ${poi.badge}">${poi.badgeLabel}</span>
+      <span>📍 ${poi.address}</span>
+      <span>Thành lập: ${poi.founded}</span>
+    </div>
+
+    <!-- Audio Player -->
+    <div class="audio-player">
+      <div class="audio-player-top">
+        <div>
+          <div style="font-weight:600;margin-bottom:0.1rem">${poi.audio.title}</div>
+          <div class="audio-title">${poi.audio.text.substring(0, 60)}...</div>
+        </div>
+        <div class="audio-label">
+          🎙 Auto
+        </div>
+      </div>
+      <div class="audio-controls">
+        <button class="btn-play ${isPlaying ? 'playing' : ''}" id="playBtn" onclick="toggleAudio()">
+          ${isPlaying ? '⏸' : '▶'}
+        </button>
+        <div class="audio-progress-wrap">
+          <div class="audio-progress-bar" onclick="seekAudio(event, this)">
+            <div class="audio-progress-fill" id="audioFill" style="width:${audioProgress}%"></div>
+          </div>
+          <div class="audio-time" id="audioTime">0:00 / ${poi.audio.duration}</div>
+        </div>
+        <div class="waveform ${isPlaying ? '' : 'paused'}" id="waveform">
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+          <div class="wave-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="info-desc">${poi.description}</div>
+
+    <!-- Stats -->
+    <div class="info-grid">
+      <div class="info-stat">
+        <span class="info-stat-val">${poi.rating}⭐</span>
+        <span class="info-stat-label">Đánh giá</span>
+      </div>
+      <div class="info-stat">
+        <span class="info-stat-val">${poi.reviews.toLocaleString()}</span>
+        <span class="info-stat-label">Reviews</span>
+      </div>
+      <div class="info-stat">
+        <span class="info-stat-val">${poi.open}</span>
+        <span class="info-stat-label">Giờ mở cửa</span>
+      </div>
+    </div>
+
+    <!-- Specialties -->
+    <div style="font-size:0.75rem;color:var(--muted);margin-bottom:0.4rem;font-weight:600">MÓN NỔI TIẾNG</div>
+    <div class="specialties">
+      ${poi.specialties.map(s => `<span class="spec-tag">🍽 ${s}</span>`).join('')}
+    </div>
+  `;
+
+  panel.classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('infoPanel').classList.remove('open');
+  stopAudio();
+  currentPOI = null;
+  renderPOIList(filteredPOIs);
+  renderMarkers();
+}
+
+// ===== AUDIO SIMULATION =====
+function startAudio(poi) {
+  stopAudio();
+  audioProgress = 0;
+  isPlaying = true;
+  
+  // Parse duration
+  const parts = poi.audio.duration.split(':');
+  const totalSecs = parseInt(parts[0]) * 60 + parseInt(parts[1]);
+  let elapsed = 0;
+
+  audioInterval = setInterval(() => {
+    if (!isPlaying) return;
+    elapsed++;
+    audioProgress = (elapsed / totalSecs) * 100;
+    
+    const fill = document.getElementById('audioFill');
+    const time = document.getElementById('audioTime');
+    if (fill) fill.style.width = Math.min(audioProgress, 100) + '%';
+    if (time) time.textContent = `${Math.floor(elapsed/60)}:${String(elapsed%60).padStart(2,'0')} / ${poi.audio.duration}`;
+    
+    if (elapsed >= totalSecs) {
+      stopAudio();
+      audioProgress = 0;
+      const fill2 = document.getElementById('audioFill');
+      if (fill2) fill2.style.width = '0%';
+    }
+  }, 1000);
+}
+
+function stopAudio() {
+  clearInterval(audioInterval);
+  isPlaying = false;
+  const waveform = document.getElementById('waveform');
+  const playBtn = document.getElementById('playBtn');
+  if (waveform) waveform.classList.add('paused');
+  if (playBtn) { playBtn.textContent = '▶'; playBtn.classList.remove('playing'); }
+}
+
+function toggleAudio() {
+  isPlaying = !isPlaying;
+  const waveform = document.getElementById('waveform');
+  const playBtn = document.getElementById('playBtn');
+  if (waveform) waveform.classList.toggle('paused', !isPlaying);
+  if (playBtn) {
+    playBtn.textContent = isPlaying ? '⏸' : '▶';
+    playBtn.classList.toggle('playing', isPlaying);
+  }
+}
+
+function seekAudio(e, bar) {
+  const rect = bar.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  audioProgress = pct * 100;
+  const fill = document.getElementById('audioFill');
+  if (fill) fill.style.width = audioProgress + '%';
+}
+
+// ===== NOTIFICATION =====
+let notifTimeout;
+function showNotification(poi) {
+  clearTimeout(notifTimeout);
+  const notif = document.getElementById('notification');
+  document.getElementById('notifTitle').textContent = `📍 ${poi.name}`;
+  document.getElementById('notifBody').textContent = `Thuyết minh audio đang tự động phát — ${poi.audio.duration}`;
+  notif.classList.add('show');
+  notifTimeout = setTimeout(() => notif.classList.remove('show'), 4000);
+}
+
+// ===== FILTERS =====
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    applyFilter();
+  });
+});
+
+function applyFilter() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  filteredPOIs = POIS.filter(p => {
+    const matchCat = currentFilter === 'all' || p.category === currentFilter;
+    const matchQ = !q || p.name.toLowerCase().includes(q) || 
+                   p.specialties.some(s => s.toLowerCase().includes(q)) ||
+                   p.address.toLowerCase().includes(q);
+    return matchCat && matchQ;
+  });
+  renderPOIList(filteredPOIs);
+}
+
+document.getElementById('searchInput').addEventListener('input', applyFilter);
+
+// ===== MAP ZOOM =====
+let zoomLevel = 1;
+let panX = 0, panY = 0;
+
+function zoomMap(factor) {
+  zoomLevel = Math.max(0.5, Math.min(3, zoomLevel * factor));
+  applyTransform();
+}
+
+function resetZoom() {
+  zoomLevel = 1; panX = 0; panY = 0;
+  applyTransform();
+}
+
+function applyTransform() {
+  const svg = document.getElementById('map-svg');
+  const cx = 400, cy = 300;
+  svg.style.transform = `scale(${zoomLevel}) translate(${panX}px,${panY}px)`;
+  svg.style.transformOrigin = `${cx}px ${cy}px`;
+}
+
+// ===== INIT =====
+renderPOIList(POIS);
+renderMarkers();
+</script>
+</body>
+</html>
