@@ -1,0 +1,265 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>POIApp</name>
+    </assembly>
+    <members>
+        <member name="T:POIApp.MainPage">
+            <summary>
+            MainPage - Tích hợp GPS Tracking thời gian thực
+            - Lấy vị trí liên tục
+            - Cập nhật khoảng cách POI tự động
+            - Trigger TTS khi gần POI
+            </summary>
+        </member>
+        <member name="T:POIApp.Models.POI">
+            <summary>
+            Model POI - Lưu trữ thông tin địa điểm
+            </summary>
+        </member>
+        <member name="P:POIApp.Models.POI.Distance">
+            <summary>
+            Khoảng cách từ user đến POI (tính bằng mét)
+            </summary>
+        </member>
+        <member name="P:POIApp.Models.POI.IsNear">
+            <summary>
+            Có đang ở gần POI không (&lt; 50m)
+            </summary>
+        </member>
+        <member name="T:POIApp.Models.POIResponse">
+            <summary>
+            Response từ API
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.AnalyticsService">
+            <summary>
+            Service Analytics - Đếm số lần nghe POI
+            Cực đơn giản, dùng Dictionary + Cache file
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AnalyticsService.RecordListenAsync(POIApp.Models.POI)">
+            <summary>
+            Ghi nhận user đã nghe POI này
+            </summary>
+            <param name="poi">POI vừa nghe</param>
+        </member>
+        <member name="M:POIApp.Services.AnalyticsService.RecordListenAsync(System.Int32,System.String)">
+            <summary>
+            Ghi nhận user đã nghe POI (overload đơn giản)
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AnalyticsService.GetListenCount(System.Int32)">
+            <summary>
+            Lấy số lần nghe của 1 POI
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AnalyticsService.GetTotalListens">
+            <summary>
+            Lấy tổng số lần nghe
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AnalyticsService.GetAllStats">
+            <summary>
+            Lấy tất cả số liệu
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AnalyticsService.LoadFromCacheAsync">
+            <summary>
+            Tải dữ liệu analytics từ cache (gọi khi app khởi động)
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AnalyticsService.GetStatsSummary">
+            <summary>
+            Tạo text thống kê để hiển thị
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AnalyticsService.ResetAsync">
+            <summary>
+            Reset tất cả thống kê
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.APIService">
+            <summary>
+            Service gọi API - Lấy danh sách POI từ MySQL
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.APIService.GetPOIsAsync">
+            <summary>
+            Lấy danh sách POI từ API
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.APIService.GetHardcodedPOIs">
+            <summary>
+            Dữ liệu POI hardcode - Dùng khi API không hoạt động
+            3 địa điểm tại TP.HCM
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.CacheService">
+            <summary>
+            Service cache POI bằng file JSON local
+            KHÔNG cần SQLite, chỉ dùng file text
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.CacheService.SavePOICacheAsync(System.Collections.Generic.List{POIApp.Models.POI})">
+            <summary>
+            Lưu danh sách POI vào file cache
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.CacheService.GetPOICacheAsync">
+            <summary>
+            Đọc danh sách POI từ cache
+            </summary>
+            <returns>Danh sách POI, hoặc null nếu cache hết hạn/không tồn tại</returns>
+        </member>
+        <member name="M:POIApp.Services.CacheService.ClearPOICache">
+            <summary>
+            Xóa cache POI
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.CacheService.SaveAnalyticsAsync(System.Collections.Generic.Dictionary{System.Int32,System.Int32})">
+            <summary>
+            Lưu số lần nghe POI vào cache
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.CacheService.GetAnalyticsAsync">
+            <summary>
+            Đọc số lần nghe POI từ cache
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.GeofenceHelper">
+            <summary>
+            Helper xử lý Geofence - Tách riêng logic kiểm tra vùng lân cận POI
+            KHÔNG phụ thuộc vào code cũ, có thể gọi độc lập
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.GeofenceHelper.IsWithinRadius(System.Double,System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            Kiểm tra xem vị trí user có trong bán kính POI không
+            </summary>
+            <param name="userLat">Vĩ độ user</param>
+            <param name="userLon">Kinh độ user</param>
+            <param name="poiLat">Vĩ độ POI</param>
+            <param name="poiLon">Kinh độ POI</param>
+            <param name="radiusMeters">Bán kính (mặc định 50m)</param>
+        </member>
+        <member name="M:POIApp.Services.GeofenceHelper.FindNearestPOI(System.Double,System.Double,System.Collections.Generic.List{POIApp.Models.POI},System.Double)">
+            <summary>
+            Tìm POI gần nhất từ danh sách
+            </summary>
+            <param name="userLat">Vĩ độ user</param>
+            <param name="userLon">Kinh độ user</param>
+            <param name="pois">Danh sách POI</param>
+            <param name="radiusMeters">Bán kính để xem là "gần"</param>
+        </member>
+        <member name="M:POIApp.Services.GeofenceHelper.GetPOIsInRadius(System.Double,System.Double,System.Collections.Generic.List{POIApp.Models.POI},System.Double)">
+            <summary>
+            Lấy danh sách tất cả POI trong bán kính
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.GeofenceHelper.CalculateDistance(System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            Tính khoảng cách giữa 2 tọa độ (Haversine)
+            Trả về khoảng cách tính bằng mét
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.GeofenceHelper.HasMovedSignificantly(System.Double,System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            Kiểm tra xem user đã di chuyển đủ xa so với vị trí cũ chưa
+            </summary>
+            <param name="oldLat">Vĩ độ cũ</param>
+            <param name="oldLon">Kinh độ cũ</param>
+            <param name="newLat">Vĩ độ mới</param>
+            <param name="newLon">Kinh độ mới</param>
+            <param name="minDistance">Khoảng cách tối thiểu để coi là di chuyển (mặc định 10m)</param>
+        </member>
+        <member name="T:POIApp.Services.GPSTrackingService">
+            <summary>
+            Service GPS Tracking - Lấy vị trí liên tục theo thời gian thực
+            Tối ưu pin: chỉ notify khi di chuyển > 5m
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.LocationService">
+            <summary>
+            Service xử lý GPS - Lấy vị trí và tính khoảng cách Haversine
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.LocationService.GetCurrentLocationAsync">
+            <summary>
+            Lấy vị trí hiện tại của user
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.LocationService.CalculateDistance(System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            Tính khoảng cách giữa 2 tọa độ bằng công thức Haversine
+            Trả về khoảng cách tính bằng mét
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.LocationService.ToRadians(System.Double)">
+            <summary>
+            Chuyển độ sang radians
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.LocationService.DistanceToPOI(Microsoft.Maui.Devices.Sensors.Location,POIApp.Models.POI)">
+            <summary>
+            Tính khoảng cách từ Location đến POI
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.TTSCooldownHelper">
+            <summary>
+            Helper chống phát lặp audio trong X giây
+            Đơn giản, KHÔNG cần queue phức tạp
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TTSCooldownHelper.#ctor(System.Int32)">
+            <summary>
+            Khởi tạo với thời gian cooldown mặc định 30 giây
+            </summary>
+            <param name="cooldownSeconds">Số giây chờ trước khi phát lại (mặc định 30)</param>
+        </member>
+        <member name="M:POIApp.Services.TTSCooldownHelper.CanPlay(System.Int32)">
+            <summary>
+            Kiểm tra xem POI này có được phát audio hay không
+            </summary>
+            <param name="poiId">ID của POI</param>
+            <returns>true = được phát, false = đang trong cooldown</returns>
+        </member>
+        <member name="M:POIApp.Services.TTSCooldownHelper.MarkAsPlayed(System.Int32)">
+            <summary>
+            Đánh dấu đã phát POI này (bắt đầu cooldown)
+            </summary>
+            <param name="poiId">ID của POI vừa phát</param>
+        </member>
+        <member name="M:POIApp.Services.TTSCooldownHelper.GetRemainingCooldownSeconds(System.Int32)">
+            <summary>
+            Lấy số giây còn lại trước khi có thể phát lại
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TTSCooldownHelper.ResetAll">
+            <summary>
+            Reset cooldown cho tất cả POI
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TTSCooldownHelper.ResetPOI(System.Int32)">
+            <summary>
+            Reset cooldown cho 1 POI cụ thể
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.TTSService">
+            <summary>
+            Service Text To Speech - Dùng TTS mặc định của Android
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TTSService.SpeakAsync(System.String)">
+            <summary>
+            Phát giọng nói từ text
+            </summary>
+        </member>
+        <member name="T:POIApp.Resource">
+            <summary>
+            Android Resource Designer class.
+            Exposes the Android Resource designer assembly into the project Namespace.
+            </summary>
+        </member>
+    </members>
+</doc>

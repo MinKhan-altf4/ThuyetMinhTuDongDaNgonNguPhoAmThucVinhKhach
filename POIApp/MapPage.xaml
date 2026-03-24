@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="POIApp.MapPage"
+             Title="Bản đồ">
+
+    <!-- =====================================================
+         MAP PAGE - Dùng AbsoluteLayout để overlay đúng
+         ===================================================== -->
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Frame Grid.Row="0" BackgroundColor="#2196F3" CornerRadius="0" Padding="12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0" Text="←" FontSize="20" WidthRequest="45"
+                        BackgroundColor="Transparent" TextColor="White"
+                        VerticalOptions="Center" Clicked="OnBackClicked" />
+
+                <Label Grid.Column="1" Text="🗺️ Bản đồ Thuyết Minh"
+                       FontSize="18" FontAttributes="Bold"
+                       TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
+
+                <Button Grid.Column="2" Text="🔄" FontSize="18" WidthRequest="45"
+                        BackgroundColor="Transparent" TextColor="White"
+                        VerticalOptions="Center" Clicked="OnRefreshClicked" />
+            </Grid>
+        </Frame>
+
+        <!-- =====================================================
+             PHẦN CHÍNH: Map + Overlay
+             ===================================================== -->
+        <Grid Grid.Row="1">
+            <!-- WEBVIEW - Bản đồ -->
+            <WebView x:Name="MapWebView" />
+
+            <!-- STATUS BAR - Trên WebView -->
+            <Frame VerticalOptions="Start" HorizontalOptions="FillAndExpand"
+                   Margin="10,10,10,0" BackgroundColor="#E3F2FD" CornerRadius="10" Padding="10"
+                   HasShadow="False">
+                <VerticalStackLayout Spacing="2">
+                    <Label x:Name="LblUserStatus" Text="📍 Đang lấy vị trí..." FontSize="13" TextColor="#1565C0" />
+                    <Label x:Name="LblNearestStatus" Text="" FontSize="12" TextColor="#666" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- POI DETAIL PANEL - Trên WebView -->
+            <Frame x:Name="POIDetailPanel" VerticalOptions="End"
+                   Margin="10,0,10,10" BackgroundColor="White" CornerRadius="15" Padding="15"
+                   HasShadow="True" IsVisible="False">
+                <VerticalStackLayout Spacing="8">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Label x:Name="LblPOIName" Text="" FontSize="17" FontAttributes="Bold" TextColor="#1565C0" />
+                        <Button Grid.Column="1" Text="✕" FontSize="14" WidthRequest="32" HeightRequest="32"
+                                BackgroundColor="#FFEBEE" TextColor="#D32F2F" CornerRadius="16"
+                                Clicked="OnCloseDetailClicked" />
+                    </Grid>
+                    <Label x:Name="LblPOIDescription" Text="" FontSize="13" TextColor="#333" />
+                    <HorizontalStackLayout Spacing="15">
+                        <Label x:Name="LblPOIDistance" Text="" FontSize="13" TextColor="#666" FontAttributes="Bold" />
+                        <Label x:Name="LblPOICoords" Text="" FontSize="11" TextColor="#999" />
+                    </HorizontalStackLayout>
+                    <Button Text="🔊 Nghe Thuyết Minh" FontSize="13"
+                            BackgroundColor="#FF9800" TextColor="White" CornerRadius="20"
+                            HeightRequest="40" Clicked="OnThuyetMinhClicked" />
+                    <Button Text="📍 Chỉ đường đến đây" FontSize="13"
+                            BackgroundColor="#4CAF50" TextColor="White" CornerRadius="20"
+                            HeightRequest="40" Clicked="OnNavigateClicked" />
+                </VerticalStackLayout>
+            </Frame>
+        </Grid>
+
+        <!-- FOOTER - Danh sách POI -->
+        <Frame Grid.Row="2" BackgroundColor="White" CornerRadius="15,15,0,0"
+               Padding="10" HasShadow="True">
+            <VerticalStackLayout Spacing="5">
+                <Label Text="📌 Địa điểm gần bạn" FontSize="14" FontAttributes="Bold" TextColor="#333" />
+                <ScrollView HorizontalScrollBarVisibility="Never">
+                    <HorizontalStackLayout x:Name="POIChipsContainer" Spacing="10" />
+                </ScrollView>
+            </VerticalStackLayout>
+        </Frame>
+    </Grid>
+
+</ContentPage>

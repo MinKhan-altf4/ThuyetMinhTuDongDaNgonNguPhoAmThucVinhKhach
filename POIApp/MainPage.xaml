@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="POIApp.MainPage"
+             Title="Thuyết Minh Tự Động">
+
+    <!-- =====================================================
+         GIAO DIỆN CHÍNH - GPS Tracking thời gian thực
+         ===================================================== -->
+
+    <ScrollView Padding="15">
+        <VerticalStackLayout Spacing="15">
+
+            <!-- TIÊU ĐỀ -->
+            <Label Text="Bản đồ Thuyết Minh"
+                   FontSize="24" FontAttributes="Bold"
+                   TextColor="#2196F3" HorizontalOptions="Center" />
+
+            <!-- TRẠNG THÁI GPS TRACKING -->
+            <Frame BackgroundColor="#E3F2FD" CornerRadius="10" Padding="12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <VerticalStackLayout Grid.Column="0" Spacing="3">
+                        <Label x:Name="LblLocation" Text="📍 Chưa bật GPS Tracking"
+                               FontSize="15" FontAttributes="Bold" TextColor="#1565C0" />
+                        <Label x:Name="LblCoordinates" Text="Bật để theo dõi vị trí liên tục"
+                               FontSize="12" TextColor="#666" />
+                    </VerticalStackLayout>
+
+                    <!-- NÚT BẬT/TẮT GPS TRACKING -->
+                    <Button x:Name="BtnTracking" Grid.Column="1" Text="🚀 BẬT" FontSize="12"
+                            BackgroundColor="#4CAF50" TextColor="White" CornerRadius="15"
+                            WidthRequest="90" HeightRequest="40"
+                            Clicked="OnToggleTrackingClicked" />
+                </Grid>
+            </Frame>
+
+            <!-- TRẠNG THÁI ĐANG XỬ LÝ -->
+            <ActivityIndicator x:Name="LoadingIndicator"
+                               IsRunning="False" IsVisible="False"
+                               Color="#2196F3" HorizontalOptions="Center" />
+
+            <!-- THÔNG BÁO -->
+            <Frame x:Name="NotificationFrame"
+                   BackgroundColor="#FFF3E0" CornerRadius="10" Padding="15"
+                   IsVisible="False">
+                <Label x:Name="LblNotification" Text="" FontSize="15" TextColor="#E65100" />
+            </Frame>
+
+            <!-- KHOẢNG CÁCH ĐẾN POI GẦN NHẤT -->
+            <Frame x:Name="NearestPOIFrame"
+                   BackgroundColor="#E8F5E9" CornerRadius="10" Padding="15"
+                   IsVisible="False">
+                <VerticalStackLayout Spacing="5">
+                    <Label Text="🏛️ Gần nhất:" FontSize="14" FontAttributes="Bold" TextColor="#2E7D32" />
+                    <Label x:Name="LblNearestName" Text="" FontSize="16" TextColor="#1B5E20" />
+                    <Label x:Name="LblNearestDistance" Text="" FontSize="13" TextColor="#333" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- DANH SÁCH POI -->
+            <Label Text="📌 Danh sách địa điểm" FontSize="18" FontAttributes="Bold" Margin="0,10,0,0" />
+
+            <CollectionView x:Name="POIListView">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Frame Margin="0,5" Padding="12" CornerRadius="10"
+                               BackgroundColor="{Binding IsNear, Converter={StaticResource NearToColorConverter}}">
+                            <VerticalStackLayout Spacing="5">
+                                <Label Text="{Binding Name}" FontSize="16" FontAttributes="Bold" />
+                                <Label Text="{Binding Description}" FontSize="13" TextColor="#555"
+                                       MaxLines="2" LineBreakMode="TailTruncation" />
+                                <Label FontSize="12" TextColor="#888">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Khoảng cách: " />
+                                            <Span Text="{Binding Distance, StringFormat='{}{0:F0} m'}" FontAttributes="Bold" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <Label FontSize="12" TextColor="#888">
+                                    <Label.FormattedText>
+                                        <FormattedString>
+                                            <Span Text="Tọa độ: " />
+                                            <Span Text="{Binding Latitude, StringFormat='{}{0:F6}, {1}'}" />
+                                        </FormattedString>
+                                    </Label.FormattedText>
+                                </Label>
+                                <!-- NÚT THUYẾT MINH -->
+                                <Button Text="🔊 Thuyết minh" FontSize="13" HeightRequest="40"
+                                        BackgroundColor="#FF9800" TextColor="White" CornerRadius="20"
+                                        Clicked="OnThuyetMinhClicked" CommandParameter="{Binding}" />
+                            </VerticalStackLayout>
+                        </Frame>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- NÚT TẢI LẠI POI -->
+            <Button Text="🔄 Tải lại POI" BackgroundColor="#607D8B" TextColor="White"
+                    FontSize="14" HeightRequest="45" CornerRadius="22" Margin="0,10,0,0"
+                    Clicked="OnReloadPOIClicked" />
+
+            <!-- NÚT MỞ BẢN ĐỒ -->
+            <Button Text="🗺️ Mở Bản đồ" BackgroundColor="#4CAF50" TextColor="White"
+                    FontSize="14" HeightRequest="45" CornerRadius="22"
+                    Clicked="OnOpenMapClicked" />
+
+            <!-- GHI CHÚ -->
+            <Label Text="ℹ️ Mẹo: Bật GPS Tracking và đến gần địa điểm (&lt;50m) để nghe thuyết minh tự động"
+                   FontSize="12" TextColor="#888" Margin="0,5,0,0" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
