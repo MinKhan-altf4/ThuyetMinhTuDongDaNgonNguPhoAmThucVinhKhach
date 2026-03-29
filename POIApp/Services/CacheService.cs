@@ -23,6 +23,9 @@ public class CacheService
     // File cache analytics
     private readonly string _analyticsCacheFile;
 
+    // File lưu tuỳ chọn người dùng (ngôn ngữ)
+    private readonly string _preferencesCacheFile;
+
     // Thời gian cache hợp lệ (giờ)
     private readonly double _cacheExpiryHours;
 
@@ -41,6 +44,8 @@ public class CacheService
 
         _poiCacheFile = Path.Combine(_cacheFolder, "pois_cache.json");
         _analyticsCacheFile = Path.Combine(_cacheFolder, "analytics_cache.json");
+        _preferencesCacheFile = Path.Combine(_cacheFolder, "preferences_cache.json");
+        _preferencesCacheFile = Path.Combine(_cacheFolder, "preferences_cache.json");
 
         // Tạo thư mục nếu chưa có
         if (!Directory.Exists(_cacheFolder))
@@ -198,6 +203,50 @@ public class CacheService
             return new Dictionary<int, int>();
         }
     }
+
+    public async Task SavePreferredLanguageAsync(string languageCode)
+    {
+        try
+        {
+            var preference = new UserPreferenceData
+            {
+                PreferredLanguageCode = languageCode,
+                UpdatedAt = DateTime.Now
+            };
+
+            var json = JsonSerializer.Serialize(preference, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            await File.WriteAllTextAsync(_preferencesCacheFile, json);
+            Debug.WriteLine($"[Cache] Đã lưu ngôn ngữ mặc định: {languageCode}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Cache] Lỗi lưu language preference: {ex.Message}");
+        }
+    }
+
+    public async Task<string?> GetPreferredLanguageAsync()
+    {
+        try
+        {
+            if (!File.Exists(_preferencesCacheFile))
+            {
+                return null;
+            }
+
+            var json = await File.ReadAllTextAsync(_preferencesCacheFile);
+            var preference = JsonSerializer.Deserialize<UserPreferenceData>(json);
+            return preference?.PreferredLanguageCode;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Cache] Lỗi đọc language preference: {ex.Message}");
+            return null;
+        }
+    }
 }
 
 // =====================================================
@@ -207,4 +256,10 @@ internal class POICacheData
 {
     public DateTime CachedAt { get; set; }
     public List<POI> POIs { get; set; } = new();
+}
+
+internal class UserPreferenceData
+{
+    public string PreferredLanguageCode { get; set; } = "vi";
+    public DateTime UpdatedAt { get; set; }
 }

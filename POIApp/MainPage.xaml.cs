@@ -344,7 +344,7 @@ public partial class MainPage : ContentPage
             }
         }
 
-        var mapPage = new MapPage(_pois, userLat, userLon);
+        var mapPage = new MapPage();
         await Navigation.PushAsync(mapPage);
     }
 
