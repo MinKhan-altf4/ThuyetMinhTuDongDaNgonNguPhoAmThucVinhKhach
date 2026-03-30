@@ -6,8 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import Dashboard from "./pages/Dashboard";
 import StallOwners from "./pages/StallOwners";
 import Stalls from "./pages/Stalls";
-import Dishes from "./pages/Dishes";
-import Customers from "./pages/Customers";
+
 import Permissions from "./pages/Permissions";
 import SystemSettings from "./pages/SystemSettings";
 import NotFound from "./pages/NotFound";
@@ -24,8 +23,7 @@ const App = () => (
           <Route path="/" element={<Dashboard />} />
           <Route path="/stall-owners" element={<StallOwners />} />
           <Route path="/stalls" element={<Stalls />} />
-          <Route path="/dishes" element={<Dishes />} />
-          <Route path="/customers" element={<Customers />} />
+         
           <Route path="/permissions" element={<Permissions />} />
           <Route path="/settings" element={<SystemSettings />} />
           <Route path="*" element={<NotFound />} />

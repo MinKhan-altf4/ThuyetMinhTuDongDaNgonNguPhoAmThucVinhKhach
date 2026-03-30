@@ -14,8 +14,7 @@ const mainItems = [
   { title: "Tổng quan", url: "/", icon: LayoutDashboard },
   { title: "Chủ gian hàng", url: "/stall-owners", icon: Users },
   { title: "Gian hàng", url: "/stalls", icon: Store },
-  { title: "Món ăn", url: "/dishes", icon: UtensilsCrossed },
-  { title: "Khách hàng", url: "/customers", icon: Package },
+  
 ];
 
 const systemItems = [
