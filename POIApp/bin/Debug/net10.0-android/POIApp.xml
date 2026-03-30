@@ -181,6 +181,33 @@
             Returns true if the language has been loaded.
             </summary>
         </member>
+        <member name="T:POIApp.Services.LocalizationService">
+            <summary>
+            Simple localization service using .NET resx files.
+            Switches CultureInfo and fires LanguageChanged event so all pages update.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.LocalizationService.Initialize">
+            <summary>
+            Initialize language from saved preference or device locale.
+            Call once in App.OnStart().
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.LocalizationService.SetLanguage(System.String)">
+            <summary>
+            Switch to a new language. Saves to Preferences and fires LanguageChanged.
+            </summary>
+        </member>
+        <member name="P:POIApp.Services.LocalizationService.Item(System.String)">
+            <summary>
+            Get a string by key, e.g. L["TabMap"]
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.LocalizationService.Get(System.String,System.Object[])">
+            <summary>
+            Get a string with format args, e.g. L["Distance", 150]
+            </summary>
+        </member>
         <member name="T:POIApp.Services.LocationService">
             <summary>
             Service xử lý GPS - Lấy vị trí và tính khoảng cách Haversine
