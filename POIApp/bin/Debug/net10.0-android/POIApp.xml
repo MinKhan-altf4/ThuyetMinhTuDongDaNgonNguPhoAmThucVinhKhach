@@ -12,26 +12,6 @@
             - Trigger TTS khi gần POI
             </summary>
         </member>
-        <member name="T:POIApp.Models.POI">
-            <summary>
-            Model POI - Lưu trữ thông tin địa điểm
-            </summary>
-        </member>
-        <member name="P:POIApp.Models.POI.Distance">
-            <summary>
-            Khoảng cách từ user đến POI (tính bằng mét)
-            </summary>
-        </member>
-        <member name="P:POIApp.Models.POI.IsNear">
-            <summary>
-            Có đang ở gần POI không (&lt; 50m)
-            </summary>
-        </member>
-        <member name="T:POIApp.Models.POIResponse">
-            <summary>
-            Response từ API
-            </summary>
-        </member>
         <member name="T:POIApp.Services.AnalyticsService">
             <summary>
             Service Analytics - Đếm số lần nghe POI
@@ -77,22 +57,6 @@
         <member name="M:POIApp.Services.AnalyticsService.ResetAsync">
             <summary>
             Reset tất cả thống kê
-            </summary>
-        </member>
-        <member name="T:POIApp.Services.APIService">
-            <summary>
-            Service gọi API - Lấy danh sách POI từ MySQL
-            </summary>
-        </member>
-        <member name="M:POIApp.Services.APIService.GetPOIsAsync">
-            <summary>
-            Lấy danh sách POI từ API
-            </summary>
-        </member>
-        <member name="M:POIApp.Services.APIService.GetHardcodedPOIs">
-            <summary>
-            Dữ liệu POI hardcode - Dùng khi API không hoạt động
-            3 địa điểm tại TP.HCM
             </summary>
         </member>
         <member name="T:POIApp.Services.CacheService">
@@ -177,6 +141,44 @@
             <summary>
             Service GPS Tracking - Lấy vị trí liên tục theo thời gian thực
             Tối ưu pin: chỉ notify khi di chuyển > 5m
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.LanguageService">
+            <summary>
+            i18n Service — loads translations from bundled JSON files.
+            Lazy-loads only the needed language to minimize startup time.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.LanguageService.ResolveDefaultLanguageAsync(System.Nullable{System.Double},System.Nullable{System.Double})">
+            <summary>
+            Resolve default language:
+            1. Saved preference → 2. Device locale → 3. Geo fallback (VN → vi, else en)
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.LanguageService.InitializeAsync(System.String)">
+            <summary>
+            Initialize service — loads strings for the given language.
+            Call once on app startup.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.LanguageService.SetLanguageAsync(System.String)">
+            <summary>
+            Change current language. Persists to cache.
+            </summary>
+        </member>
+        <member name="P:POIApp.Services.LanguageService.Item(System.String)">
+            <summary>
+            Get translated string. Falls back to key if not found.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.LanguageService.Getf(System.String,System.Object[])">
+            <summary>
+            Get translation with format arguments, e.g. Get("greeting", "Alice")
+            </summary>
+        </member>
+        <member name="P:POIApp.Services.LanguageService.IsLoaded">
+            <summary>
+            Returns true if the language has been loaded.
             </summary>
         </member>
         <member name="T:POIApp.Services.LocationService">

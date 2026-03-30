@@ -4,11 +4,30 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:POIApp"
-    Title="POIApp">
+    Title="Thuyết Minh Ẩm Thực"
+    Shell.TabBarBackgroundColor="#FAFAFA"
+    Shell.TabBarTitleColor="#1565C0"
+    Shell.TabBarUnselectedColor="#9E9E9E">
 
-    <ShellContent
-        Title="Home"
-        ContentTemplate="{DataTemplate local:MainPage}"
-        Route="MainPage" />
+    <!-- Tab 1: Bản đồ -->
+    <Tab Title="🗺️ Bản đồ" Route="MapTab">
+        <ShellContent>
+            <local:MapPage />
+        </ShellContent>
+    </Tab>
+
+    <!-- Tab 2: POI -->
+    <Tab Title="🍽️ POI" Route="POITab">
+        <ShellContent>
+            <local:POIPage />
+        </ShellContent>
+    </Tab>
+
+    <!-- Tab 3: Voice & Cài đặt -->
+    <Tab Title="⚙️ Cài đặt" Route="SettingsTab">
+        <ShellContent>
+            <local:SettingsPage />
+        </ShellContent>
+    </Tab>
 
 </Shell>

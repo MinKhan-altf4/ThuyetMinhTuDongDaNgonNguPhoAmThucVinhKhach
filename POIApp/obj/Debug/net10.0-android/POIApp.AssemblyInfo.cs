@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("POIApp")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0+695234279de0f4618084e2b3771bb0583bc3350a")]
 [assembly: System.Reflection.AssemblyProductAttribute("POIApp")]
 [assembly: System.Reflection.AssemblyTitleAttribute("POIApp")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

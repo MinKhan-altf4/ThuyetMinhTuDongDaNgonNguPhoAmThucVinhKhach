@@ -2,99 +2,235 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="POIApp.MapPage"
-             Title="Bản đồ">
+             Title="Ban do Vinh Khánh">
 
-    <!-- =====================================================
-         MAP PAGE - Dùng AbsoluteLayout để overlay đúng
-         ===================================================== -->
-
-    <Grid>
+    <Grid RowSpacing="0" ColumnSpacing="0">
         <Grid.RowDefinitions>
+            <!-- Row 0: Search bar -->
             <RowDefinition Height="Auto" />
+            <!-- Row 1: Map (full height, overlays float on top) -->
             <RowDefinition Height="*" />
+            <!-- Row 2: Bottom POI chips bar -->
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- HEADER -->
-        <Frame Grid.Row="0" BackgroundColor="#2196F3" CornerRadius="0" Padding="12">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-
-                <Button Grid.Column="0" Text="←" FontSize="20" WidthRequest="45"
-                        BackgroundColor="Transparent" TextColor="White"
-                        VerticalOptions="Center" Clicked="OnBackClicked" />
-
-                <Label Grid.Column="1" Text="🗺️ Bản đồ Thuyết Minh"
-                       FontSize="18" FontAttributes="Bold"
-                       TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" />
-
-                <Button Grid.Column="2" Text="🔄" FontSize="18" WidthRequest="45"
-                        BackgroundColor="Transparent" TextColor="White"
-                        VerticalOptions="Center" Clicked="OnRefreshClicked" />
+        <!-- ── SEARCH BAR (Row 0) ── -->
+        <Frame Grid.Row="0"
+               Margin="10,8,10,4"
+               Padding="10,0"
+               HeightRequest="44"
+               BackgroundColor="White"
+               CornerRadius="22"
+               HasShadow="True"
+               ZIndex="10">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <Label Grid.Column="0"
+                       Text="🔍"
+                       FontSize="16"
+                       VerticalOptions="Center"
+                       Margin="2,0,8,0" />
+                <Entry x:Name="SearchEntry"
+                       Grid.Column="1"
+                       Placeholder="Tim nha hang Vinh Khánh..."
+                       FontSize="14"
+                       VerticalOptions="Center"
+                       Completed="OnSearchCompleted"
+                       TextChanged="OnSearchTextChanged"
+                       BackgroundColor="Transparent" />
+                <Button x:Name="BtnClearSearch"
+                        Grid.Column="2"
+                        Text="✕"
+                        FontSize="13"
+                        WidthRequest="32"
+                        HeightRequest="32"
+                        CornerRadius="16"
+                        Padding="0"
+                        BackgroundColor="Transparent"
+                        TextColor="#9E9E9E"
+                        Clicked="OnClearSearchClicked"
+                        IsVisible="False" />
             </Grid>
         </Frame>
 
-        <!-- =====================================================
-             PHẦN CHÍNH: Map + Overlay
-             ===================================================== -->
+        <!-- ── MAP AREA (Row 1) — the only child in this row ── -->
         <Grid Grid.Row="1">
-            <!-- WEBVIEW - Bản đồ -->
-            <WebView x:Name="MapWebView" />
 
-            <!-- STATUS BAR - Trên WebView -->
-            <Frame VerticalOptions="Start" HorizontalOptions="FillAndExpand"
-                   Margin="10,10,10,0" BackgroundColor="#E3F2FD" CornerRadius="10" Padding="10"
-                   HasShadow="False">
+            <!-- Map fills entire area -->
+            <WebView x:Name="MapWebView"
+                     ZIndex="1" />
+
+            <!-- Status bar (floats on map) -->
+            <Frame VerticalOptions="Start"
+                   HorizontalOptions="Fill"
+                   Margin="12,12,12,0"
+                   Padding="10,8"
+                   BackgroundColor="#E3F2FD"
+                   CornerRadius="12"
+                   HasShadow="False"
+                   ZIndex="5">
                 <VerticalStackLayout Spacing="2">
-                    <Label x:Name="LblUserStatus" Text="📍 Đang lấy vị trí..." FontSize="13" TextColor="#1565C0" />
-                    <Label x:Name="LblNearestStatus" Text="" FontSize="12" TextColor="#666" />
+                    <Label x:Name="LblUserStatus"
+                           Text="Dang lay vi tri..."
+                           FontSize="12"
+                           TextColor="#0D47A1" />
+                    <Label x:Name="LblNearestStatus"
+                           Text=""
+                           FontSize="11"
+                           TextColor="#455A64" />
                 </VerticalStackLayout>
             </Frame>
 
-            <!-- POI DETAIL PANEL - Trên WebView -->
-            <Frame x:Name="POIDetailPanel" VerticalOptions="End"
-                   Margin="10,0,10,10" BackgroundColor="White" CornerRadius="15" Padding="15"
-                   HasShadow="True" IsVisible="False">
-                <VerticalStackLayout Spacing="8">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <Label x:Name="LblPOIName" Text="" FontSize="17" FontAttributes="Bold" TextColor="#1565C0" />
-                        <Button Grid.Column="1" Text="✕" FontSize="14" WidthRequest="32" HeightRequest="32"
-                                BackgroundColor="#FFEBEE" TextColor="#D32F2F" CornerRadius="16"
+            <!-- Search suggestions popup (floats on map) -->
+            <Frame x:Name="SearchSuggestionsPanel"
+                   VerticalOptions="Start"
+                   HorizontalOptions="Fill"
+                   Margin="12,66,12,0"
+                   Padding="0"
+                   BackgroundColor="White"
+                   CornerRadius="12"
+                   HasShadow="True"
+                   IsVisible="False"
+                   ZIndex="10">
+                <ScrollView HeightRequest="260">
+                    <VerticalStackLayout x:Name="SearchSuggestionsContainer" Spacing="0" />
+                </ScrollView>
+            </Frame>
+
+            <!-- Floating controls (bottom-left) -->
+            <VerticalStackLayout VerticalOptions="End"
+                                 HorizontalOptions="Start"
+                                 Margin="12,0,0,12"
+                                 Spacing="8"
+                                 ZIndex="10">
+                <Button x:Name="BtnReloadPOI"
+                        Text="🔄"
+                        FontSize="18"
+                        WidthRequest="48"
+                        HeightRequest="48"
+                        CornerRadius="24"
+                        Padding="0"
+                        BackgroundColor="White"
+                        TextColor="#1565C0"
+                        Clicked="OnReloadPOIClicked" />
+            </VerticalStackLayout>
+
+            <!-- POI Detail Panel (floats on map) -->
+            <Frame x:Name="POIDetailPanel"
+                   VerticalOptions="End"
+                   Margin="12,0,12,12"
+                   Padding="14"
+                   BackgroundColor="White"
+                   CornerRadius="18"
+                   HasShadow="True"
+                   IsVisible="False"
+                   ZIndex="10">
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Label x:Name="LblPOIName"
+                               Text=""
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="#0D47A1"
+                               VerticalOptions="Center" />
+                        <Button Grid.Column="1"
+                                Text="✕"
+                                FontSize="13"
+                                WidthRequest="30"
+                                HeightRequest="30"
+                                CornerRadius="15"
+                                Padding="0"
+                                BackgroundColor="#FFEBEE"
+                                TextColor="#C62828"
                                 Clicked="OnCloseDetailClicked" />
                     </Grid>
-                    <Label x:Name="LblPOIDescription" Text="" FontSize="13" TextColor="#333" />
-                    <HorizontalStackLayout Spacing="15">
-                        <Label x:Name="LblPOIDistance" Text="" FontSize="13" TextColor="#666" FontAttributes="Bold" />
-                        <Label x:Name="LblPOICoords" Text="" FontSize="11" TextColor="#999" />
+
+                    <Label x:Name="LblPOIDescription"
+                           Text=""
+                           FontSize="13"
+                           TextColor="#37474F"
+                           MaxLines="4"
+                           LineBreakMode="TailTruncation" />
+
+                    <HorizontalStackLayout Spacing="10">
+                        <Label x:Name="LblPOIDistance"
+                               Text=""
+                               FontSize="12"
+                               TextColor="#546E7A"
+                               FontAttributes="Bold" />
+                        <Label x:Name="LblPOICoords"
+                               Text=""
+                               FontSize="11"
+                               TextColor="#78909C" />
                     </HorizontalStackLayout>
-                    <Button Text="🔊 Nghe Thuyết Minh" FontSize="13"
-                            BackgroundColor="#FF9800" TextColor="White" CornerRadius="20"
-                            HeightRequest="40" Clicked="OnThuyetMinhClicked" />
-                    <Button Text="📍 Chỉ đường đến đây" FontSize="13"
-                            BackgroundColor="#4CAF50" TextColor="White" CornerRadius="20"
-                            HeightRequest="40" Clicked="OnNavigateClicked" />
+
+                    <VerticalStackLayout Spacing="4">
+                        <Label Text="Ngon ngu thuyet minh"
+                               FontSize="12"
+                               TextColor="#607D8B" />
+                        <Picker x:Name="LanguagePicker"
+                                Title="Chon ngon ngu"
+                                FontSize="13"
+                                SelectedIndexChanged="OnLanguageChanged" />
+                    </VerticalStackLayout>
+
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <Button x:Name="BtnPlayAudio"
+                                Text="▶ Phat"
+                                FontSize="13"
+                                HeightRequest="42"
+                                CornerRadius="21"
+                                BackgroundColor="#FF9800"
+                                TextColor="White"
+                                Clicked="OnPlayAudioClicked" />
+                        <Button Grid.Column="1"
+                                x:Name="BtnPauseAudio"
+                                Text="⏸ Tam dung"
+                                FontSize="13"
+                                HeightRequest="42"
+                                CornerRadius="21"
+                                BackgroundColor="#455A64"
+                                TextColor="White"
+                                Clicked="OnPauseAudioClicked" />
+                    </Grid>
+
+                    <Label x:Name="LblAudioStatus"
+                           Text=""
+                           FontSize="11"
+                           TextColor="#00897B" />
+
+                    <ActivityIndicator x:Name="AudioLoading"
+                                       IsRunning="False"
+                                       IsVisible="False"
+                                       Color="#FF9800"
+                                       HorizontalOptions="Center" />
+
+                    <Button Text="📍 Chi duong den day"
+                            FontSize="13"
+                            HeightRequest="42"
+                            CornerRadius="21"
+                            BackgroundColor="#43A047"
+                            TextColor="White"
+                            Clicked="OnNavigateClicked" />
                 </VerticalStackLayout>
             </Frame>
         </Grid>
 
-        <!-- FOOTER - Danh sách POI -->
-        <Frame Grid.Row="2" BackgroundColor="White" CornerRadius="15,15,0,0"
-               Padding="10" HasShadow="True">
-            <VerticalStackLayout Spacing="5">
-                <Label Text="📌 Địa điểm gần bạn" FontSize="14" FontAttributes="Bold" TextColor="#333" />
-                <ScrollView HorizontalScrollBarVisibility="Never">
-                    <HorizontalStackLayout x:Name="POIChipsContainer" Spacing="10" />
+        <!-- ── BOTTOM: POI CHIPS (Row 2) ── -->
+        <Frame Grid.Row="2"
+               BackgroundColor="White"
+               Padding="10,8"
+               CornerRadius="14,14,0,0"
+               HasShadow="True"
+               ZIndex="5">
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Dia diem gan ban"
+                       FontSize="14"
+                       FontAttributes="Bold"
+                       TextColor="#263238" />
+                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
+                    <HorizontalStackLayout x:Name="POIChipsContainer" Spacing="8" />
                 </ScrollView>
             </VerticalStackLayout>
         </Frame>
     </Grid>
-
 </ContentPage>
