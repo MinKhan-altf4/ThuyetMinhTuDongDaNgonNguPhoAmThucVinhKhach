@@ -3,762 +3,655 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Phở Hà Nội — Trang Chủ Gian Hàng</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>Web Chủ Gian Hàng</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0e0c09;
-    --surface: #181410;
-    --card: #1f1b15;
-    --border: #2e2820;
-    --amber: #e8a33a;
-    --amber-dim: #a06c1a;
-    --amber-glow: rgba(232,163,58,0.12);
-    --text: #f0e8d8;
-    --muted: #8a7d68;
-    --success: #4caf7d;
-    --danger: #e05252;
-    --warning: #e8a33a;
-    --font-display: 'Playfair Display', serif;
-    --font-body: 'Be Vietnam Pro', sans-serif;
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-body);
-    font-size: 14px;
-    line-height: 1.6;
-    min-height: 100vh;
-  }
+:root {
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(224 71.4% 4.1%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(224 71.4% 4.1%);
+  --muted: hsl(220 14.3% 95.9%);
+  --muted-foreground: hsl(220 8.9% 46.1%);
+  --border: hsl(220 13% 91%);
+  --primary: hsl(262.1 83.3% 57.8%);
+  --primary-foreground: hsl(210 20% 98%);
+  --accent: hsl(220 14.3% 95.9%);
+  --accent-foreground: hsl(220.9 39.3% 11%);
+  --destructive: hsl(0 72.2% 50.6%);
+  --stat-blue: hsl(217 91% 60%);
+  --stat-emerald: hsl(160 84% 39%);
+  --stat-amber: hsl(38 92% 50%);
+  --stat-rose: hsl(346 87% 60%);
+  --sidebar-bg: hsl(224 71.4% 4.1%);
+  --sidebar-fg: hsl(210 40% 90%);
+  --sidebar-border: hsl(224 30% 14%);
+  --sidebar-accent: hsl(224 30% 14%);
+  --sidebar-muted: hsl(224 20% 50%);
+  --radius: 0.75rem;
+  --font: 'Inter', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { font-family: var(--font); font-size: 14px; background: var(--background); color: var(--foreground); display: flex; overflow: hidden; }
 
-  /* ── NOISE TEXTURE ── */
-  body::before {
-    content:'';
-    position:fixed; inset:0; pointer-events:none; z-index:0;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
-    opacity: 0.6;
-  }
+/* SIDEBAR */
+#sidebar {
+  width: 240px; min-width: 240px;
+  background: var(--sidebar-bg);
+  border-right: 1px solid var(--sidebar-border);
+  display: flex; flex-direction: column;
+  height: 100vh;
+  transition: width 0.2s, min-width 0.2s;
+  overflow: hidden;
+}
+#sidebar.collapsed { width: 56px; min-width: 56px; }
 
-  /* ── STATUS BAR ── */
-  #status-bar {
-    position: sticky; top: 0; z-index: 100;
-    background: #0a0806;
-    border-bottom: 1px solid var(--border);
-    padding: 6px 24px;
-    display: flex; align-items: center; justify-content: space-between;
-    font-size: 11px; color: var(--muted);
-    backdrop-filter: blur(12px);
-  }
-  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 5px; }
-  .dot-open { background: var(--success); box-shadow: 0 0 6px var(--success); animation: pulse 2s infinite; }
-  .dot-closed { background: var(--danger); }
-  .dot-pending { background: var(--warning); }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-  .status-badge {
-    display: flex; align-items: center;
-    padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
-  }
-  .badge-open { background: rgba(76,175,125,0.15); color: var(--success); border: 1px solid rgba(76,175,125,0.3); }
-  .badge-closed { background: rgba(224,82,82,0.15); color: var(--danger); border: 1px solid rgba(224,82,82,0.3); }
-  .badge-pending { background: rgba(232,163,58,0.15); color: var(--amber); border: 1px solid rgba(232,163,58,0.3); }
-  .badge-suspended { background: rgba(224,82,82,0.2); color: var(--danger); border: 1px solid rgba(224,82,82,0.4); }
+.sidebar-header {
+  padding: 20px 16px;
+  border-bottom: 1px solid var(--sidebar-border);
+  display: flex; align-items: center; gap: 12px;
+  overflow: hidden; white-space: nowrap; flex-shrink: 0;
+}
+.sidebar-logo {
+  width: 36px; height: 36px; min-width: 36px; border-radius: 8px;
+  background: var(--primary); display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 16px; flex-shrink: 0;
+}
+.sidebar-titles { overflow: hidden; }
+.sidebar-title { color: var(--sidebar-fg); font-weight: 600; font-size: 13px; white-space: nowrap; }
+.sidebar-sub { color: var(--sidebar-muted); font-size: 11px; margin-top: 1px; white-space: nowrap; }
 
-  /* ── ADMIN NOTICE ── */
-  #admin-notice {
-    background: linear-gradient(90deg, rgba(232,163,58,0.08), transparent);
-    border-left: 3px solid var(--amber);
-    padding: 10px 24px;
-    display: flex; align-items: center; gap: 10px;
-    font-size: 12px; color: var(--amber);
-    transition: all 0.3s;
-  }
-  #admin-notice.hidden { display: none; }
-  .notice-close { margin-left:auto; cursor:pointer; opacity:.6; font-size:16px; }
-  .notice-close:hover { opacity:1; }
+.sidebar-content { flex: 1; padding: 12px 8px; overflow-y: auto; overflow-x: hidden; }
+.sidebar-group-label {
+  color: var(--sidebar-muted); font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.08em; padding: 8px 8px 4px;
+  white-space: nowrap; overflow: hidden;
+  transition: opacity 0.15s;
+}
+#sidebar.collapsed .sidebar-group-label { opacity: 0; }
 
-  /* ── LAYOUT ── */
-  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  color: var(--sidebar-fg); font-size: 13px; font-weight: 400;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap; overflow: hidden;
+  margin-bottom: 2px; user-select: none;
+}
+.nav-item:hover { background: var(--sidebar-accent); }
+.nav-item.active { background: var(--primary); color: white; }
+.nav-icon { font-size: 15px; flex-shrink: 0; width: 20px; text-align: center; }
+.nav-label { overflow: hidden; transition: opacity 0.15s, width 0.2s; white-space: nowrap; }
+#sidebar.collapsed .nav-label { opacity: 0; width: 0; }
 
-  /* ── HEADER ── */
-  header {
-    padding: 32px 0 24px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;
-    flex-wrap: wrap;
-  }
-  .stall-meta { display: flex; align-items: center; gap: 20px; }
-  .stall-avatar {
-    width: 72px; height: 72px; border-radius: 16px;
-    background: linear-gradient(135deg, var(--amber-dim), var(--amber));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 28px; font-family: var(--font-display); color: #0e0c09; font-weight: 700;
-    flex-shrink: 0;
-    box-shadow: 0 0 0 1px rgba(232,163,58,0.3), 0 8px 24px rgba(232,163,58,0.15);
-  }
-  .stall-name { font-family: var(--font-display); font-size: 26px; font-weight: 700; line-height: 1.2; }
-  .stall-location { color: var(--muted); font-size: 13px; margin-top: 3px; display: flex; align-items: center; gap: 5px; }
-  .stall-rating { display: flex; align-items: center; gap: 5px; margin-top: 6px; color: var(--amber); font-size: 13px; font-weight: 500; }
+.sidebar-footer { border-top: 1px solid var(--sidebar-border); padding: 10px 8px; flex-shrink: 0; }
+.footer-link {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 8px; cursor: pointer;
+  color: var(--sidebar-muted); font-size: 12px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap; overflow: hidden;
+}
+.footer-link:hover { background: var(--sidebar-accent); color: var(--sidebar-fg); }
+.footer-link-label { transition: opacity 0.15s; }
+#sidebar.collapsed .footer-link-label { opacity: 0; }
 
-  .header-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
-  .btn {
-    padding: 8px 18px; border-radius: 10px; border: none; cursor: pointer;
-    font-family: var(--font-body); font-size: 13px; font-weight: 500;
-    transition: all 0.2s; display: flex; align-items: center; gap: 7px;
-  }
-  .btn-primary { background: var(--amber); color: #0e0c09; }
-  .btn-primary:hover { background: #f0b34a; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(232,163,58,0.35); }
-  .btn-ghost { background: var(--card); color: var(--text); border: 1px solid var(--border); }
-  .btn-ghost:hover { border-color: var(--amber-dim); background: var(--amber-glow); }
-  .btn-danger { background: rgba(224,82,82,0.15); color: var(--danger); border: 1px solid rgba(224,82,82,0.3); }
-  .btn-danger:hover { background: rgba(224,82,82,0.25); }
+/* MAIN */
+#main { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; }
 
-  /* ── TABS ── */
-  .tabs { display: flex; gap: 2px; padding: 18px 0 0; border-bottom: 1px solid var(--border); }
-  .tab {
-    padding: 8px 18px; border-radius: 8px 8px 0 0; cursor: pointer;
-    font-size: 13px; font-weight: 500; color: var(--muted);
-    border: 1px solid transparent; border-bottom: none;
-    transition: all 0.2s; position: relative; bottom: -1px;
-    background: transparent;
-  }
-  .tab:hover { color: var(--text); }
-  .tab.active {
-    color: var(--amber); background: var(--surface);
-    border-color: var(--border); border-bottom-color: var(--surface);
-  }
+/* TOPBAR */
+#topbar {
+  height: 56px; min-height: 56px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 16px; gap: 12px; flex-shrink: 0;
+}
+.topbar-left { display: flex; align-items: center; gap: 10px; }
+.sidebar-trigger {
+  width: 36px; height: 36px; border-radius: 8px; border: none; background: transparent;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--muted-foreground); font-size: 18px; transition: background 0.15s;
+}
+.sidebar-trigger:hover { background: var(--muted); }
+.page-title { font-size: 16px; font-weight: 600; }
 
-  /* ── TAB CONTENT ── */
-  .tab-content { display: none; padding: 24px 0; }
-  .tab-content.active { display: block; }
+.topbar-right { display: flex; align-items: center; gap: 4px; }
+.icon-btn {
+  width: 36px; height: 36px; border-radius: 8px; border: none; background: transparent;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--muted-foreground); font-size: 15px; position: relative;
+  transition: background 0.15s;
+}
+.icon-btn:hover { background: var(--muted); color: var(--foreground); }
+.notif-dot { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--destructive); }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--primary); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 600; margin-left: 6px; cursor: pointer; flex-shrink: 0;
+}
 
-  /* ── STATS ROW ── */
-  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
-  @media (max-width: 700px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
-  .stat-card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
-    padding: 16px 20px;
-    transition: border-color 0.2s, transform 0.2s;
-    animation: fadeUp 0.4s ease both;
-  }
-  .stat-card:hover { border-color: var(--amber-dim); transform: translateY(-2px); }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
-  .stat-value { font-family: var(--font-display); font-size: 24px; font-weight: 700; margin-top: 4px; }
-  .stat-change { font-size: 11px; margin-top: 4px; }
-  .stat-change.pos { color: var(--success); }
-  .stat-change.neg { color: var(--danger); }
+/* CONTENT */
+#content { flex: 1; overflow-y: auto; padding: 24px; }
 
-  /* ── SECTION HEADER ── */
-  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-  .section-title { font-family: var(--font-display); font-size: 17px; font-weight: 600; }
-  .section-count { font-size: 12px; color: var(--muted); margin-left: 8px; }
+/* PAGES */
+.page { display: none; }
+.page.active { display: block; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+.animate-fade-in { animation: fadeIn 0.3s ease both; }
 
-  /* ── MENU GRID ── */
-  .menu-filters { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-  .filter-chip {
-    padding: 5px 14px; border-radius: 20px; font-size: 12px; cursor: pointer;
-    border: 1px solid var(--border); background: transparent; color: var(--muted);
-    transition: all 0.2s;
-  }
-  .filter-chip:hover, .filter-chip.active { background: var(--amber-glow); border-color: var(--amber-dim); color: var(--amber); }
+/* GRIDS */
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+@media(max-width:1000px){ .grid-4{grid-template-columns:repeat(2,1fr);} .grid-2-1{grid-template-columns:1fr;} }
 
-  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-  .dish-card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-    overflow: hidden; transition: all 0.25s; position: relative;
-    animation: fadeUp 0.4s ease both;
-  }
-  .dish-card:hover { border-color: var(--amber-dim); transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
-  .dish-card.unavailable { opacity: 0.5; pointer-events: none; }
-  .dish-thumb {
-    height: 130px; background: linear-gradient(135deg, #1a1410, #2a2018);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 44px; position: relative;
-    border-bottom: 1px solid var(--border);
-  }
-  .dish-unavail-overlay {
-    position: absolute; inset: 0; background: rgba(0,0,0,0.6);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; color: var(--danger); font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
-  }
-  .dish-body { padding: 14px; }
-  .dish-name { font-weight: 600; font-size: 14px; margin-bottom: 3px; }
-  .dish-cat { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
-  .dish-footer { display: flex; align-items: center; justify-content: space-between; }
-  .dish-price { font-family: var(--font-display); font-size: 16px; font-weight: 700; color: var(--amber); }
-  .dish-toggle {
-    width: 34px; height: 20px; border-radius: 10px; cursor: pointer; position: relative;
-    border: none; transition: background 0.2s; flex-shrink: 0;
-  }
-  .dish-toggle.on { background: var(--success); }
-  .dish-toggle.off { background: var(--border); }
-  .dish-toggle::after {
-    content:''; position:absolute; top:3px; width:14px; height:14px; border-radius:50%; background:#fff;
-    transition: left 0.2s;
-  }
-  .dish-toggle.on::after { left:17px; }
-  .dish-toggle.off::after { left:3px; }
-  .add-dish-card {
-    border: 2px dashed var(--border); border-radius: 16px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 210px; cursor: pointer; gap: 8px; color: var(--muted);
-    transition: all 0.2s;
-  }
-  .add-dish-card:hover { border-color: var(--amber-dim); color: var(--amber); background: var(--amber-glow); }
-  .add-dish-card span { font-size: 32px; }
+/* SPACE */
+.space-y-4>*+* { margin-top: 16px; }
+.space-y-6>*+* { margin-top: 24px; }
 
-  /* ── CUSTOMERS TABLE ── */
-  .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
-  table { width: 100%; border-collapse: collapse; }
-  th { padding: 12px 16px; text-align: left; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid var(--border); }
-  td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid rgba(46,40,32,0.5); }
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: rgba(232,163,58,0.03); }
+/* STAT CARD */
+.stat-card {
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--card); padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.stat-inner { display: flex; align-items: flex-start; justify-content: space-between; }
+.stat-label { font-size: 13px; color: var(--muted-foreground); }
+.stat-value { margin-top: 4px; font-size: 24px; font-weight: 700; }
+.stat-change { margin-top: 4px; font-size: 11px; font-weight: 500; }
+.pos { color: var(--stat-emerald); }
+.neg { color: var(--stat-rose); }
+.stat-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.icon-blue { background: hsl(217 91% 95%); color: var(--stat-blue); }
+.icon-emerald { background: hsl(160 84% 92%); color: var(--stat-emerald); }
+.icon-amber { background: hsl(38 92% 92%); color: var(--stat-amber); }
+.icon-rose { background: hsl(346 87% 94%); color: var(--stat-rose); }
 
-  /* ── REVENUE ── */
-  .revenue-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 640px) { .revenue-grid { grid-template-columns: 1fr; } }
-  .revenue-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
-  .rev-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
-  .chart-bars { display: flex; align-items: flex-end; gap: 6px; height: 120px; }
-  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; }
-  .bar {
-    width: 100%; border-radius: 6px 6px 0 0;
-    background: linear-gradient(180deg, var(--amber) 0%, var(--amber-dim) 100%);
-    min-height: 4px; transition: height 0.8s cubic-bezier(.34,1.2,.64,1);
-    position: relative;
-  }
-  .bar::after {
-    content: attr(data-val); position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
-    font-size: 9px; color: var(--muted); white-space: nowrap;
-  }
-  .bar-label { font-size: 10px; color: var(--muted); }
-  .activity-list { display: flex; flex-direction: column; gap: 14px; }
-  .activity-item { display: flex; align-items: flex-start; gap: 12px; }
-  .activity-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--amber); margin-top: 5px; flex-shrink: 0; }
-  .activity-text { font-size: 13px; }
-  .activity-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+/* CARD */
+.card { border-radius: var(--radius); border: 1px solid var(--border); background: var(--card); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.card-pad { padding: 20px; }
+.card-title { font-size: 13px; font-weight: 600; margin-bottom: 16px; }
 
-  /* ── SETTINGS ── */
-  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 640px) { .settings-grid { grid-template-columns: 1fr; } }
-  .setting-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
-  .setting-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-  .setting-input {
-    width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 9px 13px; color: var(--text); font-family: var(--font-body); font-size: 13px;
-    transition: border-color 0.2s; outline: none;
-  }
-  .setting-input:focus { border-color: var(--amber-dim); }
-  .setting-select {
-    width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
-    padding: 9px 13px; color: var(--text); font-family: var(--font-body); font-size: 13px; outline: none;
-  }
-  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
-  .setting-row:last-child { border-bottom: none; }
+/* TABLE */
+.table-wrap { border-radius: var(--radius); border: 1px solid var(--border); background: var(--card); overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+table { width: 100%; border-collapse: collapse; }
+th { padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 500; color: var(--muted-foreground); border-bottom: 1px solid var(--border); }
+td { padding: 13px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: hsl(220 14% 98%); }
+.td-bold { font-weight: 500; }
+.td-muted { color: var(--muted-foreground); }
 
-  /* ── TOGGLE SWITCH ── */
-  .toggle { width: 40px; height: 22px; border-radius: 11px; cursor: pointer; border: none; position: relative; transition: background 0.2s; }
-  .toggle.on { background: var(--success); }
-  .toggle.off { background: var(--border); }
-  .toggle::after { content:''; position:absolute; top:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition: left 0.2s; }
-  .toggle.on::after { left:21px; }
-  .toggle.off::after { left:3px; }
+/* BADGE */
+.badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.badge-default { background: var(--primary); color: white; }
+.badge-secondary { background: var(--muted); color: var(--muted-foreground); }
+.badge-destructive { background: hsl(0 72% 94%); color: var(--destructive); }
+.badge-outline { border: 1px solid var(--border); color: var(--foreground); }
 
-  /* ── ADMIN LOCKED ── */
-  .admin-locked {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 11px; color: var(--muted); 
-    background: rgba(46,40,32,0.6); border: 1px solid var(--border);
-    padding: 3px 9px; border-radius: 20px;
-  }
-  .lock-icon { font-size: 10px; }
+/* SEARCH */
+.search-wrap { position: relative; max-width: 300px; }
+.search-wrap input {
+  width: 100%; padding: 8px 12px 8px 34px; border-radius: 8px;
+  border: 1px solid var(--border); font-size: 13px; font-family: var(--font);
+  color: var(--foreground); outline: none; transition: border-color 0.15s; background: var(--background);
+}
+.search-wrap input:focus { border-color: var(--primary); }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted-foreground); font-size: 13px; pointer-events: none; }
 
-  /* ── MODAL ── */
-  .modal-overlay {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200;
-    display: flex; align-items: center; justify-content: center; padding: 20px;
-    opacity: 0; pointer-events: none; transition: opacity 0.2s;
-    backdrop-filter: blur(4px);
-  }
-  .modal-overlay.open { opacity: 1; pointer-events: all; }
-  .modal {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
-    padding: 28px; width: 100%; max-width: 440px;
-    transform: scale(0.95); transition: transform 0.2s;
-  }
-  .modal-overlay.open .modal { transform: scale(1); }
-  .modal-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; margin-bottom: 20px; }
-  .modal-field { margin-bottom: 14px; }
-  .modal-actions { display: flex; gap: 10px; margin-top: 22px; }
-  .modal-actions .btn { flex: 1; justify-content: center; }
+/* BUTTON */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 8px; border: 1px solid transparent;
+  font-size: 13px; font-weight: 500; font-family: var(--font); cursor: pointer; transition: all 0.15s;
+}
+.btn-primary { background: var(--primary); color: white; }
+.btn-primary:hover { opacity: 0.88; }
+.btn-outline { background: var(--background); color: var(--foreground); border-color: var(--border); }
+.btn-outline:hover { background: var(--accent); }
 
-  /* ── TOAST ── */
-  #toast {
-    position: fixed; bottom: 24px; right: 24px; z-index: 300;
-    background: var(--card); border: 1px solid var(--amber-dim);
-    padding: 12px 20px; border-radius: 12px; font-size: 13px;
-    transform: translateY(80px); opacity: 0; transition: all 0.3s;
-    display: flex; align-items: center; gap: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  }
-  #toast.show { transform: translateY(0); opacity: 1; }
+/* SWITCH */
+.switch-row { display: flex; align-items: center; justify-content: space-between; padding: 14px; border-radius: 8px; border: 1px solid var(--border); }
+.switch-row p { font-size: 13px; font-weight: 500; }
+.switch-row small { font-size: 11px; color: var(--muted-foreground); }
+.switch {
+  width: 40px; height: 22px; border-radius: 11px; border: none; cursor: pointer;
+  position: relative; transition: background 0.2s; flex-shrink: 0;
+}
+.switch.on { background: var(--primary); }
+.switch.off { background: hsl(220 13% 80%); }
+.switch.locked { cursor: not-allowed; opacity: 0.5; }
+.switch::after { content:''; position:absolute; top:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition: left 0.2s; }
+.switch.on::after { left:21px; }
+.switch.off::after { left:3px; }
 
-  /* ── THUYẾT MINH ── */
-  .promo-card {
-    background: linear-gradient(135deg, rgba(232,163,58,0.1), rgba(160,108,26,0.05));
-    border: 1px solid rgba(232,163,58,0.25); border-radius: 16px; padding: 24px;
-    display: flex; align-items: center; gap: 20px; margin-bottom: 24px;
-  }
-  .promo-icon { font-size: 40px; flex-shrink: 0; }
-  .promo-desc { font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+/* FORM */
+.form-group { margin-bottom: 14px; }
+.form-label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+.form-input, .form-select {
+  width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
+  font-size: 13px; font-family: var(--font); color: var(--foreground); outline: none;
+  transition: border-color 0.15s; background: var(--background);
+}
+.form-input:focus { border-color: var(--primary); }
+.form-input:disabled { background: var(--muted); color: var(--muted-foreground); cursor: not-allowed; }
+textarea.form-input { resize: vertical; }
 
-  /* ── FOOTER STATUS ── */
-  .footer { border-top: 1px solid var(--border); padding: 20px 0; margin-top: 40px; text-align: center; font-size: 11px; color: var(--muted); }
+/* INFO BANNER */
+.info-banner {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--accent); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 14px 16px; font-size: 13px; color: var(--accent-foreground);
+}
+.info-icon { color: var(--primary); flex-shrink: 0; }
 
-  .chip { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; }
-  .chip-avail { background: rgba(76,175,125,0.15); color: var(--success); }
-  .chip-unavail { background: rgba(224,82,82,0.12); color: var(--danger); }
+/* STALL CARD */
+.stall-card {
+  border-radius: var(--radius); border: 1px solid var(--border); background: var(--card);
+  padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); transition: box-shadow 0.2s;
+}
+.stall-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.stall-head { display: flex; align-items: flex-start; justify-content: space-between; }
+.stall-name { font-weight: 600; font-size: 14px; }
+.stall-owner { font-size: 13px; color: var(--muted-foreground); margin-top: 2px; }
+.stall-meta { display: flex; gap: 14px; margin-top: 12px; font-size: 12px; color: var(--muted-foreground); }
+
+/* CHART */
+.chart-outer { display: flex; align-items: flex-end; gap: 8px; height: 220px; padding-top: 24px; }
+.chart-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; }
+.chart-bar {
+  width: 100%; border-radius: 6px 6px 0 0;
+  background: var(--primary); min-height: 4px; transition: opacity 0.15s;
+}
+.chart-bar:hover { opacity: 0.75; }
+.chart-tick { font-size: 11px; color: var(--muted-foreground); }
+
+/* ACTIVITY */
+.activity-list { display: flex; flex-direction: column; gap: 16px; }
+.activity-item { display: flex; gap: 10px; align-items: flex-start; }
+.activity-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 5px; flex-shrink: 0; }
+.activity-text { font-size: 13px; }
+.activity-sub { font-size: 11px; color: var(--muted-foreground); margin-top: 2px; }
+
+/* DISH TOGGLE */
+.dish-toggle {
+  width: 36px; height: 20px; border-radius: 10px; border: none; cursor: pointer;
+  position: relative; transition: background 0.2s;
+}
+.dish-toggle.on { background: var(--primary); }
+.dish-toggle.off { background: hsl(220 13% 80%); }
+.dish-toggle::after { content:''; position:absolute; top:3px; width:14px; height:14px; border-radius:50%; background:#fff; transition: left 0.2s; }
+.dish-toggle.on::after { left:19px; }
+.dish-toggle.off::after { left:3px; }
+
+/* MODAL */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s; backdrop-filter: blur(2px);
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 4px); padding: 28px; width: 100%; max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+  transform: scale(0.96); transition: transform 0.2s;
+}
+.modal-overlay.open .modal { transform: scale(1); }
+.modal-title { font-size: 17px; font-weight: 600; margin-bottom: 20px; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+
+/* TOAST */
+#toast {
+  position: fixed; bottom: 20px; right: 20px; z-index: 300;
+  background: var(--foreground); color: #fff;
+  padding: 11px 18px; border-radius: 10px; font-size: 13px;
+  transform: translateY(50px); opacity: 0; transition: all 0.25s;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18); pointer-events: none;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+
+/* FLEX UTILS */
+.flex { display: flex; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: 8px; }
+.gap-3 { gap: 12px; }
+.max-w-2xl { max-width: 660px; }
 </style>
 </head>
 <body>
 
-<!-- STATUS BAR -->
-<div id="status-bar">
-  <div style="display:flex;align-items:center;gap:14px;">
-    <span id="stall-status-badge" class="status-badge badge-open">
-      <span class="status-dot dot-open"></span> Đang mở cửa
-    </span>
-    <span>Khu A - Số 12 &nbsp;·&nbsp; Cập nhật: <span id="last-update">vừa xong</span></span>
-  </div>
-  <div style="display:flex;align-items:center;gap:14px;">
-    <span>⭐ 4.8 &nbsp;·&nbsp; 24 món &nbsp;·&nbsp; 89 đơn hôm nay</span>
-    <span class="admin-locked"><span class="lock-icon">🔒</span> Được duyệt bởi Admin</span>
-  </div>
-</div>
-
-<!-- ADMIN NOTICE -->
-<div id="admin-notice">
-  <span>🔔</span>
-  <span><strong>Thông báo từ Admin:</strong> Tài khoản của bạn đang hoạt động bình thường. Vui lòng cập nhật thực đơn trước 10:00 mỗi ngày.</span>
-  <span class="notice-close" onclick="document.getElementById('admin-notice').classList.add('hidden')">✕</span>
-</div>
-
-<div class="container">
-
-  <!-- HEADER -->
-  <header>
-    <div class="stall-meta">
-      <div class="stall-avatar">P</div>
-      <div>
-        <div class="stall-name">Phở Hà Nội</div>
-        <div class="stall-location">📍 Khu A - Số 12 &nbsp;·&nbsp; Nguyễn Văn A</div>
-        <div class="stall-rating">★★★★★ 4.8 <span style="color:var(--muted);font-weight:400">(243 đánh giá)</span></div>
-      </div>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-ghost" onclick="openModal('modal-info')">✏️ Cập nhật thông tin</button>
-      <button class="btn btn-primary" onclick="toggleStallStatus()">⏸ Đóng cửa tạm</button>
-    </div>
-  </header>
-
-  <!-- TABS -->
-  <div class="tabs">
-    <div class="tab active" onclick="switchTab('overview')">📊 Tổng quan</div>
-    <div class="tab" onclick="switchTab('menu')">🍜 Thực đơn</div>
-    <div class="tab" onclick="switchTab('customers')">👥 Khách hàng</div>
-    <div class="tab" onclick="switchTab('revenue')">💰 Doanh thu</div>
-    <div class="tab" onclick="switchTab('settings')">⚙️ Cài đặt</div>
-  </div>
-
-  <!-- TAB: OVERVIEW -->
-  <div class="tab-content active" id="tab-overview">
-    <div class="stats-row">
-      <div class="stat-card" style="animation-delay:0.05s">
-        <div class="stat-label">Đơn hôm nay</div>
-        <div class="stat-value">89</div>
-        <div class="stat-change neg">↓ -5% so với hôm qua</div>
-      </div>
-      <div class="stat-card" style="animation-delay:0.1s">
-        <div class="stat-label">Doanh thu tháng</div>
-        <div class="stat-value" style="font-size:18px">7.1tr₫</div>
-        <div class="stat-change pos">↑ +12% tháng trước</div>
-      </div>
-      <div class="stat-card" style="animation-delay:0.15s">
-        <div class="stat-label">Món đang bán</div>
-        <div class="stat-value">22<span style="font-size:14px;color:var(--muted)">/24</span></div>
-        <div class="stat-change" style="color:var(--muted)">2 tạm hết hàng</div>
-      </div>
-      <div class="stat-card" style="animation-delay:0.2s">
-        <div class="stat-label">Xếp hạng</div>
-        <div class="stat-value">#3</div>
-        <div class="stat-change pos">↑ +1 vị trí</div>
-      </div>
-    </div>
-
-    <div class="promo-card">
-      <div class="promo-icon">📢</div>
-      <div>
-        <div style="font-weight:600;font-size:15px">Thuyết minh gian hàng</div>
-        <div class="promo-desc">Phở Hà Nội — Hương vị chuẩn miền Bắc từ năm 1995. Nước dùng hầm xương 8 tiếng, bánh phở tươi mỗi sáng. Gian hàng nổi bật tại khu ẩm thực TMTD, phục vụ từ 6:00 đến 22:00 hàng ngày.</div>
-        <button class="btn btn-ghost" style="margin-top:10px;padding:5px 14px;font-size:12px" onclick="openModal('modal-promo')">✏️ Chỉnh sửa</button>
-      </div>
-    </div>
-
-    <div class="section-header">
-      <div class="section-title">Hoạt động gần đây <span class="section-count">từ Admin & TMTD</span></div>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th>Sự kiện</th><th>Chi tiết</th><th>Thời gian</th><th>Nguồn</th>
-        </tr></thead>
-        <tbody>
-          <tr><td>✅ Tài khoản được phê duyệt</td><td>Admin xác nhận trạng thái hoạt động</td><td>1 giờ trước</td><td><span class="chip chip-avail">Admin</span></td></tr>
-          <tr><td>📦 Đơn hàng mới #ORD-2024-0891</td><td>Phở Bò Đặc Biệt × 2</td><td>32 phút trước</td><td><span class="chip chip-avail">TMTD</span></td></tr>
-          <tr><td>📝 Cập nhật thực đơn</td><td>Admin ghi nhận cập nhật Bánh Mì 24h</td><td>15 phút trước</td><td><span class="chip" style="background:rgba(232,163,58,0.12);color:var(--amber)">Hệ thống</span></td></tr>
-          <tr><td>👤 Khách hàng mới đăng ký</td><td>Lê Minh G — 45 đơn đã đặt</td><td>5 phút trước</td><td><span class="chip chip-avail">TMTD</span></td></tr>
-          <tr><td>📊 Báo cáo doanh thu</td><td>Dữ liệu tuần được Admin lưu trữ</td><td>2 giờ trước</td><td><span class="chip chip-avail">Admin</span></td></tr>
-        </tbody>
-      </table>
+<!-- ══════════ SIDEBAR ══════════ -->
+<div id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">🏪</div>
+    <div class="sidebar-titles" id="sb-titles">
+      <div class="sidebar-title">Chủ gian hàng</div>
+      <div class="sidebar-sub">Hệ thống gian hàng</div>
     </div>
   </div>
 
-  <!-- TAB: MENU -->
-  <div class="tab-content" id="tab-menu">
-    <div class="section-header">
-      <div class="section-title">Thực đơn <span class="section-count">24 món</span></div>
-      <button class="btn btn-primary" onclick="openModal('modal-dish')">+ Thêm món</button>
-    </div>
-    <div class="menu-filters">
-      <div class="filter-chip active" onclick="filterMenu(this,'all')">Tất cả (24)</div>
-      <div class="filter-chip" onclick="filterMenu(this,'Món chính')">Món chính (18)</div>
-      <div class="filter-chip" onclick="filterMenu(this,'Ăn nhẹ')">Ăn nhẹ (3)</div>
-      <div class="filter-chip" onclick="filterMenu(this,'Tráng miệng')">Tráng miệng (2)</div>
-      <div class="filter-chip" onclick="filterMenu(this,'Đồ uống')">Đồ uống (1)</div>
-    </div>
-    <div class="menu-grid" id="menu-grid">
-      <!-- dishes rendered by JS -->
-    </div>
+  <div class="sidebar-content">
+    <div class="sidebar-group-label">Quản lý chính</div>
+    <div class="nav-item active" onclick="goPage('dashboard',this)"><span class="nav-icon">📊</span><span class="nav-label">Tổng quan</span></div>
+    <div class="nav-item" onclick="goPage('menu',this)"><span class="nav-icon">🍜</span><span class="nav-label">Thực đơn</span></div>
+    <div class="nav-item" onclick="goPage('customers',this)"><span class="nav-icon">📦</span><span class="nav-label">Khách hàng</span></div>
+
+    <div class="sidebar-group-label" style="margin-top:8px">Gian hàng</div>
+    <div class="nav-item" onclick="goPage('stall',this)"><span class="nav-icon">🏪</span><span class="nav-label">Thông tin gian hàng</span></div>
+    <div class="nav-item" onclick="goPage('revenue',this)"><span class="nav-icon">💰</span><span class="nav-label">Doanh thu</span></div>
+    <div class="nav-item" onclick="goPage('settings',this)"><span class="nav-icon">⚙️</span><span class="nav-label">Cài đặt</span></div>
   </div>
 
-  <!-- TAB: CUSTOMERS -->
-  <div class="tab-content" id="tab-customers">
-    <div class="section-header">
-      <div class="section-title">Khách hàng <span class="section-count">dữ liệu từ Admin</span></div>
-      <span class="admin-locked"><span class="lock-icon">🔒</span> Chỉ xem</span>
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr>
-          <th>Họ tên</th><th>Email</th><th>Số đơn</th><th>Tổng chi tiêu</th><th>Đơn gần nhất</th>
-        </tr></thead>
-        <tbody>
-          <tr><td><strong>Lê Minh G</strong></td><td style="color:var(--muted)">minhg@email.com</td><td>45</td><td style="color:var(--amber)">2,150,000₫</td><td style="color:var(--muted)">29/03/2024</td></tr>
-          <tr><td><strong>Nguyễn Thị H</strong></td><td style="color:var(--muted)">thih@email.com</td><td>32</td><td style="color:var(--amber)">1,680,000₫</td><td style="color:var(--muted)">28/03/2024</td></tr>
-          <tr><td><strong>Trần Đức I</strong></td><td style="color:var(--muted)">duci@email.com</td><td>28</td><td style="color:var(--amber)">1,420,000₫</td><td style="color:var(--muted)">27/03/2024</td></tr>
-          <tr><td><strong>Phạm Thanh K</strong></td><td style="color:var(--muted)">thanhk@email.com</td><td>15</td><td style="color:var(--amber)">780,000₫</td><td style="color:var(--muted)">25/03/2024</td></tr>
-          <tr><td><strong>Đỗ Văn L</strong></td><td style="color:var(--muted)">vanl@email.com</td><td>8</td><td style="color:var(--amber)">420,000₫</td><td style="color:var(--muted)">20/03/2024</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p style="font-size:12px;color:var(--muted);margin-top:12px">* Dữ liệu khách hàng được Admin lưu trữ và đồng bộ. Bạn chỉ có quyền xem.</p>
-  </div>
-
-  <!-- TAB: REVENUE -->
-  <div class="tab-content" id="tab-revenue">
-    <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Tuần này</div><div class="stat-value" style="font-size:18px">7.1tr₫</div><div class="stat-change pos">↑ +18%</div></div>
-      <div class="stat-card"><div class="stat-label">Tháng này</div><div class="stat-value" style="font-size:18px">28.4tr₫</div><div class="stat-change pos">↑ +12%</div></div>
-      <div class="stat-card"><div class="stat-label">Trung bình/ngày</div><div class="stat-value" style="font-size:18px">945k₫</div><div class="stat-change pos">↑ +8%</div></div>
-      <div class="stat-card"><div class="stat-label">Đơn trung bình</div><div class="stat-value" style="font-size:18px">53k₫</div><div class="stat-change neg">↓ -2%</div></div>
-    </div>
-    <div class="revenue-grid">
-      <div class="revenue-card">
-        <div class="rev-title">Doanh thu 7 ngày (nghìn₫)</div>
-        <div class="chart-bars" id="chart-bars">
-          <!-- rendered by JS -->
-        </div>
-      </div>
-      <div class="revenue-card">
-        <div class="rev-title">Hoạt động gần đây</div>
-        <div class="activity-list">
-          <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Báo cáo tuần được Admin lưu trữ</div><div class="activity-sub">2 giờ trước</div></div></div>
-          <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Doanh thu T7 đạt đỉnh: 7.1tr₫</div><div class="activity-sub">Hôm nay</div></div></div>
-          <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">89 đơn hàng được xử lý</div><div class="activity-sub">Hôm nay</div></div></div>
-          <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Xếp hạng #3 trong hệ thống TMTD</div><div class="activity-sub">Tuần này</div></div></div>
-          <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Admin xác nhận doanh thu tháng 3</div><div class="activity-sub">28/03/2024</div></div></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TAB: SETTINGS -->
-  <div class="tab-content" id="tab-settings">
-    <div class="settings-grid">
-      <div class="setting-card">
-        <div style="font-weight:600;margin-bottom:16px;font-family:var(--font-display)">Thông tin gian hàng</div>
-        <div class="modal-field">
-          <div class="setting-label">Tên gian hàng</div>
-          <input class="setting-input" value="Phở Hà Nội">
-        </div>
-        <div class="modal-field">
-          <div class="setting-label">Vị trí <span class="admin-locked" style="vertical-align:middle"><span class="lock-icon">🔒</span> Admin quản lý</span></div>
-          <input class="setting-input" value="Khu A - Số 12" disabled style="opacity:0.5;cursor:not-allowed">
-        </div>
-        <div class="modal-field">
-          <div class="setting-label">Giờ mở cửa</div>
-          <input class="setting-input" value="06:00">
-        </div>
-        <div class="modal-field">
-          <div class="setting-label">Giờ đóng cửa</div>
-          <input class="setting-input" value="22:00">
-        </div>
-        <button class="btn btn-primary" style="margin-top:6px" onclick="showToast('✅ Đã lưu thông tin gian hàng')">Lưu thay đổi</button>
-      </div>
-
-      <div class="setting-card">
-        <div style="font-weight:600;margin-bottom:16px;font-family:var(--font-display)">Cài đặt vận hành</div>
-        <div class="setting-row">
-          <div>
-            <div style="font-size:13px">Nhận thông báo đơn hàng mới</div>
-            <div style="font-size:11px;color:var(--muted)">Âm thanh & hiển thị</div>
-          </div>
-          <button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button>
-        </div>
-        <div class="setting-row">
-          <div>
-            <div style="font-size:13px">Tự động đóng cửa theo giờ</div>
-            <div style="font-size:11px;color:var(--muted)">Đóng lúc 22:00 tự động</div>
-          </div>
-          <button class="toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button>
-        </div>
-        <div class="setting-row">
-          <div>
-            <div style="font-size:13px">Hiển thị số lượng còn lại <span class="admin-locked" style="vertical-align:middle"><span class="lock-icon">🔒</span></span></div>
-            <div style="font-size:11px;color:var(--muted)">Kiểm soát bởi Admin</div>
-          </div>
-          <button class="toggle off" disabled style="opacity:0.4;cursor:not-allowed"></button>
-        </div>
-        <div class="setting-row">
-          <div>
-            <div style="font-size:13px">Tham gia chương trình khuyến mãi</div>
-            <div style="font-size:11px;color:var(--muted)">TMTD Flash Sale</div>
-          </div>
-          <button class="toggle off" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button>
-        </div>
-      </div>
-
-      <div class="setting-card" style="grid-column: 1/-1">
-        <div style="font-weight:600;margin-bottom:16px;font-family:var(--font-display)">Thông tin tài khoản <span class="admin-locked" style="vertical-align:middle"><span class="lock-icon">🔒</span> Được Admin xét duyệt</span></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
-          <div>
-            <div class="setting-label">Họ tên chủ gian hàng</div>
-            <input class="setting-input" value="Nguyễn Văn A" disabled style="opacity:0.5;cursor:not-allowed">
-          </div>
-          <div>
-            <div class="setting-label">Email</div>
-            <input class="setting-input" value="vana@email.com" disabled style="opacity:0.5;cursor:not-allowed">
-          </div>
-          <div>
-            <div class="setting-label">Trạng thái tài khoản</div>
-            <input class="setting-input" value="Hoạt động ✓" disabled style="opacity:0.5;cursor:not-allowed;color:var(--success)">
-          </div>
-        </div>
-        <p style="font-size:11px;color:var(--muted);margin-top:12px">* Thông tin tài khoản chỉ được thay đổi bởi Admin hệ thống. Liên hệ Admin nếu cần cập nhật.</p>
-      </div>
-    </div>
-  </div>
-
-</div><!-- /container -->
-
-<!-- FOOTER -->
-<div class="footer container">Hệ thống Quản lý Gian Hàng · TMTD Platform · <span id="clock"></span></div>
-
-<!-- MODALS -->
-<div class="modal-overlay" id="modal-info">
-  <div class="modal">
-    <div class="modal-title">Cập nhật thông tin gian hàng</div>
-    <div class="modal-field"><div class="setting-label">Tên gian hàng</div><input class="setting-input" value="Phở Hà Nội"></div>
-    <div class="modal-field"><div class="setting-label">Mô tả ngắn</div><input class="setting-input" value="Phở chuẩn miền Bắc từ năm 1995"></div>
-    <div class="modal-field"><div class="setting-label">Giờ hoạt động</div><input class="setting-input" value="06:00 - 22:00"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-info')">Hủy</button>
-      <button class="btn btn-primary" onclick="closeModal('modal-info');showToast('✅ Đã cập nhật thông tin!')">Lưu</button>
+  <div class="sidebar-footer">
+    <div class="footer-link">
+      <span>↗</span>
+      <span class="footer-link-label">Xem Web Admin</span>
     </div>
   </div>
 </div>
 
+<!-- ══════════ MAIN ══════════ -->
+<div id="main">
+  <div id="topbar">
+    <div class="topbar-left">
+      <button class="sidebar-trigger" onclick="toggleSidebar()">☰</button>
+      <h1 class="page-title" id="page-title">Tổng quan</h1>
+    </div>
+    <div class="topbar-right">
+      <button class="icon-btn">🔍</button>
+      <button class="icon-btn">🔔<span class="notif-dot"></span></button>
+      <div class="avatar">A</div>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active animate-fade-in" id="page-dashboard">
+      <div class="space-y-6">
+        <div class="grid-4">
+          <div class="stat-card animate-fade-in" style="animation-delay:.04s">
+            <div class="stat-inner"><div><div class="stat-label">Đơn hàng hôm nay</div><div class="stat-value">89</div><div class="stat-change neg">-5% so với hôm qua</div></div><div class="stat-icon icon-rose">🛒</div></div>
+          </div>
+          <div class="stat-card animate-fade-in" style="animation-delay:.08s">
+            <div class="stat-inner"><div><div class="stat-label">Doanh thu tuần</div><div class="stat-value">7.1tr₫</div><div class="stat-change pos">+18% tuần trước</div></div><div class="stat-icon icon-emerald">💵</div></div>
+          </div>
+          <div class="stat-card animate-fade-in" style="animation-delay:.12s">
+            <div class="stat-inner"><div><div class="stat-label">Món đang bán</div><div class="stat-value">22</div><div class="stat-change" style="color:var(--muted-foreground)">/ 24 món tổng cộng</div></div><div class="stat-icon icon-amber">🍜</div></div>
+          </div>
+          <div class="stat-card animate-fade-in" style="animation-delay:.16s">
+            <div class="stat-inner"><div><div class="stat-label">Đánh giá khách hàng</div><div class="stat-value">4.8 ⭐</div><div class="stat-change pos">+1 vị trí hôm nay</div></div><div class="stat-icon icon-blue">📈</div></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card card-pad animate-fade-in">
+            <div class="card-title">Doanh thu theo tuần (triệu VND)</div>
+            <div class="chart-outer" id="dash-chart"></div>
+          </div>
+          <div class="card card-pad animate-fade-in">
+            <div class="card-title">Hoạt động gần đây</div>
+            <div class="activity-list">
+              <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Tài khoản được Admin phê duyệt</div><div class="activity-sub">Nguyễn Văn A · 1 giờ trước</div></div></div>
+              <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Đơn hàng mới #ORD-2024-0891</div><div class="activity-sub">Phở Bò Đặc Biệt × 2 · 32 phút trước</div></div></div>
+              <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Cập nhật thực đơn ghi nhận</div><div class="activity-sub">Admin · 15 phút trước</div></div></div>
+              <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Khách mới: Lê Minh G (45 đơn)</div><div class="activity-sub">5 phút trước</div></div></div>
+              <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Báo cáo doanh thu Admin lưu trữ</div><div class="activity-sub">Phở Hà Nội · 2 giờ trước</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MENU / DISHES -->
+    <div class="page animate-fade-in" id="page-menu">
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="search-wrap"><span class="search-icon">🔍</span><input placeholder="Tìm món ăn..." oninput="filterDishes(this.value)"></div>
+          <button class="btn btn-primary" onclick="openModal('modal-dish')">+ Thêm món</button>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Tên món</th><th>Gian hàng</th><th>Phân loại</th><th>Giá</th><th>Trạng thái</th><th>Bán</th></tr></thead>
+          <tbody id="dish-tbody"></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CUSTOMERS -->
+    <div class="page animate-fade-in" id="page-customers">
+      <div class="space-y-4">
+        <div class="info-banner"><span class="info-icon">🔒</span><span>Dữ liệu khách hàng được Admin lưu trữ và đồng bộ từ hệ thống TMTD. Bạn chỉ có quyền xem.</span></div>
+        <div class="search-wrap"><span class="search-icon">🔍</span><input placeholder="Tìm khách hàng..."></div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Họ tên</th><th>Email</th><th>Đơn hàng</th><th>Tổng chi tiêu</th><th>Đơn gần nhất</th></tr></thead>
+          <tbody>
+            <tr><td class="td-bold">Lê Minh G</td><td class="td-muted">minhg@email.com</td><td>45</td><td>2,150,000₫</td><td class="td-muted">29/03/2024</td></tr>
+            <tr><td class="td-bold">Nguyễn Thị H</td><td class="td-muted">thih@email.com</td><td>32</td><td>1,680,000₫</td><td class="td-muted">28/03/2024</td></tr>
+            <tr><td class="td-bold">Trần Đức I</td><td class="td-muted">duci@email.com</td><td>28</td><td>1,420,000₫</td><td class="td-muted">27/03/2024</td></tr>
+            <tr><td class="td-bold">Phạm Thanh K</td><td class="td-muted">thanhk@email.com</td><td>15</td><td>780,000₫</td><td class="td-muted">25/03/2024</td></tr>
+            <tr><td class="td-bold">Đỗ Văn L</td><td class="td-muted">vanl@email.com</td><td>8</td><td>420,000₫</td><td class="td-muted">20/03/2024</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- STALL INFO -->
+    <div class="page animate-fade-in" id="page-stall">
+      <div class="space-y-4">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+          <div class="stall-card">
+            <div class="stall-head">
+              <div><div class="stall-name">Phở Hà Nội</div><div class="stall-owner">Nguyễn Văn A</div></div>
+              <span class="badge badge-default">Đang mở</span>
+            </div>
+            <div class="stall-meta"><span>📍 Khu A - Số 12</span><span>⭐ 4.8</span></div>
+            <div style="font-size:12px;color:var(--muted-foreground);margin-top:8px">24 món ăn</div>
+          </div>
+        </div>
+
+        <div class="card card-pad max-w-2xl">
+          <div style="font-weight:600;margin-bottom:16px">Cập nhật thông tin gian hàng</div>
+          <div class="form-group"><label class="form-label">Tên gian hàng</label><input class="form-input" value="Phở Hà Nội"></div>
+          <div class="form-group">
+            <label class="form-label">Vị trí &nbsp;<span class="badge badge-outline" style="font-size:10px">🔒 Admin quản lý</span></label>
+            <input class="form-input" value="Khu A - Số 12" disabled>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="form-group"><label class="form-label">Giờ mở cửa</label><input class="form-input" value="06:00"></div>
+            <div class="form-group"><label class="form-label">Giờ đóng cửa</label><input class="form-input" value="22:00"></div>
+          </div>
+          <div class="form-group"><label class="form-label">Mô tả / Thuyết minh</label><textarea class="form-input" rows="3">Phở Hà Nội — Hương vị chuẩn miền Bắc từ năm 1995. Nước dùng hầm xương 8 tiếng, bánh phở tươi mỗi sáng.</textarea></div>
+          <button class="btn btn-primary" onclick="showToast('✅ Đã lưu thông tin gian hàng')">Lưu thay đổi</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- REVENUE -->
+    <div class="page animate-fade-in" id="page-revenue">
+      <div class="space-y-6">
+        <div class="grid-4">
+          <div class="stat-card"><div class="stat-inner"><div><div class="stat-label">Tuần này</div><div class="stat-value">7.1tr₫</div><div class="stat-change pos">+18%</div></div><div class="stat-icon icon-emerald">📈</div></div></div>
+          <div class="stat-card"><div class="stat-inner"><div><div class="stat-label">Tháng này</div><div class="stat-value">28.4tr₫</div><div class="stat-change pos">+12%</div></div><div class="stat-icon icon-blue">💰</div></div></div>
+          <div class="stat-card"><div class="stat-inner"><div><div class="stat-label">Trung bình / ngày</div><div class="stat-value">945k₫</div><div class="stat-change pos">+8%</div></div><div class="stat-icon icon-amber">📊</div></div></div>
+          <div class="stat-card"><div class="stat-inner"><div><div class="stat-label">Đơn trung bình</div><div class="stat-value">53k₫</div><div class="stat-change neg">-2%</div></div><div class="stat-icon icon-rose">🛒</div></div></div>
+        </div>
+        <div class="grid-2-1">
+          <div class="card card-pad animate-fade-in">
+            <div class="card-title">Doanh thu theo tuần (triệu VND)</div>
+            <div class="chart-outer" id="rev-chart"></div>
+          </div>
+          <div class="card card-pad animate-fade-in">
+            <div class="card-title">Hoạt động tài chính</div>
+            <div class="activity-list">
+              <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Báo cáo tuần Admin lưu trữ</div><div class="activity-sub">2 giờ trước</div></div></div>
+              <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Doanh thu T7 đạt đỉnh 7.1tr₫</div><div class="activity-sub">Hôm nay</div></div></div>
+              <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">89 đơn hàng xử lý thành công</div><div class="activity-sub">Hôm nay</div></div></div>
+              <div class="activity-item"><div class="activity-dot"></div><div><div class="activity-text">Xếp hạng #3 trong hệ thống TMTD</div><div class="activity-sub">Tuần này</div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page animate-fade-in" id="page-settings">
+      <div class="max-w-2xl space-y-6">
+
+        <div class="card card-pad">
+          <div style="font-weight:600;margin-bottom:16px">Thông tin tài khoản &nbsp;<span class="badge badge-outline" style="font-size:10px">🔒 Admin quản lý</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="form-group"><label class="form-label">Họ tên</label><input class="form-input" value="Nguyễn Văn A" disabled></div>
+            <div class="form-group"><label class="form-label">Email</label><input class="form-input" value="vana@email.com" disabled></div>
+            <div class="form-group"><label class="form-label">Gian hàng</label><input class="form-input" value="Phở Hà Nội" disabled></div>
+            <div class="form-group"><label class="form-label">Trạng thái</label><input class="form-input" value="Hoạt động" disabled></div>
+          </div>
+        </div>
+
+        <div class="card card-pad">
+          <div style="font-weight:600;margin-bottom:16px">Quyền được Admin cấp &nbsp;<span class="badge badge-outline" style="font-size:10px">🔒 Chỉ xem</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="switch-row"><div><p>Chỉnh sửa thông tin</p></div><button class="switch on locked" disabled></button></div>
+            <div class="switch-row"><div><p>Xóa dữ liệu</p></div><button class="switch off locked" disabled></button></div>
+            <div class="switch-row"><div><p>Xem báo cáo</p></div><button class="switch on locked" disabled></button></div>
+            <div class="switch-row"><div><p>Quản lý thực đơn</p></div><button class="switch on locked" disabled></button></div>
+          </div>
+        </div>
+
+        <div class="card card-pad">
+          <div style="font-weight:600;margin-bottom:16px">Cài đặt vận hành</div>
+          <div class="space-y-4">
+            <div class="switch-row"><div><p>Nhận thông báo đơn hàng mới</p><small>Âm thanh & hiển thị</small></div><button class="switch on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
+            <div class="switch-row"><div><p>Tự động đóng cửa theo giờ</p><small>Đóng tự động lúc 22:00</small></div><button class="switch on" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
+            <div class="switch-row"><div><p>Tham gia chương trình khuyến mãi</p><small>TMTD Flash Sale</small></div><button class="switch off" onclick="this.classList.toggle('on');this.classList.toggle('off')"></button></div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="showToast('✅ Đã lưu cài đặt')">Lưu thay đổi</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL: Add Dish -->
 <div class="modal-overlay" id="modal-dish">
   <div class="modal">
     <div class="modal-title">Thêm món ăn mới</div>
-    <div class="modal-field"><div class="setting-label">Tên món</div><input class="setting-input" placeholder="VD: Phở Bò Đặc Biệt"></div>
-    <div class="modal-field"><div class="setting-label">Phân loại</div><select class="setting-select"><option>Món chính</option><option>Ăn nhẹ</option><option>Tráng miệng</option><option>Đồ uống</option></select></div>
-    <div class="modal-field"><div class="setting-label">Giá (₫)</div><input class="setting-input" type="number" placeholder="55000"></div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-dish')">Hủy</button>
-      <button class="btn btn-primary" onclick="closeModal('modal-dish');showToast('✅ Đã thêm món mới!')">Thêm</button>
+    <div class="form-group"><label class="form-label">Tên món</label><input class="form-input" id="new-name" placeholder="VD: Phở Bò Đặc Biệt"></div>
+    <div class="form-group"><label class="form-label">Phân loại</label><select class="form-select" id="new-cat"><option>Món chính</option><option>Ăn nhẹ</option><option>Tráng miệng</option><option>Đồ uống</option></select></div>
+    <div class="form-group"><label class="form-label">Giá (₫)</label><input class="form-input" id="new-price" type="number" placeholder="55000"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-dish')">Hủy</button>
+      <button class="btn btn-primary" onclick="addDish()">Thêm món</button>
     </div>
   </div>
 </div>
 
-<div class="modal-overlay" id="modal-promo">
-  <div class="modal">
-    <div class="modal-title">Chỉnh sửa thuyết minh</div>
-    <div class="modal-field">
-      <div class="setting-label">Nội dung thuyết minh</div>
-      <textarea class="setting-input" rows="5" style="resize:vertical">Phở Hà Nội — Hương vị chuẩn miền Bắc từ năm 1995. Nước dùng hầm xương 8 tiếng, bánh phở tươi mỗi sáng. Gian hàng nổi bật tại khu ẩm thực TMTD, phục vụ từ 6:00 đến 22:00 hàng ngày.</textarea>
-    </div>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-promo')">Hủy</button>
-      <button class="btn btn-primary" onclick="closeModal('modal-promo');showToast('✅ Đã cập nhật thuyết minh!')">Lưu</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast">🔔 <span id="toast-msg"></span></div>
+<div id="toast"></div>
 
 <script>
 const dishes = [
-  { id:1, name:'Phở Bò Đặc Biệt', cat:'Món chính', price:'55,000₫', emoji:'🍜', status:'available' },
-  { id:2, name:'Phở Gà', cat:'Món chính', price:'50,000₫', emoji:'🍜', status:'available' },
-  { id:3, name:'Phở Bò Tái', cat:'Món chính', price:'52,000₫', emoji:'🍜', status:'available' },
-  { id:4, name:'Phở Chín Nạm', cat:'Món chính', price:'55,000₫', emoji:'🍜', status:'available' },
-  { id:5, name:'Phở Bò Viên', cat:'Món chính', price:'48,000₫', emoji:'🍜', status:'available' },
-  { id:6, name:'Bún Bò Giò Heo', cat:'Món chính', price:'60,000₫', emoji:'🍲', status:'available' },
-  { id:7, name:'Bánh Mì Thịt Nướng', cat:'Ăn nhẹ', price:'30,000₫', emoji:'🥖', status:'unavailable' },
-  { id:8, name:'Chè Thập Cẩm', cat:'Tráng miệng', price:'25,000₫', emoji:'🍮', status:'available' },
-  { id:9, name:'Trà Đá', cat:'Đồ uống', price:'5,000₫', emoji:'🧊', status:'unavailable' },
-  { id:10, name:'Giò Lụa Hà Nội', cat:'Ăn nhẹ', price:'20,000₫', emoji:'🍖', status:'available' },
+  {id:1, name:'Phở Bò Đặc Biệt', cat:'Món chính', price:'55,000₫', status:'available'},
+  {id:2, name:'Bún Bò Giò Heo', cat:'Món chính', price:'60,000₫', status:'available'},
+  {id:3, name:'Cơm Tấm Sườn Bì Chả', cat:'Món chính', price:'50,000₫', status:'available'},
+  {id:4, name:'Bánh Mì Thịt Nướng', cat:'Ăn nhẹ', price:'30,000₫', status:'unavailable'},
+  {id:5, name:'Chè Thái Thập Cẩm', cat:'Tráng miệng', price:'25,000₫', status:'available'},
+  {id:6, name:'Hủ Tiếu Khô', cat:'Món chính', price:'45,000₫', status:'available'},
 ];
+const chartData = [4200,3800,5100,4600,6200,5800,7100];
+const chartLabels = ['T1','T2','T3','T4','T5','T6','T7'];
+const pageTitles = {dashboard:'Tổng quan',menu:'Quản lý Món Ăn',customers:'Thông tin Khách Hàng',stall:'Thông tin Gian Hàng',revenue:'Doanh thu',settings:'Cài đặt'};
 
-let currentFilter = 'all';
-
-function renderMenu(filter) {
-  const grid = document.getElementById('menu-grid');
-  const filtered = filter === 'all' ? dishes : dishes.filter(d => d.cat === filter);
-  grid.innerHTML = filtered.map((d,i) => `
-    <div class="dish-card ${d.status === 'unavailable' ? 'unavailable' : ''}" style="animation-delay:${i*0.05}s" data-cat="${d.cat}">
-      <div class="dish-thumb">
-        ${d.emoji}
-        ${d.status === 'unavailable' ? '<div class="dish-unavail-overlay">Hết hàng</div>' : ''}
-      </div>
-      <div class="dish-body">
-        <div class="dish-name">${d.name}</div>
-        <div class="dish-cat">${d.cat}</div>
-        <div class="dish-footer">
-          <div class="dish-price">${d.price}</div>
-          <button class="dish-toggle ${d.status === 'available' ? 'on' : 'off'}" onclick="toggleDish(${d.id},this)" title="${d.status === 'available' ? 'Đang bán' : 'Hết hàng'}"></button>
-        </div>
-      </div>
-    </div>
-  `).join('') + `
-    <div class="add-dish-card" onclick="openModal('modal-dish')">
-      <span>+</span>
-      <div style="font-size:13px">Thêm món mới</div>
-    </div>
-  `;
+function goPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const pg = document.getElementById('page-' + id);
+  pg.classList.add('active');
+  // re-trigger animation
+  pg.classList.remove('animate-fade-in');
+  void pg.offsetWidth;
+  pg.classList.add('animate-fade-in');
+  if (el) el.classList.add('active');
+  document.getElementById('page-title').textContent = pageTitles[id] || id;
+  if (id === 'menu') renderDishes();
+  if (id === 'dashboard') renderChart('dash-chart');
+  if (id === 'revenue') renderChart('rev-chart');
 }
 
-function filterMenu(el, cat) {
-  currentFilter = cat;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  renderMenu(cat);
+let collapsed = false;
+function toggleSidebar() {
+  collapsed = !collapsed;
+  document.getElementById('sidebar').classList.toggle('collapsed', collapsed);
 }
+
+function renderDishes(q = '') {
+  const tbody = document.getElementById('dish-tbody');
+  const list = dishes.filter(d => d.name.toLowerCase().includes(q.toLowerCase()));
+  tbody.innerHTML = list.map(d => `
+    <tr>
+      <td class="td-bold">${d.name}</td>
+      <td class="td-muted">Phở Hà Nội</td>
+      <td><span class="badge badge-outline">${d.cat}</span></td>
+      <td>${d.price}</td>
+      <td><span class="badge ${d.status==='available'?'badge-default':'badge-secondary'}">${d.status==='available'?'Còn hàng':'Hết hàng'}</span></td>
+      <td><button class="dish-toggle ${d.status==='available'?'on':'off'}" onclick="toggleDish(${d.id},this)"></button></td>
+    </tr>`).join('');
+}
+function filterDishes(v) { renderDishes(v); }
 
 function toggleDish(id, btn) {
-  const dish = dishes.find(d => d.id === id);
-  if (!dish) return;
-  dish.status = dish.status === 'available' ? 'unavailable' : 'available';
-  btn.classList.toggle('on');
-  btn.classList.toggle('off');
-  const card = btn.closest('.dish-card');
-  card.classList.toggle('unavailable', dish.status === 'unavailable');
-  const overlay = card.querySelector('.dish-unavail-overlay');
-  if (dish.status === 'unavailable') {
-    if (!overlay) {
-      const thumb = card.querySelector('.dish-thumb');
-      const d = document.createElement('div');
-      d.className = 'dish-unavail-overlay'; d.textContent = 'Hết hàng';
-      thumb.appendChild(d);
-    }
-  } else {
-    if (overlay) overlay.remove();
-  }
-  showToast(dish.status === 'available' ? '✅ Đã bật bán: ' + dish.name : '⏸ Đã tắt: ' + dish.name);
+  const d = dishes.find(x => x.id === id);
+  d.status = d.status === 'available' ? 'unavailable' : 'available';
+  btn.classList.toggle('on', d.status === 'available');
+  btn.classList.toggle('off', d.status !== 'available');
+  const badge = btn.closest('tr').querySelector('.badge:last-of-type');
+  badge.className = 'badge ' + (d.status === 'available' ? 'badge-default' : 'badge-secondary');
+  badge.textContent = d.status === 'available' ? 'Còn hàng' : 'Hết hàng';
+  showToast(d.status === 'available' ? '✅ Bật bán: ' + d.name : '⏸ Tắt: ' + d.name);
 }
 
-// Chart
-const chartData = [4200,3800,5100,4600,6200,5800,7100];
-const chartLabels = ['T2','T3','T4','T5','T6','T7','CN'];
-function renderChart() {
+function addDish() {
+  const name = document.getElementById('new-name').value.trim();
+  if (!name) { showToast('⚠️ Vui lòng nhập tên món'); return; }
+  const cat = document.getElementById('new-cat').value;
+  const price = parseInt(document.getElementById('new-price').value) || 0;
+  dishes.push({ id: Date.now(), name, cat, price: price.toLocaleString('vi-VN') + '₫', status: 'available' });
+  closeModal('modal-dish');
+  renderDishes();
+  showToast('✅ Đã thêm: ' + name);
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-price').value = '';
+}
+
+function renderChart(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
   const max = Math.max(...chartData);
-  document.getElementById('chart-bars').innerHTML = chartData.map((v,i) => `
-    <div class="bar-wrap">
-      <div class="bar" style="height:${Math.round((v/max)*90)}%;margin-top:auto" data-val="${(v/1000).toFixed(1)}k"></div>
-      <div class="bar-label">${chartLabels[i]}</div>
-    </div>
-  `).join('');
+  el.innerHTML = chartData.map((v, i) => `
+    <div class="chart-col">
+      <div class="chart-bar" style="height:${Math.round((v/max)*100)}%" title="${chartLabels[i]}: ${(v/1000).toFixed(1)}tr₫"></div>
+      <div class="chart-tick">${chartLabels[i]}</div>
+    </div>`).join('');
 }
 
-// Tab switching
-function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  const tabs = ['overview','menu','customers','revenue','settings'];
-  const idx = tabs.indexOf(tab);
-  document.querySelectorAll('.tab')[idx].classList.add('active');
-  document.getElementById('tab-' + tab).classList.add('active');
-  if (tab === 'menu') renderMenu(currentFilter);
-  if (tab === 'revenue') renderChart();
-}
-
-// Status toggle
-let stallOpen = true;
-function toggleStallStatus() {
-  stallOpen = !stallOpen;
-  const badge = document.getElementById('stall-status-badge');
-  const btn = document.querySelector('.btn-primary');
-  if (stallOpen) {
-    badge.className = 'status-badge badge-open';
-    badge.innerHTML = '<span class="status-dot dot-open"></span> Đang mở cửa';
-    btn.textContent = '⏸ Đóng cửa tạm';
-    showToast('✅ Gian hàng đã mở cửa');
-  } else {
-    badge.className = 'status-badge badge-closed';
-    badge.innerHTML = '<span class="status-dot dot-closed"></span> Đã đóng cửa';
-    btn.textContent = '▶ Mở cửa lại';
-    showToast('⏸ Gian hàng đã đóng cửa tạm');
-  }
-}
-
-// Modal
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
+document.querySelectorAll('.modal-overlay').forEach(o =>
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); }));
 
-// Toast
-let toastTimer;
+let toastT;
 function showToast(msg) {
-  clearTimeout(toastTimer);
-  document.getElementById('toast-msg').textContent = msg;
-  document.getElementById('toast').classList.add('show');
-  toastTimer = setTimeout(() => document.getElementById('toast').classList.remove('show'), 3000);
+  clearTimeout(toastT);
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  toastT = setTimeout(() => t.classList.remove('show'), 3000);
 }
 
-// Clock
-function updateClock() {
-  const now = new Date();
-  document.getElementById('clock').textContent = now.toLocaleTimeString('vi-VN');
-  document.getElementById('last-update').textContent = now.toLocaleTimeString('vi-VN', {hour:'2-digit',minute:'2-digit'});
-}
-updateClock(); setInterval(updateClock, 1000);
-
-// Init
-renderMenu('all');
+renderChart('dash-chart');
 </script>
 </body>
 </html>
