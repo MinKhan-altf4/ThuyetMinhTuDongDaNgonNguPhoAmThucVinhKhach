@@ -68,15 +68,23 @@ switch ($action) {
         getDishes($conn);
         break;
     default:
-        // backward-compatible: trả danh sách restaurant đơn giản
-        getLegacyPOIs($conn);
+        // ──────────────────────────────────────────
+        // Lấy 1 POI theo id:  ?id=7
+        // ──────────────────────────────────────────
+        if (isset($_GET['id'])) {
+            getPOIById($conn, (int)$_GET['id']);
+        } else {
+            // backward-compatible: trả danh sách restaurant đơn giản
+            getLegacyPOIs($conn);
+        }
         break;
 }
 
 // =====================================================
-// ENDPOINT: /api.php (legacy, backward compatible)
+// ENDPOINT: /api.php (default) — trả POI với đa ngôn ngữ
 // =====================================================
 function getLegacyPOIs($conn) {
+    // Lấy restaurant + audio tiếng Việt (mặc định)
     $sql = "SELECT
                 r.restaurant_id  AS id,
                 r.name,
@@ -103,22 +111,146 @@ function getLegacyPOIs($conn) {
 
     $pois = [];
     while ($row = $result->fetch_assoc()) {
+        $id = (int)$row['id'];
+
+        // Lấy translations đa ngôn ngữ
+        $translations = getTranslationsForRestaurant($conn, $id);
+
         $pois[] = [
-            'id'          => (int)$row['id'],
-            'name'        => $row['name'],
-            'description' => $row['description'],
-            'latitude'    => (float)$row['latitude'],
-            'longitude'   => (float)$row['longitude'],
-            'address'     => $row['address'],
-            'open_hour'   => $row['open_hour'],
-            'close_hour'  => $row['close_hour'],
-            'rating'      => (float)$row['rating'],
-            'phone'       => $row['phone'],
-            'audio_url'   => $row['audio_url'],
+            'id'           => $id,
+            'name'         => $row['name'],
+            'description'  => $row['description'],
+            'latitude'     => (float)$row['latitude'],
+            'longitude'    => (float)$row['longitude'],
+            'address'      => $row['address'],
+            'open_hour'    => $row['open_hour'],
+            'close_hour'   => $row['close_hour'],
+            'rating'       => (float)$row['rating'],
+            'phone'        => $row['phone'],
+            'audio_url'    => $row['audio_url'],
+            'translations' => $translations,  // ← đa ngôn ngữ
         ];
     }
 
-    sendJson(true, $pois, null, "Danh sách POI (legacy)");
+    sendJson(true, $pois, null, "Danh sách POI với đa ngôn ngữ");
+}
+
+// =====================================================
+// ENDPOINT: /api.php?id=7 — lấy 1 POI theo id
+// =====================================================
+function getPOIById($conn, $id) {
+    if ($id <= 0) {
+        sendJson(false, null, "id không hợp lệ");
+        return;
+    }
+
+    $stmt = $conn->prepare(
+        "SELECT
+            r.restaurant_id  AS id,
+            r.name,
+            r.description,
+            r.lat            AS latitude,
+            r.lng            AS longitude,
+            r.address,
+            r.open_hour,
+            r.close_hour,
+            r.rating,
+            r.phone,
+            (SELECT image_url FROM restaurant_image WHERE restaurant_id = r.restaurant_id AND is_primary = 1 LIMIT 1) AS image_url
+        FROM restaurant r
+        WHERE r.restaurant_id = ?
+        LIMIT 1"
+    );
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($row = $result->fetch_assoc()) {
+        $poiId = (int)$row['id'];
+
+        // Lấy audio đa ngôn ngữ
+        $audio = getAudioForRestaurant($conn, $poiId);
+
+        // Lấy translations
+        $translations = getTranslationsForRestaurant($conn, $poiId);
+
+        $poi = [
+            'id'           => $poiId,
+            'name'         => $row['name'],
+            'description'  => $row['description'],
+            'latitude'     => (float)$row['latitude'],
+            'longitude'    => (float)$row['longitude'],
+            'address'      => $row['address'],
+            'open_hour'    => $row['open_hour'],
+            'close_hour'   => $row['close_hour'],
+            'rating'       => (float)$row['rating'],
+            'phone'        => $row['phone'],
+            'audio_url'    => $audio['vi']['url'] ?? null,
+            'audio'        => $audio,
+            'translations' => $translations,
+        ];
+
+        Debug("getPOIById: Tìm thấy POI #{$poiId}: {$row['name']}");
+        $stmt->close();
+        sendJson(true, $poi, null, "POI #{$poiId}");
+    } else {
+        Debug("getPOIById: Không tìm thấy POI #{$id}");
+        $stmt->close();
+        sendJson(false, null, "Không tìm thấy POI với id = {$id}");
+    }
+}
+
+// Debug helper
+function Debug($msg) {
+    error_log("[API] " . $msg);
+}
+
+// =====================================================
+// HELPER: Translations đa ngôn ngữ cho 1 restaurant
+// =====================================================
+function getTranslationsForRestaurant($conn, $restaurantId) {
+    // languages: vi=1, en=2, zh=3, jp=4, kr=5
+    $langMap = [
+        1 => 'vi',
+        2 => 'en',
+        3 => 'zh',
+        4 => 'jp',
+        5 => 'kr',
+    ];
+
+    // Lấy tất cả audio của restaurant → audio_url theo ngôn ngữ
+    $sql = "SELECT a.language_id, a.audio_url, a.duration, a.version
+            FROM audio a
+            WHERE a.restaurant_id = ? AND a.is_active = 1";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("i", $restaurantId);
+    $stmt->execute();
+    $audioResult = $stmt->get_result();
+
+    $audioMap = [];
+    while ($ar = $audioResult->fetch_assoc()) {
+        $code = $langMap[(int)$ar['language_id']] ?? null;
+        if ($code) {
+            $audioMap[$code] = [
+                'url'      => $ar['audio_url'],
+                'duration' => (int)$ar['duration'],
+                'version'  => (int)$ar['version'],
+            ];
+        }
+    }
+    $stmt->close();
+
+    // Translations = name/description cho mỗi ngôn ngữ
+    // Tiếng Việt (id=1) dùng dữ liệu gốc từ restaurant, không cần join
+    $translations = [
+        'vi' => ['name' => null, 'description' => null], // null = dùng name/description gốc
+    ];
+
+    foreach ([2 => 'en', 3 => 'zh', 4 => 'jp', 5 => 'kr'] as $lid => $code) {
+        $translations[$code] = ['name' => null, 'description' => null];
+    }
+
+    return $translations;
 }
 
 // =====================================================
@@ -152,22 +284,24 @@ function getRestaurants($conn) {
     while ($row = $result->fetch_assoc()) {
         $id = (int)$row['id'];
 
-        // Lấy audio cho tất cả ngôn ngữ
+        // Lấy audio + translations cho tất cả ngôn ngữ
         $audio = getAudioForRestaurant($conn, $id);
+        $translations = getTranslationsForRestaurant($conn, $id);
 
         $restaurants[] = [
-            'id'          => $id,
-            'name'        => $row['name'],
-            'description' => $row['description'],
-            'latitude'    => (float)$row['lat'],
-            'longitude'   => (float)$row['lng'],
-            'address'     => $row['address'],
-            'open_hour'   => $row['open_hour'],
-            'close_hour'  => $row['close_hour'],
-            'rating'      => (float)$row['rating'],
-            'phone'       => $row['phone'],
-            'image_url'   => $row['image_url'],
-            'audio'       => $audio,
+            'id'           => $id,
+            'name'         => $row['name'],
+            'description'  => $row['description'],
+            'latitude'     => (float)$row['lat'],
+            'longitude'    => (float)$row['lng'],
+            'address'      => $row['address'],
+            'open_hour'    => $row['open_hour'],
+            'close_hour'   => $row['close_hour'],
+            'rating'       => (float)$row['rating'],
+            'phone'        => $row['phone'],
+            'image_url'    => $row['image_url'],
+            'audio'        => $audio,
+            'translations' => $translations,
         ];
     }
 
@@ -254,7 +388,7 @@ function getAudio($conn) {
         return;
     }
 
-    $langMap = ['vi' => 1, 'en' => 2, 'zh' => 3, 'jp' => 4];
+    $langMap = ['vi' => 1, 'en' => 2, 'zh' => 3, 'jp' => 4, 'kr' => 5];
     $langId = $langMap[$lang] ?? 1;
 
     $sql = "SELECT audio_url, duration, version, last_updated

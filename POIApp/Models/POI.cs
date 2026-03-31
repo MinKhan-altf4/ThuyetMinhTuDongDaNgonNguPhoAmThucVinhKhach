@@ -1,12 +1,17 @@
+using System.Globalization;
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using POIApp.Services;
 
 namespace POIApp.Models;
 
 public class POI
 {
     [JsonPropertyName("id")]
+    [JsonConverter(typeof(StringToIntConverter))]
     public int Id { get; set; }
 
+    // Tiếng Việt (mặc định / fallback)
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;
 
@@ -29,6 +34,7 @@ public class POI
     public string? CloseHour { get; set; }
 
     [JsonPropertyName("rating")]
+    [JsonConverter(typeof(StringToFloatConverter))]
     public float Rating { get; set; }
 
     [JsonPropertyName("phone")]
@@ -40,7 +46,12 @@ public class POI
     [JsonPropertyName("audio_url")]
     public string? AudioUrl { get; set; }
 
-    // ── Multi-language ──
+    // ── Multi-language (map từ API: translations.name_<lang>, translations.description_<lang>) ──
+    // Format: { "vi": { "name": "...", "description": "..." }, "en": { "name": "...", "description": "..." }, ... }
+    [JsonPropertyName("translations")]
+    public Dictionary<string, TranslationSet>? Translations { get; set; }
+
+    // Legacy: fallback trường riêng (vẫn giữ tương thích ngược)
     [JsonPropertyName("name_en")]
     public string? NameEn { get; set; }
 
@@ -53,18 +64,59 @@ public class POI
     [JsonPropertyName("description_zh")]
     public string? DescriptionZh { get; set; }
 
-    [JsonPropertyName("audio_en_base64")]
-    public string? AudioEnBase64 { get; set; }
+    [JsonPropertyName("name_jp")]
+    public string? NameJp { get; set; }
 
-    [JsonPropertyName("audio_en_file")]
-    public string? AudioEnFile { get; set; }
+    [JsonPropertyName("description_jp")]
+    public string? DescriptionJp { get; set; }
 
-    // ── Display (computed, language-aware) ──
+    [JsonPropertyName("name_kr")]
+    public string? NameKr { get; set; }
+
+    [JsonPropertyName("description_kr")]
+    public string? DescriptionKr { get; set; }
+
+    // ── Display (computed, language-aware — sử dụng TranslationSet) ──
     [JsonIgnore]
-    public string DisplayName => Name;
+    public string DisplayName
+    {
+        get
+        {
+            var lang = LocalizationService.Instance.CurrentLanguage;
+            return GetLocalizedText(lang, Name, static p => p.Name);
+        }
+    }
 
     [JsonIgnore]
-    public string DisplayDescription => Description;
+    public string DisplayDescription
+    {
+        get
+        {
+            var lang = LocalizationService.Instance.CurrentLanguage;
+            return GetLocalizedText(lang, Description, static p => p.Description);
+        }
+    }
+
+    /// <summary>
+    /// Lấy text theo ngôn ngữ ưu tiên, fallback về tiếng Việt, cuối cùng là default.
+    /// Ưu tiên: TranslationSet (từ API) → legacy field → default
+    /// </summary>
+    private string GetLocalizedText(string lang, string defaultVal, Func<POI, string?> legacySelector)
+    {
+        // 1. Thử Translations (từ API mới)
+        if (Translations != null && Translations.TryGetValue(lang, out var ts))
+            return !string.IsNullOrWhiteSpace(ts.Name) ? ts.Name : defaultVal;
+
+        // 2. Fallback legacy field (backward-compatible)
+        return lang switch
+        {
+            "en" => legacySelector(this) ?? defaultVal,
+            "zh" => legacySelector(this) ?? defaultVal,
+            "jp" => legacySelector(this) ?? defaultVal,
+            "kr" => legacySelector(this) ?? defaultVal,  // thống nhất: "kr" (ko fallback để tương thích)
+            _ => defaultVal
+        };
+    }
 
     // ── Navigation helpers ──
     [JsonIgnore]
@@ -72,6 +124,18 @@ public class POI
 
     [JsonIgnore]
     public bool IsNear { get; set; }
+}
+
+/// <summary>
+/// Bộ name + description cho 1 ngôn ngữ, map từ JSON: translations["vi"] = { name, description }
+/// </summary>
+public class TranslationSet
+{
+    [JsonPropertyName("name")]
+    public string? Name { get; set; }
+
+    [JsonPropertyName("description")]
+    public string? Description { get; set; }
 }
 
 public class POIResponse
@@ -87,4 +151,61 @@ public class POIResponse
 
     [JsonPropertyName("error")]
     public string? Error { get; set; }
+}
+
+public class StringToDoubleConverter : JsonConverter<double>
+{
+    public override double Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return reader.TokenType switch
+        {
+            JsonTokenType.Number => reader.GetDouble(),
+            JsonTokenType.String => double.TryParse(reader.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0,
+            JsonTokenType.Null => 0,
+            _ => 0
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, double value, JsonSerializerOptions options)
+    {
+        writer.WriteNumberValue(value);
+    }
+}
+
+public class StringToFloatConverter : JsonConverter<float>
+{
+    public override float Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return reader.TokenType switch
+        {
+            JsonTokenType.Number => reader.GetSingle(),
+            JsonTokenType.String => float.TryParse(reader.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0f,
+            JsonTokenType.Null => 0f,
+            _ => 0f
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, float value, JsonSerializerOptions options)
+    {
+        writer.WriteNumberValue(value);
+    }
+}
+
+public class StringToIntConverter : JsonConverter<int>
+{
+    public override int Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return reader.TokenType switch
+        {
+            JsonTokenType.Number => reader.GetInt32(),
+            JsonTokenType.String => int.TryParse(reader.GetString(), out var v) ? v : 0,
+            JsonTokenType.Null => 0,
+            _ => 0
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, int value, JsonSerializerOptions options)
+    {
+        writer.WriteNumberValue(value);
+    }
 }

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="POIApp.POIPage"
+             Title="Danh sách POI">
+
+    <Grid RowSpacing="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Frame Grid.Row="0"
+               Padding="16,12"
+               BackgroundColor="#1565C0"
+               CornerRadius="0"
+               HasShadow="False">
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Địa điểm ẩm thực"
+                       FontSize="20"
+                       FontAttributes="Bold"
+                       TextColor="White" />
+                <Label x:Name="LblSubtitle"
+                       Text="TP.HCM · 12 địa điểm"
+                       FontSize="13"
+                       TextColor="#BBDEFB" />
+            </VerticalStackLayout>
+        </Frame>
+
+        <!-- POI List -->
+        <ScrollView Grid.Row="1" Padding="0">
+            <VerticalStackLayout Spacing="0" Padding="0">
+
+                <!-- Loading -->
+                <ActivityIndicator x:Name="LoadingIndicator"
+                                   IsRunning="False"
+                                   IsVisible="False"
+                                   Color="#1565C0"
+                                   HorizontalOptions="Center"
+                                   Margin="0,20,0,0" />
+
+                <!-- POI Cards -->
+                <VerticalStackLayout x:Name="POIListContainer" Spacing="12" Padding="12" />
+
+                <!-- Empty state -->
+                <VerticalStackLayout x:Name="EmptyState"
+                                     IsVisible="False"
+                                     HorizontalOptions="Center"
+                                     Margin="0,60,0,0"
+                                     Spacing="12">
+                    <Label Text="🍽️" FontSize="48" HorizontalOptions="Center" />
+                    <Label Text="Không tìm thấy địa điểm"
+                           FontSize="16"
+                           TextColor="#9E9E9E"
+                           HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

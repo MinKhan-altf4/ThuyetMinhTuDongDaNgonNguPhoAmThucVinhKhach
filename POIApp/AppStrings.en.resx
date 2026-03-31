@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true" />
+  </xsd:schema>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter</value></resheader>
+
+  <data name="TabMap" xml:space="preserve"><value>🗺️ Map</value></data>
+  <data name="TabPOI" xml:space="preserve"><value>🍽️ Places</value></data>
+  <data name="TabSettings" xml:space="preserve"><value>⚙️ Settings</value></data>
+  <data name="SearchPlaceholder" xml:space="preserve"><value>Search Vinh Khánh restaurants...</value></data>
+  <data name="GettingLocation" xml:space="preserve"><value>Getting location...</value></data>
+  <data name="NoPOIData" xml:space="preserve"><value>No POI data</value></data>
+  <data name="NearPlaces" xml:space="preserve"><value>Nearby places</value></data>
+  <data name="Distance" xml:space="preserve"><value>Distance: {0}m</value></data>
+  <data name="Coords" xml:space="preserve"><value>Coords: {0:F6}, {1:F6}</value></data>
+  <data name="Description" xml:space="preserve"><value>Description</value></data>
+  <data name="CommentaryLanguage" xml:space="preserve"><value>Commentary language</value></data>
+  <data name="Play" xml:space="preserve"><value>▶ Play</value></data>
+  <data name="Pause" xml:space="preserve"><value>⏸ Pause</value></data>
+  <data name="Navigate" xml:space="preserve"><value>📍 Navigate here</value></data>
+  <data name="Close" xml:space="preserve"><value>Close</value></data>
+  <data name="ReadyToPlay" xml:space="preserve"><value>Ready to play commentary</value></data>
+  <data name="LoadingAudio" xml:space="preserve"><value>Loading audio...</value></data>
+  <data name="AudioError" xml:space="preserve"><value>Audio playback error</value></data>
+  <data name="Paused" xml:space="preserve"><value>Paused</value></data>
+  <data name="AllPlaces" xml:space="preserve"><value>All places</value></data>
+  <data name="OpenHours" xml:space="preserve"><value>Open: {0} - {1}</value></data>
+  <data name="Listen" xml:space="preserve"><value>🔊 Listen</value></data>
+  <data name="Directions" xml:space="preserve"><value>🧭 Directions</value></data>
+  <data name="VoiceOffline" xml:space="preserve"><value>🔊 Voice Offline</value></data>
+  <data name="VoiceOfflineDesc" xml:space="preserve"><value>Download English audio for offline playback, no internet required.</value></data>
+  <data name="DownloadVoicePackage" xml:space="preserve"><value>⬇ Download English Package</value></data>
+  <data name="OfflineNotDownloaded" xml:space="preserve"><value>Not downloaded · Size: ~12 MB</value></data>
+  <data name="Downloading" xml:space="preserve"><value>Downloading: {0}%</value></data>
+  <data name="DownloadSuccess" xml:space="preserve"><value>✅ Download complete!</value></data>
+  <data name="OfflineReady" xml:space="preserve"><value>Downloaded · Ready for offline</value></data>
+  <data name="DownloadFailed" xml:space="preserve"><value>❌ Download failed: {0}</value></data>
+  <data name="Retry" xml:space="preserve"><value>⬇ Retry</value></data>
+  <data name="VoiceSettings" xml:space="preserve"><value>🗣️ TTS Voice</value></data>
+  <data name="SelectVoice" xml:space="preserve"><value>Select commentary voice</value></data>
+  <data name="TestVoice" xml:space="preserve"><value>🔊 Test voice</value></data>
+  <data name="SystemDefaultVoice" xml:space="preserve"><value>System default voice</value></data>
+  <data name="VietnameseFemale" xml:space="preserve"><value>Vietnamese female voice</value></data>
+  <data name="VietnameseMale" xml:space="preserve"><value>Vietnamese male voice</value></data>
+  <data name="EnglishFemale" xml:space="preserve"><value>English female voice</value></data>
+  <data name="GPSSettings" xml:space="preserve"><value>📡 GPS Settings</value></data>
+  <data name="GPSSensitivity" xml:space="preserve"><value>GPS Sensitivity</value></data>
+  <data name="NotificationRadius" xml:space="preserve"><value>Notification radius</value></data>
+  <data name="SearchRadius" xml:space="preserve"><value>POI Search Radius</value></data>
+  <data name="BackgroundGPS" xml:space="preserve"><value>Background GPS</value></data>
+  <data name="BackgroundGPSDesc" xml:space="preserve"><value>Saves battery when app is in background</value></data>
+  <data name="About" xml:space="preserve"><value>ℹ️ About</value></data>
+  <data name="AppTitle" xml:space="preserve"><value>Auto Guide - Food App</value></data>
+  <data name="Version" xml:space="preserve"><value>Version</value></data>
+  <data name="SupportedLanguages" xml:space="preserve"><value>Supported</value></data>
+  <data name="MapCredit" xml:space="preserve"><value>Map: OpenStreetMap · Leaflet.js</value></data>
+  <data name="Language" xml:space="preserve"><value>Language</value></data>
+  <data name="SelectLanguage" xml:space="preserve"><value>Select commentary language</value></data>
+  <data name="CurrentLanguage" xml:space="preserve"><value>Current language: {0}</value></data>
+  <data name="Vietnamese" xml:space="preserve"><value>Tiếng Việt</value></data>
+  <data name="English" xml:space="preserve"><value>English</value></data>
+  <data name="Chinese" xml:space="preserve"><value>中文</value></data>
+  <data name="Korean" xml:space="preserve"><value>한국어</value></data>
+  <data name="TTSTestVI" xml:space="preserve"><value>Xin chào! Đây là giọng đọc thuyết minh tự động. Chúc bạn ngon miệng!</value></data>
+  <data name="TTSTestEN" xml:space="preserve"><value>Hello! This is the automatic tour guide voice. Enjoy your meal!</value></data>
+  <data name="TTSTestZH" xml:space="preserve"><value>您好！这是自动语音导览。祝您用餐愉快！</value></data>
+  <data name="TTSTestKO" xml:space="preserve"><value>안녕하세요! 이것은 자동 음성 가이드입니다. 맛있는 식사 되세요!</value></data>
+</root>

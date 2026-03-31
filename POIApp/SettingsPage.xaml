@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="POIApp.SettingsPage"
+             Title="Voice va Cai dat">
+
+    <ScrollView Padding="0">
+        <VerticalStackLayout Spacing="20" Padding="16">
+
+            <!-- Language Selection -->
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="LblLanguageHeader"
+                       Text="🌐 Ngôn ngữ"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#1565C0" />
+
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Label x:Name="LblLanguageDesc"
+                               Text="Chọn ngôn ngữ thuyết minh"
+                               FontSize="14"
+                               TextColor="#37474F" />
+
+                        <Picker x:Name="LangPicker"
+                                Title="Chọn ngôn ngữ"
+                                FontSize="14"
+                                SelectedIndexChanged="OnLanguageChanged" />
+
+                        <Label x:Name="LblCurrentLang"
+                               Text="Ngôn ngữ hiện tại: Tiếng Việt"
+                               FontSize="12"
+                               TextColor="#78909C" />
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- Voice Offline -->
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="LblVoiceOfflineHeader"
+                       Text="🔊 Voice Offline"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#1565C0" />
+
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Label x:Name="LblVoiceLang"
+                               FontSize="14"
+                               TextColor="#37474F" />
+                        <Label x:Name="LblVoiceDesc"
+                               FontSize="12"
+                               TextColor="#78909C"
+                               MaxLines="3" />
+
+                        <!-- Download progress -->
+                        <Frame x:Name="DownloadProgressFrame"
+                               IsVisible="False"
+                               BackgroundColor="#E3F2FD"
+                               CornerRadius="8"
+                               Padding="10"
+                               HasShadow="False">
+                            <VerticalStackLayout Spacing="6">
+                                <Label x:Name="LblDownloadStatus"
+                                       FontSize="12"
+                                       TextColor="#1565C0" />
+                                <ProgressBar x:Name="DownloadProgress"
+                                              ProgressColor="#1565C0"
+                                              HeightRequest="6" />
+                            </VerticalStackLayout>
+                        </Frame>
+
+                        <Button x:Name="BtnDownloadVoice"
+                                FontSize="13"
+                                HeightRequest="40"
+                                CornerRadius="20"
+                                BackgroundColor="#1565C0"
+                                TextColor="White"
+                                Clicked="OnDownloadVoiceClicked" />
+
+                        <Label x:Name="LblOfflineStatus"
+                               FontSize="11"
+                               TextColor="#90A4AE" />
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- TTS Settings -->
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="LblTTSHeader"
+                       Text="🗣️ Giọng TTS"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#1565C0" />
+
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Label x:Name="LblTTSDesc"
+                               FontSize="14"
+                               TextColor="#37474F" />
+
+                        <Picker x:Name="VoicePicker"
+                                Title="Chọn giọng TTS"
+                                FontSize="13">
+                            <Picker.ItemsSource>
+                                <x:Array Type="{x:Type x:String}">
+                                    <x:String>Giọng mặc định hệ thống</x:String>
+                                    <x:String>Giọng nữ tiếng Việt</x:String>
+                                    <x:String>Giọng nam tiếng Việt</x:String>
+                                    <x:String>Giọng nữ tiếng Anh</x:String>
+                                </x:Array>
+                            </Picker.ItemsSource>
+                        </Picker>
+
+                        <Button x:Name="BtnTestVoice"
+                                FontSize="13"
+                                HeightRequest="40"
+                                CornerRadius="20"
+                                BackgroundColor="#FF9800"
+                                TextColor="White"
+                                Clicked="OnTestVoiceClicked" />
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- GPS Settings -->
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="LblGPSHeader"
+                       Text="📡 Cài đặt GPS"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#1565C0" />
+
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="12">
+                        <VerticalStackLayout Spacing="4">
+                            <Label x:Name="LblGPSSensitivity"
+                                   FontSize="14"
+                                   TextColor="#37474F" />
+                            <Slider x:Name="SldGPSSensitivity"
+                                    Minimum="5"
+                                    Maximum="50"
+                                    Value="10"
+                                    MinimumTrackColor="#1565C0"
+                                    MaximumTrackColor="#BBDEFB"
+                                    ValueChanged="OnGPSSensitivityChanged" />
+                            <Label x:Name="LblGPSSensitivityValue"
+                                   FontSize="11"
+                                   TextColor="#78909C" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label x:Name="LblSearchRadius"
+                                   FontSize="14"
+                                   TextColor="#37474F" />
+                            <Slider x:Name="SldSearchRadius"
+                                    Minimum="100"
+                                    Maximum="2000"
+                                    Value="500"
+                                    MinimumTrackColor="#43A047"
+                                    MaximumTrackColor="#C8E6C9"
+                                    ValueChanged="OnSearchRadiusChanged" />
+                            <Label x:Name="LblSearchRadiusValue"
+                                   FontSize="11"
+                                   TextColor="#78909C" />
+                        </VerticalStackLayout>
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout>
+                                <Label x:Name="LblBackgroundGPS"
+                                       FontSize="14"
+                                       TextColor="#37474F" />
+                                <Label x:Name="LblBackgroundGPSDesc"
+                                       FontSize="11"
+                                       TextColor="#78909C" />
+                            </VerticalStackLayout>
+                            <Switch x:Name="SwBackgroundGPS"
+                                    Grid.Column="1"
+                                    IsToggled="True"
+                                    OnColor="#1565C0"
+                                    Toggled="OnBackgroundGPSChanged" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- About -->
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="LblAboutHeader"
+                       Text="ℹ️ Thông tin"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#1565C0" />
+
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="8">
+                        <Label x:Name="LblAppName"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="#37474F" />
+                        <Label x:Name="LblVersion"
+                               FontSize="12"
+                               TextColor="#78909C" />
+                        <Label x:Name="LblSupportedLangs"
+                               FontSize="12"
+                               TextColor="#78909C" />
+                        <Label x:Name="LblMapCredit"
+                               FontSize="12"
+                               TextColor="#78909C" />
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+
+            <BoxView HeightRequest="40" Color="Transparent" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

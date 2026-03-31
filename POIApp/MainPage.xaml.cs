@@ -67,8 +67,12 @@ public partial class MainPage : ContentPage
         // Load cache analytics
         LoadAnalyticsOnStart();
 
-        // Tải POI
-        LoadPOIsAsync();
+        // Tải POI (fire-and-forget với error handling)
+        _ = LoadPOIsAsync().ContinueWith(t =>
+        {
+            if (t.IsFaulted)
+                Debug.WriteLine("[MainPage] ❌ LoadPOIsAsync bắt exception: " + t.Exception?.Flatten().Message);
+        }, TaskScheduler.Default);
     }
 
     // =====================================================
