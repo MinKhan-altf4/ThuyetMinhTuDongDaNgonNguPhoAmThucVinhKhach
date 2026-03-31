@@ -8,7 +8,7 @@
         <Grid.RowDefinitions>
             <!-- Row 0: Search bar -->
             <RowDefinition Height="Auto" />
-            <!-- Row 1: Map (full height, overlays float on top) -->
+            <!-- Row 1: Map area (contains map + overlay panels) -->
             <RowDefinition Height="*" />
             <!-- Row 2: Bottom POI chips bar -->
             <RowDefinition Height="Auto" />
@@ -52,8 +52,8 @@
             </Grid>
         </Frame>
 
-        <!-- ── MAP AREA (Row 1) — the only child in this row ── -->
-        <Grid Grid.Row="1">
+        <!-- ── MAP AREA (Row 1) — ZIndex overlay hoạt động đúng vì overlay nằm TRONG local Grid ── -->
+        <Grid Grid.Row="1" ZIndex="1">
 
             <!-- Map fills entire area -->
             <WebView x:Name="MapWebView"
@@ -114,7 +114,7 @@
                         Clicked="OnReloadPOIClicked" />
             </VerticalStackLayout>
 
-            <!-- POI Detail Panel (floats on map) -->
+            <!-- POI Detail Panel (floats on map, highest z-index) -->
             <Frame x:Name="POIDetailPanel"
                    VerticalOptions="End"
                    Margin="12,0,12,12"
@@ -123,7 +123,7 @@
                    CornerRadius="18"
                    HasShadow="True"
                    IsVisible="False"
-                   ZIndex="10">
+                   ZIndex="15">
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <Label x:Name="LblPOIName"
@@ -215,22 +215,26 @@
             </Frame>
         </Grid>
 
-        <!-- ── BOTTOM: POI CHIPS (Row 2) ── -->
-        <Frame Grid.Row="2"
-               BackgroundColor="White"
-               Padding="10,8"
-               CornerRadius="14,14,0,0"
-               HasShadow="True"
-               ZIndex="5">
-            <VerticalStackLayout Spacing="6">
-                <Label Text="Dia diem gan ban"
-                       FontSize="14"
-                       FontAttributes="Bold"
-                       TextColor="#263238" />
-                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
-                    <HorizontalStackLayout x:Name="POIChipsContainer" Spacing="8" />
-                </ScrollView>
-            </VerticalStackLayout>
-        </Frame>
+        <!-- ── BOTTOM: POI CHIPS (Row 2) — layout đơn giản không bo tròn ── -->
+        <Grid Grid.Row="2"
+              BackgroundColor="White"
+              Padding="12,10"
+              ZIndex="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Label Grid.Row="0"
+                   Text="Dia diem gan ban"
+                   FontSize="14"
+                   FontAttributes="Bold"
+                   TextColor="#263238"
+                   Margin="0,0,0,6" />
+            <ScrollView Grid.Row="1"
+                        Orientation="Horizontal"
+                        HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout x:Name="POIChipsContainer" Spacing="8" />
+            </ScrollView>
+        </Grid>
     </Grid>
 </ContentPage>
