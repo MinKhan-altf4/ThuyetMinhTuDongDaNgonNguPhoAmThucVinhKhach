@@ -252,7 +252,7 @@ public partial class MapPage : ContentPage
         var nearest = _pois.FirstOrDefault();
         if (nearest == null)
         {
-            LblNearestStatus.Text = "Khong co du lieu POI";
+            LblNearestStatus.Text = "Không có dữ liệu POI";
             return;
         }
         var icon = nearest.Distance < 400 ? "🎯" : (nearest.Distance <= 1000 ? "📍" : "📌");
@@ -309,8 +309,20 @@ public partial class MapPage : ContentPage
     private void CenterMapOnPOI(POI poi)
     {
         if (!_mapReady) return;
-        // Use EvaluateJavaScriptAsync to fly the map to the POI
-        var js = $"if(window.map){{map.flyTo([{poi.Latitude},{poi.Longitude}],18,{{animate:true,duration:1}});}}";
+        var inv = CultureInfo.InvariantCulture;
+        // Fly to POI: zoom +2 levels above current, smooth 1.2s animation, no map rebuild
+        var js = $@"
+if(window.map){{
+  var targetZoom=Math.min(map.getZoom()+2,19);
+  map.flyTo([{poi.Latitude.ToString(inv)},{poi.Longitude.ToString(inv)}],targetZoom,{{animate:true,duration:1.2}});
+  if(window._lastSelected!=={poi.Id}){{
+    var prev=document.querySelector('.poi-pin.selected');
+    if(prev){{prev.classList.remove('selected');var prevBody=prev.querySelector('.body');if(prevBody)prevBody.style.boxShadow='';}}
+    var cur=document.querySelector('[data-poi-id=""{poi.Id}""]');
+    if(cur){{cur.classList.add('selected');var curBody=cur.querySelector('.body');if(curBody)curBody.style.boxShadow='0 0 0 8px rgba(255,152,0,.3),0 4px 12px rgba(0,0,0,.3)';}}
+    window._lastSelected={poi.Id};
+  }}
+}}";
         MapWebView.EvaluateJavaScriptAsync(js);
     }
 
@@ -342,7 +354,6 @@ public partial class MapPage : ContentPage
         sb.Append($"var userLat={_userLat.ToString(inv)},userLng={_userLon.ToString(inv)};");
         sb.Append($"var map=L.map('map',{{zoomControl:false,attributionControl:false}}).setView([{cLat.ToString(inv)},{cLon.ToString(inv)}],16);");
         sb.Append("L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);");
-        sb.Append("L.control.zoom({position:'topright'}).addTo(map);");
         sb.Append(@"
 L.Control.Recenter=L.Control.extend({options:{position:'bottomright'},onAdd:function(){
   var btn=L.DomUtil.create('button','leaflet-bar leaflet-control');
@@ -376,8 +387,8 @@ new L.Control.Recenter().addTo(map);
 
             var nearClass = isNear ? "near" : "";
             var selClass = isSelected ? "selected" : "";
-            sb.Append($"var pin{poi.Id}=L.divIcon({{html:\"<div class='poi-pin {nearClass} {selClass}'><div class='body' style='background:{color};'>•</div><div class='tail' style='background:{color};'></div></div>\",className:'',iconSize:[36,46],iconAnchor:[18,46]}});");
-            sb.Append($"L.marker([{poi.Latitude.ToString(inv)},{poi.Longitude.ToString(inv)}],{{icon:pin{poi.Id}}}).addTo(map).on('click',function(){{window.location='poi://detail/{poi.Id}';}});");
+            sb.Append($"var pin{poi.Id}=L.divIcon({{html:\"<div class='poi-pin {nearClass} {selClass}' data-poi-id='{poi.Id}'><div class='body' style='background:{color};'>•</div><div class='tail' style='background:{color};'></div></div>\",className:'',iconSize:[36,46],iconAnchor:[18,46]}});");
+            sb.Append($"L.marker([{poi.Latitude.ToString(inv)},{poi.Longitude.ToString(inv)}],{{icon:pin{poi.Id},riseOnHover:true}}).addTo(map).on('click',function(){{window.location='poi://detail/{poi.Id}';}});");
 
             // Geofence circle: chỉ hiện khi gần (<400m)
             if (isNear)
@@ -393,12 +404,12 @@ new L.Control.Recenter().addTo(map);
     {
         _selectedPOI = poi;
         BindPOIDetailText(poi);
-        LblPOIDistance.Text = $"Khoang cach: {poi.Distance:F0}m";
+        LblPOIDistance.Text = $"Khoảng cách: {poi.Distance:F0}m";
         LblPOICoords.Text = $"{poi.Latitude:F6}, {poi.Longitude:F6}";
         LblPOIDistance.TextColor = poi.Distance < 400 ? Color.FromArgb("#43A047") : (poi.Distance <= 1000 ? Color.FromArgb("#FF9800") : Color.FromArgb("#EF5350"));
-        LblAudioStatus.Text = "San sang phat thuyet minh";
+        LblAudioStatus.Text = "Sẵn sàng phát thuyết minh";
         POIDetailPanel.IsVisible = true;
-        RefreshMap();
+        // No RefreshMap() — marker state updated via JS in CenterMapOnPOI
     }
 
     private void BindPOIDetailText(POI poi)
@@ -413,7 +424,16 @@ new L.Control.Recenter().addTo(map);
         _selectedPOI = null;
         _offlineAudioService.Stop();
         _ttsService.Stop();
-        RefreshMap();
+        // Reset marker style via JS — no map rebuild
+        if (_mapReady)
+        {
+            MapWebView.EvaluateJavaScriptAsync(@"
+if(window._lastSelected!==undefined){
+  var el=document.querySelector('[data-poi-id=""'+window._lastSelected+'""]');
+  if(el){el.classList.remove('selected');var body=el.querySelector('.body');if(body)body.style.boxShadow='';}
+  window._lastSelected=null;
+}");
+        }
     }
 
     private async void OnPlayAudioClicked(object? sender, EventArgs e)
@@ -425,7 +445,7 @@ new L.Control.Recenter().addTo(map);
             BtnPlayAudio.IsEnabled = false;
             AudioLoading.IsRunning = true;
             AudioLoading.IsVisible = true;
-            LblAudioStatus.Text = "Dang tai...";
+            LblAudioStatus.Text = "Đang tải...";
 
             if (_selectedLanguage == LangEn)
             {
@@ -436,10 +456,19 @@ new L.Control.Recenter().addTo(map);
             }
             else
             {
-                // Ngôn ngữ khác (vi/zh/jp/kr) → dùng TTS
-                _offlineAudioService.Stop();
-                await _ttsService.SpeakAsync($"{_selectedPOI.DisplayName}. {_selectedPOI.DisplayDescription}");
-                LblAudioStatus.Text = $"Da phat TTS ({_selectedLanguage})";
+                // Tiếng Việt hoặc ngôn ngữ khác → thử audio offline trước
+                _ttsService.Stop();
+                var result = await _offlineAudioService.PlayAsync(_selectedPOI, _selectedLanguage);
+                if (result.Success)
+                {
+                    LblAudioStatus.Text = result.Message;
+                }
+                else
+                {
+                    // Audio offline không có → dùng TTS
+                    await _ttsService.SpeakAsync($"{_selectedPOI.DisplayName}. {_selectedPOI.DisplayDescription}");
+                    LblAudioStatus.Text = $"Đã phát TTS ({_selectedLanguage})";
+                }
             }
         }
         catch (Exception ex)
@@ -459,7 +488,7 @@ new L.Control.Recenter().addTo(map);
     {
         _offlineAudioService.Pause();
         _ttsService.Stop();
-        LblAudioStatus.Text = "Da tam dung";
+        LblAudioStatus.Text = "Đã tạm dừng";
     }
 
     private async void OnNavigateClicked(object? sender, EventArgs e)
@@ -480,6 +509,18 @@ new L.Control.Recenter().addTo(map);
     private void OnReloadPOIClicked(object? sender, EventArgs e)
     {
         _ = LoadPOIsAsync();
+    }
+
+    private void OnZoomInClicked(object? sender, EventArgs e)
+    {
+        if (!_mapReady) return;
+        MapWebView.EvaluateJavaScriptAsync("if(window.map){map.zoomIn();}");
+    }
+
+    private void OnZoomOutClicked(object? sender, EventArgs e)
+    {
+        if (!_mapReady) return;
+        MapWebView.EvaluateJavaScriptAsync("if(window.map){map.zoomOut();}");
     }
 
     private void OnClearSearchClicked(object? sender, EventArgs e)
@@ -696,7 +737,7 @@ new L.Control.Recenter().addTo(map);
             if (_pois.Count == 0)
             {
                 Debug.WriteLine("[Map] ⚠️  KHÔNG có POI nào — kiểm tra: (1) API có chạy? (2) MySQL có start? (3) database đã import?");
-                LblNearestStatus.Text = "Khong co du lieu POI - kiem tra API/database";
+                LblNearestStatus.Text = "Không có dữ liệu POI - kiểm tra API/database";
                 // ❌ KHÔNG refresh map khi không có POI — tránh map trắng
                 return;
             }

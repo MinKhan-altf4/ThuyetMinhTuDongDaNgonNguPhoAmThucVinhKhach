@@ -170,9 +170,19 @@ public sealed class OfflineAudioService
 
     private async Task<string?> ResolveAudioFileAsync(POI poi, string languageCode)
     {
+        // Tiếng Việt → ưu tiên local offline trước server
+        if (languageCode.Equals("vi", StringComparison.OrdinalIgnoreCase))
+        {
+            var bundledName = $"audio/vi/poi_{poi.Id}_vi.mp3";
+            if (await IsBundledFileExistsAsync(bundledName))
+            {
+                return await CopyBundledToLocalAsync(poi.Id, bundledName);
+            }
+        }
+
+        // Tiếng Anh → dùng local nếu có
         if (languageCode.Equals("en", StringComparison.OrdinalIgnoreCase))
         {
-            // Use bundled offline English file only (simple + stable)
             var bundledName = $"audio/en/poi_{poi.Id}.mp3";
             if (await IsBundledFileExistsAsync(bundledName))
             {
@@ -180,6 +190,7 @@ public sealed class OfflineAudioService
             }
         }
 
+        // Ngôn ngữ khác hoặc local không có → trả null (dùng TTS)
         return null;
     }
 

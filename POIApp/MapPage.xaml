@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="POIApp.MapPage"
-             Title="Ban do Vinh Khánh">
+             Title="Bản đồ Thuyết minh Tự động đường Vĩnh Khánh">
 
     <Grid RowSpacing="0" ColumnSpacing="0">
         <Grid.RowDefinitions>
@@ -31,7 +31,7 @@
                        Margin="2,0,8,0" />
                 <Entry x:Name="SearchEntry"
                        Grid.Column="1"
-                       Placeholder="Tim nha hang Vinh Khánh..."
+                       Placeholder="Tìm nhà hàng Vĩnh Khánh..."
                        FontSize="14"
                        VerticalOptions="Center"
                        Completed="OnSearchCompleted"
@@ -70,7 +70,7 @@
                    ZIndex="5">
                 <VerticalStackLayout Spacing="2">
                     <Label x:Name="LblUserStatus"
-                           Text="Dang lay vi tri..."
+                           Text="Đang lấy vị trí..."
                            FontSize="12"
                            TextColor="#0D47A1" />
                     <Label x:Name="LblNearestStatus"
@@ -96,12 +96,34 @@
                 </ScrollView>
             </Frame>
 
-            <!-- Floating controls (bottom-left) -->
+            <!-- Floating controls (bottom-left, vertical stack: ZoomIn → ZoomOut → Refresh) -->
             <VerticalStackLayout VerticalOptions="End"
                                  HorizontalOptions="Start"
                                  Margin="12,0,0,12"
-                                 Spacing="8"
+                                 Spacing="6"
                                  ZIndex="10">
+                <Button x:Name="BtnZoomIn"
+                        Text="+"
+                        FontSize="20"
+                        FontAttributes="Bold"
+                        WidthRequest="48"
+                        HeightRequest="48"
+                        CornerRadius="24"
+                        Padding="0"
+                        BackgroundColor="White"
+                        TextColor="#1565C0"
+                        Clicked="OnZoomInClicked" />
+                <Button x:Name="BtnZoomOut"
+                        Text="−"
+                        FontSize="20"
+                        FontAttributes="Bold"
+                        WidthRequest="48"
+                        HeightRequest="48"
+                        CornerRadius="24"
+                        Padding="0"
+                        BackgroundColor="White"
+                        TextColor="#1565C0"
+                        Clicked="OnZoomOutClicked" />
                 <Button x:Name="BtnReloadPOI"
                         Text="🔄"
                         FontSize="18"
@@ -164,19 +186,18 @@
                     </HorizontalStackLayout>
 
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="Ngon ngu thuyet minh"
+                        <Label Text="Ngôn ngữ thuyết minh"
                                FontSize="12"
                                TextColor="#607D8B" />
                         <Picker x:Name="LanguagePicker"
-                                Title="Chon ngon ngu"
+                                Title="Chọn ngôn ngữ"
                                 FontSize="13"
                                 SelectedIndexChanged="OnLanguageChanged" />
                     </VerticalStackLayout>
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Button x:Name="BtnPlayAudio"
-                                Text="▶ Phat"
-                                FontSize="13"
+                                Text="▶ Phát"                                FontSize="13"
                                 HeightRequest="42"
                                 CornerRadius="21"
                                 BackgroundColor="#FF9800"
@@ -184,7 +205,7 @@
                                 Clicked="OnPlayAudioClicked" />
                         <Button Grid.Column="1"
                                 x:Name="BtnPauseAudio"
-                                Text="⏸ Tam dung"
+                                Text="⏸ Tạm dừng"
                                 FontSize="13"
                                 HeightRequest="42"
                                 CornerRadius="21"
@@ -204,7 +225,7 @@
                                        Color="#FF9800"
                                        HorizontalOptions="Center" />
 
-                    <Button Text="📍 Chi duong den day"
+                    <Button Text="📍 Chỉ đường đến đây"
                             FontSize="13"
                             HeightRequest="42"
                             CornerRadius="21"
@@ -225,7 +246,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Label Grid.Row="0"
-                   Text="Dia diem gan ban"
+                   Text="Địa điểm gần bạn"
                    FontSize="14"
                    FontAttributes="Bold"
                    TextColor="#263238"

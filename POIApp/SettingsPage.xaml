@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="POIApp.SettingsPage"
-             Title="Voice va Cai dat">
+             Title="Giọng nói và Cài đặt">
 
     <ScrollView Padding="0">
         <VerticalStackLayout Spacing="20" Padding="16">
