@@ -1,42 +1,99 @@
+import { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StatCard } from "@/components/StatCard";
 import { Users, Store, UtensilsCrossed, ShoppingCart } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
-const chartData = [
-  { name: "T1", revenue: 4200 },
-  { name: "T2", revenue: 3800 },
-  { name: "T3", revenue: 5100 },
-  { name: "T4", revenue: 4600 },
-  { name: "T5", revenue: 6200 },
-  { name: "T6", revenue: 5800 },
-  { name: "T7", revenue: 7100 },
-];
-
-const recentActivities = [
-  { action: "Chủ gian hàng mới đăng ký", name: "Nguyễn Văn A", time: "5 phút trước" },
-  { action: "Cập nhật thực đơn", name: "Gian hàng Phở Hà Nội", time: "15 phút trước" },
-  { action: "Đơn hàng mới", name: "#ORD-2024-0891", time: "32 phút trước" },
-  { action: "Phê duyệt tài khoản", name: "Trần Thị B", time: "1 giờ trước" },
-  { action: "Báo cáo doanh thu", name: "Gian hàng Bún Bò", time: "2 giờ trước" },
-];
+// Định nghĩa kiểu dữ liệu cho Typescript
+interface DashboardData {
+  stats: {
+    owners: number;
+    stores: number;
+    dishes: number;
+    ordersToday: number;
+  };
+  chartData: { name: string; revenue: number }[];
+  activities: { action: string; name: string; time: string }[];
+}
 
 export default function Dashboard() {
+  // 1. Khởi tạo State để lưu trữ dữ liệu từ DB
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // 2. Gọi API khi Component được mount
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Thay đổi URL này thành endpoint API thực tế của bạn
+        const response = await fetch("/api/admin/dashboard-stats");
+        const result = await response.json();
+        setData(result);
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <AdminLayout title="Đang tải...">
+        <div className="flex h-64 items-center justify-center">
+          <p className="text-muted-foreground">Đang lấy dữ liệu từ hệ thống...</p>
+        </div>
+      </AdminLayout>
+    );
+  }
+
   return (
     <AdminLayout title="Tổng quan">
       <div className="space-y-6">
+        {/* Thống kê từ bảng: users, restaurant, dish */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard title="Chủ gian hàng" value={128} change="+12 tháng này" changeType="positive" icon={Users} color="blue" />
-          <StatCard title="Gian hàng" value={156} change="+8 tháng này" changeType="positive" icon={Store} color="emerald" />
-          <StatCard title="Món ăn" value={1243} change="+45 tháng này" changeType="positive" icon={UtensilsCrossed} color="amber" />
-          <StatCard title="Đơn hàng hôm nay" value={89} change="-5% so với hôm qua" changeType="negative" icon={ShoppingCart} color="rose" />
+          <StatCard 
+            title="Chủ gian hàng" 
+            value={data?.stats.owners || 0} 
+            change="+1 mới" 
+            changeType="positive" 
+            icon={Users} 
+            color="blue" 
+          />
+          <StatCard 
+            title="Gian hàng" 
+            value={data?.stats.stores || 0} 
+            change="Khu vực Vĩnh Khánh" 
+            changeType="positive" 
+            icon={Store} 
+            color="emerald" 
+          />
+          <StatCard 
+            title="Món ăn" 
+            value={data?.stats.dishes || 0} 
+            change="Đang kinh doanh" 
+            changeType="positive" 
+            icon={UtensilsCrossed} 
+            color="amber" 
+          />
+          <StatCard 
+            title="Đơn hàng hôm nay" 
+            value={data?.stats.ordersToday || 0} 
+            change="Cần xử lý" 
+            changeType="neutral" 
+            icon={ShoppingCart} 
+            color="rose" 
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          {/* Biểu đồ doanh thu */}
           <div className="col-span-2 rounded-xl border bg-card p-5 shadow-sm animate-fade-in">
             <h3 className="mb-4 text-sm font-semibold text-card-foreground">Doanh thu theo tuần (triệu VND)</h3>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={chartData}>
+              <BarChart data={data?.chartData || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
@@ -53,10 +110,11 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
 
+          {/* Hoạt động lấy từ bảng restaurant hoặc users */}
           <div className="rounded-xl border bg-card p-5 shadow-sm animate-fade-in">
             <h3 className="mb-4 text-sm font-semibold text-card-foreground">Hoạt động gần đây</h3>
             <div className="space-y-4">
-              {recentActivities.map((activity, i) => (
+              {(data?.activities || []).map((activity, i) => (
                 <div key={i} className="flex items-start gap-3">
                   <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
                   <div className="min-w-0">
