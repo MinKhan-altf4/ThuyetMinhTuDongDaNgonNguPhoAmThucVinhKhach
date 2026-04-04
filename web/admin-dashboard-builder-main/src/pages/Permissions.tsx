@@ -2,6 +2,8 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { ShieldCheck } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth"; // ✅ import hook
+
 
 const permissions = [
   { id: 1, owner: "Nguyễn Văn A", stall: "Phở Hà Nội", canEdit: true, canDelete: false, canViewReports: true, canManageMenu: true },
@@ -10,9 +12,9 @@ const permissions = [
   { id: 4, owner: "Phạm Minh D", stall: "Bánh Mì 24h", canEdit: false, canDelete: false, canViewReports: false, canManageMenu: false },
 ];
 
-export default function Permissions() {
+export default function Permissions() {  const { handleLogout } = useAuth(); // ✅ dùng hook
   return (
-    <AdminLayout title="Phân quyền">
+    <AdminLayout title="Phân quyền" onLogout={handleLogout}>
       <div className="space-y-4 animate-fade-in">
         <div className="flex items-center gap-2 rounded-lg border bg-accent/50 p-4">
           <ShieldCheck className="h-5 w-5 text-primary" />

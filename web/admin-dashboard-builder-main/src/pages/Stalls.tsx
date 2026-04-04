@@ -2,6 +2,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, MapPin, Star } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth"; // ✅ import hook
 
 const stalls = [
   { id: 1, name: "Phở Hà Nội", owner: "Nguyễn Văn A", location: "Khu A - Số 12", rating: 4.8, dishes: 24, status: "open" },
@@ -19,8 +20,10 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function Stalls() {
+  const { handleLogout } = useAuth(); // ✅ dùng hook
+
   return (
-    <AdminLayout title="Quản lý Gian Hàng">
+    <AdminLayout title="Quản lý Gian Hàng" onLogout={handleLogout}>
       <div className="space-y-4 animate-fade-in">
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

@@ -1,25 +1,35 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/db'; // Import từ file bạn vừa tạo
+import { pool } from './db'; // Vì file db.ts nằm ngay cạnh file này
 
 export async function GET() {
   try {
-    // 1. Lấy tổng số chủ gian hàng (role admin)
+    // 1. Truy vấn lấy số lượng từ các bảng trong XAMPP
     const [users]: any = await pool.query("SELECT COUNT(*) as total FROM users WHERE role = 'admin'");
-    
-    // 2. Lấy tổng số nhà hàng
     const [restaurants]: any = await pool.query("SELECT COUNT(*) as total FROM restaurant");
-    
-    // 3. Lấy tổng số món ăn đang hoạt động
     const [dishes]: any = await pool.query("SELECT COUNT(*) as total FROM dish WHERE is_active = 1");
 
-    // Trả về dữ liệu JSON cho Frontend
+    // 2. Trả về kết quả JSON
     return NextResponse.json({
-      owners: users[0].total,
-      stores: restaurants[0].total,
-      foods: dishes[0].total,
-      ordersToday: 0 // Giả lập vì DB chưa có bảng đơn hàng
+      stats: {
+        owners: users[0]?.total || 0,
+        stores: restaurants[0]?.total || 0,
+        dishes: dishes[0]?.total || 0,
+        ordersToday: 0
+      },
+      chartData: [
+        { name: "T1", revenue: 4200 },
+        { name: "T2", revenue: 3800 }
+      ],
+      activities: [
+        { action: "Kết nối thành công", name: "MySQL XAMPP", time: "Vừa xong" }
+      ]
     });
+
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Lỗi kết nối:", error.message);
+    return NextResponse.json(
+      { error: "Lỗi kết nối MySQL qua XAMPP" }, 
+      { status: 500 }
+    );
   }
 }

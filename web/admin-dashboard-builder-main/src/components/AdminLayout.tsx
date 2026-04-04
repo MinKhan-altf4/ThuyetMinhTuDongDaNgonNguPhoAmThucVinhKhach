@@ -1,13 +1,17 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/AdminSidebar";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, LogOut } from "lucide-react"; // ✅ thêm LogOut
 
 interface AdminLayoutProps {
   children: React.ReactNode;
   title?: string;
+  onLogout?: () => void; // ✅ thêm prop
 }
 
-export function AdminLayout({ children, title }: AdminLayoutProps) {
+
+
+
+export function AdminLayout({ children, title, onLogout }: AdminLayoutProps) {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
@@ -29,6 +33,17 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
               <div className="ml-2 flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
                 A
               </div>
+
+              {/* ✅ Thêm nút đăng xuất */}
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="flex items-center gap-1.5 rounded-lg px-3 h-9 text-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Đăng xuất
+                </button>
+              )}
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6">

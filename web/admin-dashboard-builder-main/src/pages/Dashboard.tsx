@@ -3,8 +3,8 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { StatCard } from "@/components/StatCard";
 import { Users, Store, UtensilsCrossed, ShoppingCart } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useNavigate } from "react-router-dom";
 
-// Định nghĩa kiểu dữ liệu cho Typescript
 interface DashboardData {
   stats: {
     owners: number;
@@ -17,16 +17,23 @@ interface DashboardData {
 }
 
 export default function Dashboard() {
-  // 1. Khởi tạo State để lưu trữ dữ liệu từ DB
+  const navigate = useNavigate(); // ✅ phải nằm TRONG component
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 2. Gọi API khi Component được mount
+  // ✅ Kiểm tra đăng nhập
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem("isAdminLoggedIn");
+    if (!isLoggedIn) {
+      navigate("/login");
+    }
+  }, []);
+
+  // Gọi API
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Thay đổi URL này thành endpoint API thực tế của bạn
-        const response = await fetch("/api/admin/dashboard-stats");
+        const response = await fetch("http://localhost:3000/api/stats");
         const result = await response.json();
         setData(result);
       } catch (error) {
@@ -39,9 +46,15 @@ export default function Dashboard() {
     fetchDashboardData();
   }, []);
 
+  // ✅ Hàm logout
+  const handleLogout = () => {
+    localStorage.removeItem("isAdminLoggedIn");
+    navigate("/login");
+  };
+
   if (loading) {
     return (
-      <AdminLayout title="Đang tải...">
+      <AdminLayout title="Đang tải..." onLogout={handleLogout}>
         <div className="flex h-64 items-center justify-center">
           <p className="text-muted-foreground">Đang lấy dữ liệu từ hệ thống...</p>
         </div>
@@ -50,46 +63,44 @@ export default function Dashboard() {
   }
 
   return (
-    <AdminLayout title="Tổng quan">
+    <AdminLayout title="Tổng quan" onLogout={handleLogout}>
       <div className="space-y-6">
-        {/* Thống kê từ bảng: users, restaurant, dish */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard 
-            title="Chủ gian hàng" 
-            value={data?.stats.owners || 0} 
-            change="+1 mới" 
-            changeType="positive" 
-            icon={Users} 
-            color="blue" 
+          <StatCard
+            title="Chủ gian hàng"
+            value={data?.stats.owners || 0}
+            change="+1 mới"
+            changeType="positive"
+            icon={Users}
+            color="blue"
           />
-          <StatCard 
-            title="Gian hàng" 
-            value={data?.stats.stores || 0} 
-            change="Khu vực Vĩnh Khánh" 
-            changeType="positive" 
-            icon={Store} 
-            color="emerald" 
+          <StatCard
+            title="Gian hàng"
+            value={data?.stats.stores || 0}
+            change="Khu vực Vĩnh Khánh"
+            changeType="positive"
+            icon={Store}
+            color="emerald"
           />
-          <StatCard 
-            title="Món ăn" 
-            value={data?.stats.dishes || 0} 
-            change="Đang kinh doanh" 
-            changeType="positive" 
-            icon={UtensilsCrossed} 
-            color="amber" 
+          <StatCard
+            title="Món ăn"
+            value={data?.stats.dishes || 0}
+            change="Đang kinh doanh"
+            changeType="positive"
+            icon={UtensilsCrossed}
+            color="amber"
           />
-          <StatCard 
-            title="Đơn hàng hôm nay" 
-            value={data?.stats.ordersToday || 0} 
-            change="Cần xử lý" 
-            changeType="neutral" 
-            icon={ShoppingCart} 
-            color="rose" 
+          <StatCard
+            title="Đơn hàng hôm nay"
+            value={data?.stats.ordersToday || 0}
+            change="Cần xử lý"
+            changeType="neutral"
+            icon={ShoppingCart}
+            color="rose"
           />
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Biểu đồ doanh thu */}
           <div className="col-span-2 rounded-xl border bg-card p-5 shadow-sm animate-fade-in">
             <h3 className="mb-4 text-sm font-semibold text-card-foreground">Doanh thu theo tuần (triệu VND)</h3>
             <ResponsiveContainer width="100%" height={280}>
@@ -110,7 +121,6 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
 
-          {/* Hoạt động lấy từ bảng restaurant hoặc users */}
           <div className="rounded-xl border bg-card p-5 shadow-sm animate-fade-in">
             <h3 className="mb-4 text-sm font-semibold text-card-foreground">Hoạt động gần đây</h3>
             <div className="space-y-4">

@@ -3,10 +3,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/useAuth"; // ✅ import hook
 
 export default function SystemSettings() {
+  const { handleLogout } = useAuth(); // ✅ dùng hook
+
   return (
-    <AdminLayout title="Cài đặt Hệ thống">
+    <AdminLayout title="Cài đặt Hệ thống" onLogout={handleLogout}>
       <div className="max-w-2xl space-y-6 animate-fade-in">
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <h3 className="mb-4 font-semibold text-card-foreground">Thông tin hệ thống</h3>

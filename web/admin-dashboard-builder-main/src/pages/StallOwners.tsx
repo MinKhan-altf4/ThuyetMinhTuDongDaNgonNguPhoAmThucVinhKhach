@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Search, Plus, MoreHorizontal } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth"; // ✅ import hook
 
 const owners = [
   { id: 1, name: "Nguyễn Văn A", email: "vana@email.com", stall: "Phở Hà Nội", status: "active", joined: "15/01/2024" },
@@ -21,8 +22,10 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function StallOwners() {
+  const { handleLogout } = useAuth(); // ✅ dùng hook
+
   return (
-    <AdminLayout title="Quản lý Chủ Gian Hàng">
+    <AdminLayout title="Quản lý Chủ Gian Hàng" onLogout={handleLogout}>
       <div className="space-y-4 animate-fade-in">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-sm">
