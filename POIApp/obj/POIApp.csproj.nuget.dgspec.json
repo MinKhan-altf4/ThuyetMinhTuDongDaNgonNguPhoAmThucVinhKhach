@@ -1,25 +1,21 @@
 {
   "format": 1,
   "restore": {
-    "F:\\C#\\POIDemo\\POIApp\\POIApp.csproj": {}
+    "D:\\TMATTĐ\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj": {}
   },
   "projects": {
-    "F:\\C#\\POIDemo\\POIApp\\POIApp.csproj": {
+    "D:\\TMATTĐ\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "F:\\C#\\POIDemo\\POIApp\\POIApp.csproj",
+        "projectUniqueName": "D:\\TMATTĐ\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj",
         "projectName": "POIApp",
-        "projectPath": "F:\\C#\\POIDemo\\POIApp\\POIApp.csproj",
-        "packagesPath": "C:\\Users\\TGC\\.nuget\\packages\\",
-        "outputPath": "F:\\C#\\POIDemo\\POIApp\\obj\\",
+        "projectPath": "D:\\TMATTĐ\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj",
+        "packagesPath": "C:\\Users\\LOQ\\.nuget\\packages\\",
+        "outputPath": "D:\\TMATTĐ\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\obj\\",
         "projectStyle": "PackageReference",
         "crossTargeting": true,
-        "fallbackFolders": [
-          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-        ],
         "configFilePaths": [
-          "C:\\Users\\TGC\\AppData\\Roaming\\NuGet\\NuGet.Config",
-          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Users\\LOQ\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -34,15 +30,15 @@
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net10.0-android36.0": {
+          "net10.0-android": {
             "targetAlias": "net10.0-android",
             "projectReferences": {}
           },
-          "net10.0-ios26.2": {
+          "net10.0-ios": {
             "targetAlias": "net10.0-ios",
             "projectReferences": {}
           },
-          "net10.0-maccatalyst26.2": {
+          "net10.0-maccatalyst": {
             "targetAlias": "net10.0-maccatalyst",
             "projectReferences": {}
           },
@@ -64,7 +60,7 @@
         "SdkAnalysisLevel": "10.0.200"
       },
       "frameworks": {
-        "net10.0-android36.0": {
+        "net10.0-android": {
           "targetAlias": "net10.0-android",
           "dependencies": {
             "Microsoft.Extensions.Logging.Debug": {
@@ -74,12 +70,6 @@
             "Microsoft.Maui.Controls": {
               "target": "Package",
               "version": "[10.0.20, )"
-            },
-            "Microsoft.NET.ILLink.Tasks": {
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[10.0.4, )",
-              "autoReferenced": true
             }
           },
           "imports": [
@@ -93,24 +83,12 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[10.0.5, 10.0.5]"
-            }
-          ],
           "frameworkReferences": {
-            "Microsoft.Android": {
-              "privateAssets": "all"
-            },
-            "Microsoft.Android.Runtimes": {
-              "privateAssets": "all"
-            },
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -386,7 +364,7 @@
             "System.Xml.XPath.XDocument": "(,5.0.32767]"
           }
         },
-        "net10.0-ios26.2": {
+        "net10.0-ios": {
           "targetAlias": "net10.0-ios",
           "dependencies": {
             "Microsoft.Extensions.Logging.Debug": {
@@ -396,12 +374,6 @@
             "Microsoft.Maui.Controls": {
               "target": "Package",
               "version": "[10.0.20, )"
-            },
-            "Microsoft.NET.ILLink.Tasks": {
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[10.0.4, )",
-              "autoReferenced": true
             }
           },
           "imports": [
@@ -415,24 +387,12 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[10.0.5, 10.0.5]"
-            }
-          ],
           "frameworkReferences": {
-            "Microsoft.iOS": {
-              "privateAssets": "all"
-            },
-            "Microsoft.iOS.Runtimes": {
-              "privateAssets": "all"
-            },
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -708,7 +668,7 @@
             "System.Xml.XPath.XDocument": "(,5.0.32767]"
           }
         },
-        "net10.0-maccatalyst26.2": {
+        "net10.0-maccatalyst": {
           "targetAlias": "net10.0-maccatalyst",
           "dependencies": {
             "Microsoft.Extensions.Logging.Debug": {
@@ -718,16 +678,9 @@
             "Microsoft.Maui.Controls": {
               "target": "Package",
               "version": "[10.0.20, )"
-            },
-            "Microsoft.NET.ILLink.Tasks": {
-              "suppressParent": "All",
-              "target": "Package",
-              "version": "[10.0.4, )",
-              "autoReferenced": true
             }
           },
           "imports": [
-            "xamarinios10",
             "net461",
             "net462",
             "net47",
@@ -738,24 +691,12 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[10.0.5, 10.0.5]"
-            }
-          ],
           "frameworkReferences": {
-            "Microsoft.MacCatalyst": {
-              "privateAssets": "all"
-            },
-            "Microsoft.MacCatalyst.Runtimes": {
-              "privateAssets": "all"
-            },
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -1068,7 +1009,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.CSharp": "(,4.7.32767]",
             "Microsoft.VisualBasic": "(,10.4.32767]",
@@ -1346,18 +1287,6 @@
         }
       },
       "runtimes": {
-        "android-arm64": {
-          "#import": []
-        },
-        "android-x64": {
-          "#import": []
-        },
-        "iossimulator-x64": {
-          "#import": []
-        },
-        "maccatalyst-x64": {
-          "#import": []
-        },
         "win-x64": {
           "#import": []
         }
