@@ -94,7 +94,7 @@ public static class AppSettingsHelper
 
     // ── API Base URL ──
     private const string KeyApiBaseUrl = "api_base_url";
-    private const string DefaultApiBaseUrl = "http://10.0.2.2/POIApi/api.php";
+    private const string DefaultApiBaseUrl = "http://10.0.2.2/ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach/POIApi/api.php";
 
     public static string GetApiBaseUrl()
     {
