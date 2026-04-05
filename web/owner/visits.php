@@ -27,7 +27,7 @@ include 'header.php';
             <h2 class="text-2xl font-bold text-slate-800">Lượt ghé thăm</h2>
             <p class="text-sm text-slate-500">Thông tin khách hàng truy cập gian hàng</p>
         </div>
-        <button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all">Xuất báo cáo</button>
+        
     </div>
 
     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">

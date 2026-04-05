@@ -107,14 +107,67 @@ include 'header.php'; // header gộp (sidebar + topbar)
             </div>
         </div>
 
-        <!-- Thông báo -->
+        <!-- Thông báo Pop-up -->
         <?php if ($msg): ?>
-            <div class="rounded-xl px-4 py-3 text-sm font-medium
-                <?= $msg_type === 'ok'
-                    ? 'bg-emerald-50 border border-emerald-100 text-emerald-700'
-                    : 'bg-red-50 border border-red-100 text-red-600' ?>">
-                <?= htmlspecialchars($msg) ?>
+            <div id="notification" class="fixed top-6 right-6 z-50 animate-slide-in">
+                <div class="rounded-xl px-5 py-4 text-sm font-medium shadow-lg border backdrop-blur-sm flex items-center gap-3 max-w-sm
+                    <?= $msg_type === 'ok'
+                        ? 'bg-emerald-50/95 border-emerald-200 text-emerald-700'
+                        : 'bg-red-50/95 border-red-200 text-red-700' ?>">
+                    <div class="flex-shrink-0">
+                        <?= $msg_type === 'ok'
+                            ? '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>'
+                            : '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>'
+                        ?>
+                    </div>
+                    <span><?= htmlspecialchars($msg) ?></span>
+                    <button onclick="document.getElementById('notification').remove()" class="ml-2 opacity-70 hover:opacity-100 transition">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                    </button>
+                </div>
             </div>
+            <style>
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(400px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                @keyframes slideOut {
+                    from {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                    to {
+                        transform: translateX(400px);
+                        opacity: 0;
+                    }
+                }
+                .animate-slide-in {
+                    animation: slideIn 0.3s ease-out;
+                }
+                .animate-slide-out {
+                    animation: slideOut 0.3s ease-in forwards;
+                }
+            </style>
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const notification = document.getElementById('notification');
+                    if (notification) {
+                        setTimeout(function() {
+                            notification.classList.remove('animate-slide-in');
+                            notification.classList.add('animate-slide-out');
+                            setTimeout(function() {
+                                notification.remove();
+                            }, 300);
+                        }, 3500);
+                    }
+                });
+            </script>
         <?php endif; ?>
 
         <!-- Form hồ sơ cá nhân -->
