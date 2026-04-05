@@ -1,4 +1,3 @@
 <?php
-// seller/index.php — Redirect vào dashboard
-header('Location: /seller/pages/dashboard.php');
+header('Location: dashboard.php');
 exit;

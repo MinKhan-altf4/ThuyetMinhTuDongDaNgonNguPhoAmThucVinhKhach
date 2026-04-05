@@ -1,17 +1,15 @@
 <?php
-// seller/config.php — Kết nối database
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "food_app"; // Tên database từ file food_app.sql
 
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');           // XAMPP mặc định để trống
-define('DB_NAME', 'seller_app');
+$conn = new mysqli($servername, $username, $password, $dbname);
 
-$pdo = new PDO(
-    "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
-    DB_USER,
-    DB_PASS,
-    [
-        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-    ]
-);
+if ($conn->connect_error) {
+    die("Kết nối thất bại: " . $conn->connect_error);
+}
+
+// Thiết lập tiếng Việt có dấu
+$conn->set_charset("utf8mb4");
+?>

@@ -96,3 +96,92 @@ app.delete('/api/users/:id', async (req, res) => {
 });
 
 app.listen(3000, () => console.log('Backend đang chạy tại http://localhost:3000'));
+// Thêm vào server.js hiện tại của bạn
+// ============================================================
+// POST /api/visit — Ghi lượt truy cập khi khách mở trang nhà hàng
+// Gọi từ mobile app khi khách vào xem restaurant
+// ============================================================
+
+import UAParser from 'ua-parser-js'; // npm install ua-parser-js
+
+app.post('/api/visit', async (req, res) => {
+  const { restaurant_id, language_code, session_id } = req.body;
+
+  if (!restaurant_id) {
+    return res.status(400).json({ error: 'Thiếu restaurant_id' });
+  }
+
+  // Phát hiện loại thiết bị từ User-Agent
+  const ua = new UAParser(req.headers['user-agent']);
+  const deviceType = ua.getDevice().type || 'desktop'; // mobile / tablet / desktop
+
+  // Lấy IP thật (nếu dùng proxy/nginx)
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim()
+          || req.socket.remoteAddress
+          || null;
+
+  try {
+    await pool.query(
+      `INSERT INTO customer_visits
+         (restaurant_id, ip_address, device_type, language_code, session_id)
+       VALUES (?, ?, ?, ?, ?)`,
+      [restaurant_id, ip, deviceType, language_code || null, session_id || null]
+    );
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// GET /api/visit/stats — Thống kê lượt truy cập (cho Admin)
+// ============================================================
+
+app.get('/api/visit/stats', async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT * FROM v_visit_stats ORDER BY total_visits DESC");
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// GET /api/visit/stats/:restaurant_id — Thống kê 1 nhà hàng
+// ============================================================
+
+app.get('/api/visit/stats/:restaurant_id', async (req, res) => {
+  const { restaurant_id } = req.params;
+  try {
+    // Tổng quan
+    const [[summary]] = await pool.query(
+      "SELECT * FROM v_visit_stats WHERE restaurant_id = ?",
+      [restaurant_id]
+    );
+
+    // Theo ngày (7 ngày gần nhất)
+    const [byDay] = await pool.query(
+      `SELECT DATE(visited_at) AS date, COUNT(*) AS visits
+       FROM customer_visits
+       WHERE restaurant_id = ?
+         AND visited_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+       GROUP BY DATE(visited_at)
+       ORDER BY date ASC`,
+      [restaurant_id]
+    );
+
+    // Theo ngôn ngữ
+    const [byLanguage] = await pool.query(
+      `SELECT language_code, COUNT(*) AS visits
+       FROM customer_visits
+       WHERE restaurant_id = ?
+       GROUP BY language_code
+       ORDER BY visits DESC`,
+      [restaurant_id]
+    );
+
+    res.json({ summary, byDay, byLanguage });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
