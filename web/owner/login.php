@@ -14,6 +14,11 @@ require_once __DIR__ . '/config.php';
 
 $error = '';
 
+// Kiểm tra nếu bị kick ra vì account deleted
+if (!empty($_GET['expired'])) {
+    $error = '❌ Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = trim($_POST['email'] ?? '');
     $password = trim($_POST['password'] ?? '');
@@ -27,12 +32,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($user && password_verify($password, $user['password_hash'])) {
-            $_SESSION['user_id']       = $user['user_id'];
-            $_SESSION['user_name']     = $user['name'];
-            $_SESSION['user_email']    = $user['email'];
-            $_SESSION['restaurant_id'] = $user['restaurant_id'];
-            header('Location: dashboard.php');
-            exit;
+            // Kiểm tra xem user có nằm trong users_deleted không
+            $stmt_check = $pdo->prepare("SELECT deleted_id FROM users_deleted WHERE user_id = ? LIMIT 1");
+            $stmt_check->execute([$user['user_id']]);
+            $isDeleted = $stmt_check->fetch(PDO::FETCH_ASSOC);
+            
+            if ($isDeleted) {
+                $error = '❌ Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.';
+            } else {
+                $_SESSION['user_id']       = $user['user_id'];
+                $_SESSION['user_name']     = $user['name'];
+                $_SESSION['user_email']    = $user['email'];
+                $_SESSION['restaurant_id'] = $user['restaurant_id'];
+                header('Location: dashboard.php');
+                exit;
+            }
         } else {
             $error = 'Email hoặc mật khẩu không đúng.';
         }

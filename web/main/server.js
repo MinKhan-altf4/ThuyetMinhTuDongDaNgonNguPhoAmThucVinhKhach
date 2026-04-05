@@ -108,26 +108,164 @@ app.put('/api/users/:id', async (req, res) => {
     return res.status(400).json({ error: 'Thiếu tên' });
   }
   try {
-    await pool.query(
+    const [result] = await pool.query(
       "UPDATE users SET name = ?, email = ?, phone = ?, restaurant_id = ? WHERE user_id = ?",
       [name, email || null, phone || null, restaurant_id || null, id]
     );
-    res.json({ success: true });
+    res.json({ 
+      success: true,
+      message: 'Cập nhật thông tin thành công',
+      affectedRows: result.affectedRows
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// DELETE /api/users/:id — Xóa user
+// DELETE /api/users/:id — Xóa user (soft delete - backup first)
 // ============================================================
 app.delete('/api/users/:id', async (req, res) => {
   const { id } = req.params;
+  const connection = await pool.getConnection();
+  
   try {
-    await pool.query("DELETE FROM users WHERE user_id = ?", [id]);
-    res.json({ success: true });
+    // Bắt đầu transaction
+    await connection.beginTransaction();
+    
+    // 1. Lấy dữ liệu user cần xóa
+    const [user] = await connection.query(
+      "SELECT * FROM users WHERE user_id = ?",
+      [id]
+    );
+    
+    if (user.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Không tìm thấy user' });
+    }
+    
+    const userData = user[0];
+    
+    // 2. Insert vào bảng backup
+    await connection.query(
+      `INSERT INTO users_deleted (user_id, name, password_hash, email, phone, restaurant_id, created_at, deleted_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userData.user_id,
+        userData.name,
+        userData.password_hash,
+        userData.email || null,
+        userData.phone || null,
+        userData.restaurant_id || null,
+        userData.created_at,
+        'admin'
+      ]
+    );
+    
+    // 3. Xóa từ users table
+    await connection.query(
+      "DELETE FROM users WHERE user_id = ?",
+      [id]
+    );
+    
+    // 4. Commit transaction
+    await connection.commit();
+    
+    res.json({ 
+      success: true,
+      message: 'Đã xóa user và backup dữ liệu'
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Lỗi DELETE user:', error.message);
+    res.status(500).json({ error: error.message });
+  } finally {
+    connection.release();
+  }
+});
+
+// ============================================================
+// GET /api/users/deleted — Lấy danh sách users đã xóa
+// ============================================================
+app.get('/api/users/deleted', async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT 
+        ud.deleted_id,
+        ud.user_id,
+        ud.name,
+        ud.email,
+        ud.phone,
+        r.name as restaurant_name,
+        ud.created_at,
+        ud.deleted_at,
+        ud.deleted_by
+      FROM users_deleted ud
+      LEFT JOIN restaurant r ON ud.restaurant_id = r.restaurant_id
+      ORDER BY ud.deleted_at DESC
+    `);
+    res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// POST /api/users/restore/:id — Khôi phục user từ backup
+// ============================================================
+app.post('/api/users/restore/:id', async (req, res) => {
+  const { id } = req.params;
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    // 1. Lấy dữ liệu từ bảng backup
+    const [deleted] = await connection.query(
+      "SELECT * FROM users_deleted WHERE deleted_id = ?",
+      [id]
+    );
+    
+    if (deleted.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Không tìm thấy trong backup' });
+    }
+    
+    const userData = deleted[0];
+    
+    // 2. Insert lại vào users table
+    await connection.query(
+      `INSERT INTO users (user_id, name, password_hash, email, phone, restaurant_id, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [
+        userData.user_id,
+        userData.name,
+        userData.password_hash,
+        userData.email,
+        userData.phone,
+        userData.restaurant_id,
+        userData.created_at
+      ]
+    );
+    
+    // 3. Xóa từ bảng backup
+    await connection.query(
+      "DELETE FROM users_deleted WHERE deleted_id = ?",
+      [id]
+    );
+    
+    await connection.commit();
+    
+    res.json({ 
+      success: true,
+      message: 'Khôi phục user thành công'
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Lỗi restore user:', error.message);
+    res.status(500).json({ error: error.message });
+  } finally {
+    connection.release();
   }
 });
 

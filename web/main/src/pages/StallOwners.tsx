@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Trash2, X, Edit2 } from "lucide-react";
+import { Search, Plus, Trash2, X, Edit2, RotateCcw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom"; // Thêm dòng này
+import { useNavigate } from "react-router-dom";
 
 interface Restaurant {
   restaurant_id: number;
@@ -25,13 +25,26 @@ interface User {
   created_at: string;
 }
 
+interface DeletedUser {
+  deleted_id: number;
+  user_id: number;
+  name: string;
+  email: string;
+  phone: string;
+  restaurant_name: string;
+  deleted_at: string;
+  deleted_by: string;
+}
+
 export default function StallOwners() {
   const navigate = useNavigate();
   const { handleLogout } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
+  const [deletedUsers, setDeletedUsers] = useState<DeletedUser[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState("active");
 
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -40,10 +53,13 @@ export default function StallOwners() {
     email: "",
     phone: "",
     password: "",
-    restaurant_id: ""
+    restaurant_id: "null"
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalMessage, setSuccessModalMessage] = useState("");
 
   const fetchUsers = async () => {
     try {
@@ -54,6 +70,16 @@ export default function StallOwners() {
       console.error("Lỗi khi lấy danh sách users");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDeletedUsers = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/users/deleted");
+      const data = await res.json();
+      setDeletedUsers(data);
+    } catch {
+      console.error("Lỗi khi lấy danh sách deleted users");
     }
   };
 
@@ -69,6 +95,7 @@ export default function StallOwners() {
 
   useEffect(() => {
     fetchUsers();
+    fetchDeletedUsers();
     fetchRestaurants();
   }, []);
 
@@ -97,7 +124,7 @@ export default function StallOwners() {
         name: formData.name,
         email: formData.email || null,
         phone: formData.phone || null,
-        restaurant_id: formData.restaurant_id ? parseInt(formData.restaurant_id) : null
+        restaurant_id: formData.restaurant_id && formData.restaurant_id !== "null" ? parseInt(formData.restaurant_id) : null
       };
       
       if (!editingUser) {
@@ -116,6 +143,11 @@ export default function StallOwners() {
         return;
       }
       
+      const result = await res.json();
+      const message = editingUser ? "✅ Cập nhật thông tin thành công" : "✅ Thêm tài khoản thành công";
+      setSuccessModalMessage(message);
+      setShowSuccessModal(true);
+      
       resetForm();
       fetchUsers();
     } catch {
@@ -126,12 +158,48 @@ export default function StallOwners() {
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`Xóa tài khoản "${name}"?`)) return;
+    if (!confirm(`Xóa tài khoản "${name}"? Dữ liệu sẽ được backup.`)) return;
     try {
-      await fetch(`http://localhost:3000/api/users/${id}`, { method: "DELETE" });
-      setUsers((prev) => prev.filter((u) => u.user_id !== id));
-    } catch {
-      alert("Lỗi khi xóa");
+      const res = await fetch(`http://localhost:3000/api/users/${id}`, { 
+        method: "DELETE" 
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        alert("Lỗi: " + (err.error || "Không thể xóa"));
+        return;
+      }
+
+      setSuccessModalMessage("✅ Đã xóa và backup dữ liệu thành công");
+      setShowSuccessModal(true);
+      
+      fetchUsers();
+      fetchDeletedUsers();
+    } catch (err) {
+      alert("❌ Lỗi khi xóa: " + (err instanceof Error ? err.message : "Không xác định"));
+    }
+  };
+
+  const handleRestore = async (deletedId: number, userName: string) => {
+    if (!confirm(`Khôi phục tài khoản "${userName}"?`)) return;
+    try {
+      const res = await fetch(`http://localhost:3000/api/users/restore/${deletedId}`, {
+        method: "POST"
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert("Lỗi: " + (err.error || "Không thể khôi phục"));
+        return;
+      }
+
+      setSuccessModalMessage("✅ Khôi phục tài khoản thành công");
+      setShowSuccessModal(true);
+      
+      fetchUsers();
+      fetchDeletedUsers();
+    } catch (err) {
+      alert("❌ Lỗi khi khôi phục");
     }
   };
 
@@ -142,17 +210,19 @@ export default function StallOwners() {
       email: user.email || "",
       phone: user.phone || "",
       password: "",
-      restaurant_id: user.restaurant_id?.toString() || ""
+      restaurant_id: user.restaurant_id ? user.restaurant_id.toString() : "null"
     });
     setShowForm(true);
     setError("");
   };
 
   const resetForm = () => {
-    setFormData({ name: "", email: "", phone: "", password: "", restaurant_id: "" });
+    setFormData({ name: "", email: "", phone: "", password: "", restaurant_id: "null" });
     setEditingUser(null);
     setShowForm(false);
     setError("");
+    setSuccessMessage("");
+    setShowSuccessModal(false);
   };
 
   const filtered = users.filter((u) =>
@@ -176,6 +246,29 @@ export default function StallOwners() {
     <AdminLayout title="Quản lý Chủ Gian Hàng" onLogout={handleLogout}>
       <div className="space-y-4 animate-fade-in">
 
+        {successMessage && (
+          <div className="rounded-lg border border-green-600 bg-green-50 p-3 text-sm text-green-700">
+            {successMessage}
+          </div>
+        )}
+
+        <div className="flex gap-2 border-b">
+          <button
+            onClick={() => setActiveTab("active")}
+            className={`px-4 py-2 font-medium ${activeTab === "active" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+          >
+            Hoạt động ({users.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("deleted")}
+            className={`px-4 py-2 font-medium ${activeTab === "deleted" ? "border-b-2 border-primary text-primary" : "text-muted-foreground"}`}
+          >
+            Ngưng hoạt động ({deletedUsers.length})
+          </button>
+        </div>
+
+        {activeTab === "active" && (
+          <>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -243,7 +336,7 @@ export default function StallOwners() {
                     <SelectValue placeholder="Chọn gian hàng" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">-- Không quản lý gian hàng --</SelectItem>
+                    <SelectItem value="null">-- Không quản lý gian hàng --</SelectItem>
                     {restaurants.map((r) => (
                       <SelectItem key={r.restaurant_id} value={r.restaurant_id.toString()}>
                         {r.name}
@@ -331,6 +424,82 @@ export default function StallOwners() {
             </TableBody>
           </Table>
         </div>
+          </>
+        )}
+
+        {activeTab === "deleted" && (
+          <div className="space-y-4">
+            {deletedUsers.length === 0 ? (
+              <div className="rounded-lg border bg-muted/50 p-6 text-center">
+                <p className="text-muted-foreground">Không có tài khoản bị xóa nào</p>
+              </div>
+            ) : (
+              <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Họ tên</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Số điện thoại</TableHead>
+                      <TableHead>Gian hàng</TableHead>
+                      <TableHead>Ngày xóa</TableHead>
+                      <TableHead className="w-24"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {deletedUsers.map((user) => (
+                      <TableRow key={user.deleted_id}>
+                        <TableCell className="text-muted-foreground">#{user.user_id}</TableCell>
+                        <TableCell className="font-medium">{user.name}</TableCell>
+                        <TableCell>{user.email || "—"}</TableCell>
+                        <TableCell>{user.phone || "—"}</TableCell>
+                        <TableCell>
+                          {user.restaurant_name ? (
+                            <Badge variant="outline">{user.restaurant_name}</Badge>
+                          ) : (
+                            <Badge variant="secondary">Không có</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{formatDate(user.deleted_at)}</TableCell>
+                        <TableCell>
+                          <button
+                            onClick={() => handleRestore(user.deleted_id, user.name)}
+                            className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-green-50 hover:text-green-600 transition-colors"
+                            title="Khôi phục"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Modal thành công */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-sm w-full p-8 shadow-2xl animate-in fade-in zoom-in duration-300">
+              <div className="flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-center text-slate-900 mb-2">Thành công!</h3>
+              <p className="text-center text-slate-600 mb-6">{successModalMessage}</p>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:shadow-lg font-semibold transition-all"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
     </AdminLayout>

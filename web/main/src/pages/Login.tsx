@@ -23,7 +23,7 @@ export default function Login() {
       <form onSubmit={handleLogin} className="w-96 rounded-lg bg-white p-8 shadow-md">
         <h2 className="mb-6 text-2xl font-bold text-center">Admin Login</h2>
         <input 
-          type="text" placeholder="Text Admin" 
+          type="text" placeholder="Tên đăng nhập" 
           className="mb-4 w-full rounded border p-2"
           onChange={(e) => setText(e.target.value)} 
         />
