@@ -25,6 +25,26 @@ app.get('/api/stats', async (req, res) => {
     const [restaurants] = await pool.query("SELECT COUNT(*) as total FROM restaurant");
     const [dishes] = await pool.query("SELECT COUNT(*) as total FROM dish WHERE is_active = 1");
 
+    // Top 5 gian hàng rating cao nhất
+    const [topRestaurants] = await pool.query(`
+      SELECT r.name, r.rating,
+        COUNT(d.dish_id) as dish_count
+      FROM restaurant r
+      LEFT JOIN dish d ON d.restaurant_id = r.restaurant_id AND d.is_active = 1
+      GROUP BY r.restaurant_id, r.name, r.rating
+      ORDER BY r.rating DESC
+      LIMIT 5
+    `);
+
+    // 5 gian hàng mới thêm gần đây (dựa vào restaurant_id tăng dần)
+    const [recentRestaurants] = await pool.query(`
+      SELECT name, restaurant_id,
+        NOW() as created_at
+      FROM restaurant
+      ORDER BY restaurant_id DESC
+      LIMIT 5
+    `);
+
     res.json({
       stats: {
         owners: users[0].total,
@@ -32,16 +52,8 @@ app.get('/api/stats', async (req, res) => {
         dishes: dishes[0].total,
         ordersToday: 0
       },
-      chartData: [
-        { name: 'T2', revenue: 12 },
-        { name: 'T3', revenue: 18 },
-        { name: 'T4', revenue: 15 },
-        { name: 'T5', revenue: 22 },
-        { name: 'T6', revenue: 30 },
-        { name: 'T7', revenue: 28 },
-        { name: 'CN', revenue: 20 },
-      ],
-      activities: []
+      topRestaurants,
+      activities: recentRestaurants,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -53,30 +65,54 @@ app.get('/api/stats', async (req, res) => {
 // ============================================================
 app.get('/api/users', async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      "SELECT user_id, name, email, phone, created_at FROM users ORDER BY created_at DESC"
-    );
+    const [rows] = await pool.query(`
+      SELECT 
+        u.user_id, u.name, u.email, u.phone, u.restaurant_id, u.created_at,
+        r.name AS restaurant_name
+      FROM users u
+      LEFT JOIN restaurant r ON u.restaurant_id = r.restaurant_id
+      ORDER BY u.created_at DESC
+    `);
     res.json(rows);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
-
 // ============================================================
 // POST /api/users — Thêm user mới
 // ============================================================
 app.post('/api/users', async (req, res) => {
-  const { name, email, phone, password } = req.body;
+  const { name, email, phone, password, restaurant_id } = req.body;
   if (!name || !password) {
     return res.status(400).json({ error: 'Thiếu tên hoặc mật khẩu' });
   }
   try {
     const password_hash = await bcrypt.hash(password, 10);
     const [result] = await pool.query(
-      "INSERT INTO users (name, password_hash, email, phone) VALUES (?, ?, ?, ?)",
-      [name, password_hash, email || null, phone || null]
+      "INSERT INTO users (name, password_hash, email, phone, restaurant_id) VALUES (?, ?, ?, ?, ?)",
+      [name, password_hash, email || null, phone || null, restaurant_id || null]
     );
-    res.json({ user_id: result.insertId, name, email, phone });
+    res.json({ user_id: result.insertId, name, email, phone, restaurant_id });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// PUT /api/users/:id — Cập nhật user
+// ============================================================
+app.put('/api/users/:id', async (req, res) => {
+  const { id } = req.params;
+  const { name, email, phone, restaurant_id } = req.body;
+  if (!name) {
+    return res.status(400).json({ error: 'Thiếu tên' });
+  }
+  try {
+    await pool.query(
+      "UPDATE users SET name = ?, email = ?, phone = ?, restaurant_id = ? WHERE user_id = ?",
+      [name, email || null, phone || null, restaurant_id || null, id]
+    );
+    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

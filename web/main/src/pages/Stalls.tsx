@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -27,9 +28,15 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export default function Stalls() {
+  const navigate = useNavigate();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  const handleLogout = () => {
+    localStorage.removeItem("isAdminLoggedIn");
+    navigate("/login");
+  };
 
   // Lấy dữ liệu từ server.js
   useEffect(() => {
@@ -54,7 +61,7 @@ export default function Stalls() {
   );
 
   return (
-    <AdminLayout title="Gian hàng">
+    <AdminLayout title="Gian hàng" onLogout={handleLogout}>
       <div className="flex flex-col gap-4 animate-fade-in">
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

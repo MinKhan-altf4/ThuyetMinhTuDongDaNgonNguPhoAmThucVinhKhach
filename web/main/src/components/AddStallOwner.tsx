@@ -422,7 +422,7 @@ export default function AddStallOwner() {
             <Button type="submit" disabled={loading}>
               {loading ? "Đang xử lý..." : "Thêm mới"}
             </Button>
-            <Button type="button" variant="outline" onClick={() => navigate("/admin/stall-owners")}>
+            <Button type="button" variant="outline" onClick={() => navigate("/stall-owners")}>
               Hủy bỏ
             </Button>
           </div>
