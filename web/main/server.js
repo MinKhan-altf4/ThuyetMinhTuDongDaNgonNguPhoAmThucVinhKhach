@@ -389,4 +389,20 @@ app.get('/api/owner/:id', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+app.get('/api/restaurants', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        r.*, 
+        u.name as owner_name,
+        (SELECT COUNT(*) FROM dish d WHERE d.restaurant_id = r.restaurant_id) as dish_count
+      FROM restaurant r
+      LEFT JOIN users u ON r.restaurant_id = u.restaurant_id
+    `;
+    const [rows] = await pool.query(query);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 app.listen(3000, () => console.log('Backend đang chạy tại http://localhost:3000'));

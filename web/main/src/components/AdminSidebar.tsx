@@ -99,11 +99,13 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-
-      <SidebarFooter className="sidebar-gradient border-t border-sidebar-border p-3">
+<SidebarFooter className="sidebar-gradient border-t border-sidebar-border p-3">
         {!collapsed && (
           <a
-            href="#"
+            /* Thay đổi URL dưới đây cho đúng với cấu trúc thư mục của bạn trên XAMPP */
+            href="http://localhost/ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach/web/owner/login.php" 
+            target="_blank" 
+            rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-md px-3 py-2 text-xs text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
             <ExternalLink className="h-3.5 w-3.5" />

@@ -1,113 +1,48 @@
 <?php
 session_start();
-include 'config.php';
+require_once __DIR__ . '/config.php';
 
-// Kiểm tra đăng nhập qua session username (thiết lập ở check_login.php)
-if (!isset($_SESSION['username'])) {
+if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
 
-// Lấy thông tin user hiện tại để biết họ quản lý nhà hàng nào (nếu cần)
-$current_user = $_SESSION['username'];
-$user_query = $conn->query("SELECT restaurant_id FROM users WHERE username = '$current_user'");
-$user_data = $user_query->fetch_assoc();
-$my_restaurant_id = $user_data['restaurant_id'];
+$restaurant_id = $_SESSION['restaurant_id'];
+$pageTitle = "Tổng quan";
+
+// Thống kê riêng cho gian hàng này
+$stats = ['dishes' => 0, 'visits' => 0];
+if ($restaurant_id) {
+    $stats['dishes'] = $pdo->prepare("SELECT COUNT(*) FROM dish WHERE restaurant_id = ?");
+    $stats['dishes']->execute([$restaurant_id]);
+    $stats['dishes'] = $stats['dishes']->fetchColumn();
+
+    $stats['visits'] = $pdo->prepare("SELECT COUNT(*) FROM customer_visits WHERE restaurant_id = ?");
+    $stats['visits']->execute([$restaurant_id]);
+    $stats['visits'] = $stats['visits']->fetchColumn();
+}
+
+include 'css/header.php';
+include 'sidebar.php';
 ?>
-
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <title>Bảng điều khiển Food App</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-</head>
-<body class="bg-light">
-    <div class="container mt-4">
-        <div class="d-flex justify-content-between align-items-center bg-white p-3 shadow-sm rounded">
-            <div>
-                <h4 class="mb-0">Xin chào, <?php echo htmlspecialchars($current_user); ?>!</h4>
-                <small class="text-muted">Hệ thống quản lý thực đơn nhà hàng</small>
+<main class="flex-1 lg:ml-56">
+    <?php include 'topbar.php'; ?>
+    <div class="p-6 bg-slate-50/50 min-h-screen">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <p class="text-sm font-medium text-slate-500">Tổng món ăn</p>
+                <h3 class="text-3xl font-bold text-slate-800 mt-1"><?= number_format($stats['dishes']) ?></h3>
             </div>
-            <a href="logout.php" class="btn btn-danger btn-sm">Đăng xuất</a>
-        </div>
-
-        <div class="row mt-4">
-            <div class="col-md-4">
-                <div class="card border-0 shadow-sm bg-primary text-white p-3">
-                    <h6>Tổng số món ăn (Dishes)</h6>
-                    <?php 
-                        $res = $conn->query("SELECT COUNT(*) as total FROM dish");
-                        echo "<h2 class='mb-0'>" . $res->fetch_assoc()['total'] . "</h2>";
-                    ?>
-                </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <p class="text-sm font-medium text-slate-500">Lượt ghé thăm</p>
+                <h3 class="text-3xl font-bold text-orange-500 mt-1"><?= number_format($stats['visits']) ?></h3>
+            </div>
             </div>
 
-            <div class="col-md-4">
-                <div class="card border-0 shadow-sm bg-success text-white p-3">
-                    <h6>Số lượng nhà hàng</h6>
-                    <?php 
-                        $res = $conn->query("SELECT COUNT(*) as total FROM restaurant");
-                        echo "<h2 class='mb-0'>" . $res->fetch_assoc()['total'] . "</h2>";
-                    ?>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="card border-0 shadow-sm bg-warning text-dark p-3">
-                    <h6>Tổng lượt khách ghé thăm</h6>
-                    <?php 
-                        $res = $conn->query("SELECT COUNT(*) as total FROM customer_visits");
-                        echo "<h2 class='mb-0'>" . $res->fetch_assoc()['total'] . "</h2>";
-                    ?>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mt-4 border-0 shadow-sm">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0">Danh sách thực đơn (Dữ liệu từ bảng dish)</h5>
-            </div>
-            <div class="card-body p-0">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>ID</th>
-                            <th>Tên món (Dish Name)</th>
-                            <th>Mô tả</th>
-                            <th class="text-end">Giá bán</th>
-                            <th class="text-center">Trạng thái</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        // Truy vấn chính xác các cột: dish_id, name, description, price, is_active từ bảng dish
-                        $sql = "SELECT dish_id, name, description, price, is_active FROM dish ORDER BY dish_id DESC";
-                        $result = $conn->query($sql);
-
-                        if ($result && $result->num_rows > 0) {
-                            while($row = $result->fetch_assoc()) {
-                                $status_class = $row['is_active'] ? 'bg-success' : 'bg-secondary';
-                                $status_text = $row['is_active'] ? 'Đang bán' : 'Ngừng bán';
-                                
-                                echo "<tr>
-                                        <td>#{$row['dish_id']}</td>
-                                        <td><strong>{$row['name']}</strong></td>
-                                        <td><small class='text-muted'>{$row['description']}</small></td>
-                                        <td class='text-end text-primary fw-bold'>" . number_format($row['price'], 0, ',', '.') . " đ</td>
-                                        <td class='text-center'>
-                                            <span class='badge $status_class'>$status_text</span>
-                                        </td>
-                                      </tr>";
-                            }
-                        } else {
-                            echo "<tr><td colspan='5' class='text-center py-4'>Không có món ăn nào trong hệ thống.</td></tr>";
-                        }
-                        ?>
-                    </tbody>
-                </table>
-            </div>
+        <div class="bg-orange-50 border border-orange-100 rounded-2xl p-6 text-orange-800">
+            <h4 class="font-bold">Chào mừng trở lại!</h4>
+            <p class="text-sm opacity-80">Hôm nay gian hàng của bạn có thêm dữ liệu mới, hãy kiểm tra ngay.</p>
         </div>
     </div>
-</body>
-</html>
+</main>
+<?php include './css/footer.php'; ?>

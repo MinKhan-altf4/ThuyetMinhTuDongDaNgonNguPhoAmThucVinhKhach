@@ -1,30 +1,85 @@
 <?php
-// seller/pages/profile.php
-require_once __DIR__ . '/../check_login.php';
-require_once __DIR__ . '/../config.php';
+// profile.php — Hồ sơ cá nhân (bảng users của food_app)
+require_once __DIR__ . '/check_login.php';
+require_once __DIR__ . '/config.php';
 
-$seller_id = $_SESSION['seller_id'];
-$pageTitle = 'Hồ sơ';
+$user_id    = $_SESSION['user_id'];
+$pageTitle  = 'Hồ sơ';
 
-$user = $pdo->prepare("SELECT id, name, email, role, created_at FROM users WHERE id = ?");
-$user->execute([$seller_id]);
-$user = $user->fetch();
+// Lấy thông tin user — bảng users: user_id, name, email, phone, restaurant_id, password_hash, created_at
+$stmt = $pdo->prepare(
+    "SELECT u.user_id, u.name, u.email, u.phone, u.created_at, u.restaurant_id,
+            r.name AS restaurant_name, r.address, r.phone AS restaurant_phone,
+            r.open_hour, r.close_hour, r.rating, r.description AS restaurant_desc
+     FROM users u
+     LEFT JOIN restaurant r ON u.restaurant_id = r.restaurant_id
+     WHERE u.user_id = ?"
+);
+$stmt->execute([$user_id]);
+$user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-$msg = '';
+$msg      = '';
+$msg_type = 'ok'; // ok | error
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name     = trim($_POST['name'] ?? '');
-    $password = trim($_POST['password'] ?? '');
+    $action = $_POST['action'] ?? 'profile';
 
-    if ($name) {
-        if ($password) {
-            $hash = password_hash($password, PASSWORD_BCRYPT);
-            $pdo->prepare("UPDATE users SET name=?, password=? WHERE id=?")->execute([$name, $hash, $seller_id]);
+    // ── Cập nhật hồ sơ cá nhân ───────────────────────────────────────────────
+    if ($action === 'profile') {
+        $name     = trim($_POST['name'] ?? '');
+        $phone    = trim($_POST['phone'] ?? '');
+        $password = trim($_POST['password'] ?? '');
+        $confirm  = trim($_POST['password_confirm'] ?? '');
+
+        if (!$name) {
+            $msg = 'Họ tên không được để trống.';
+            $msg_type = 'error';
+        } elseif ($password && $password !== $confirm) {
+            $msg = 'Mật khẩu xác nhận không khớp.';
+            $msg_type = 'error';
         } else {
-            $pdo->prepare("UPDATE users SET name=? WHERE id=?")->execute([$name, $seller_id]);
+            if ($password) {
+                $hash = password_hash($password, PASSWORD_BCRYPT);
+                $pdo->prepare("UPDATE users SET name=?, phone=?, password_hash=? WHERE user_id=?")
+                    ->execute([$name, $phone, $hash, $user_id]);
+            } else {
+                $pdo->prepare("UPDATE users SET name=?, phone=? WHERE user_id=?")
+                    ->execute([$name, $phone, $user_id]);
+            }
+            $_SESSION['user_name'] = $name;
+            $user['name']  = $name;
+            $user['phone'] = $phone;
+            $msg = 'Cập nhật hồ sơ thành công!';
         }
-        $_SESSION['seller_name'] = $name;
-        $msg = 'Cập nhật thành công!';
-        $user['name'] = $name;
+    }
+
+    // ── Cập nhật thông tin nhà hàng ──────────────────────────────────────────
+    if ($action === 'restaurant' && $user['restaurant_id']) {
+        $r_name  = trim($_POST['r_name'] ?? '');
+        $r_desc  = trim($_POST['r_desc'] ?? '');
+        $r_phone = trim($_POST['r_phone'] ?? '');
+        $r_addr  = trim($_POST['r_address'] ?? '');
+        $r_open  = trim($_POST['r_open'] ?? '');
+        $r_close = trim($_POST['r_close'] ?? '');
+
+        if (!$r_name) {
+            $msg = 'Tên nhà hàng không được để trống.';
+            $msg_type = 'error';
+        } else {
+            $pdo->prepare(
+                "UPDATE restaurant SET name=?, description=?, phone=?, address=?, open_hour=?, close_hour=?
+                 WHERE restaurant_id=?"
+            )->execute([$r_name, $r_desc, $r_phone, $r_addr, $r_open, $r_close, $user['restaurant_id']]);
+
+            $_SESSION['restaurant_name'] = $r_name;
+            $user['restaurant_name']     = $r_name;
+            $user['restaurant_desc']     = $r_desc;
+            $user['restaurant_phone']    = $r_phone;
+            $user['address']             = $r_addr;
+            $user['open_hour']           = $r_open;
+            $user['close_hour']          = $r_close;
+            $msg = 'Đã cập nhật thông tin nhà hàng!';
+        }
     }
 }
 ?>
@@ -33,70 +88,154 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title><?= $pageTitle ?> — Seller</title>
+  <title><?= $pageTitle ?> — Food App</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-  <style>* { font-family:'Be Vietnam Pro',sans-serif; } @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}} .fade-up{animation:fadeUp .35s ease both}</style>
+  <style>
+    * { font-family: 'Be Vietnam Pro', sans-serif; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    .fade-up { animation: fadeUp .35s ease both; }
+  </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
 
-<?php include __DIR__ . '/../components/sidebar.php'; ?>
+<?php include __DIR__ . '/components/sidebar.php'; ?>
 
 <div class="lg:pl-56 flex flex-col min-h-screen">
-  <?php include __DIR__ . '/../components/topbar.php'; ?>
+  <?php include __DIR__ . '/components/topbar.php'; ?>
 
   <main class="flex-1 p-4 lg:p-6">
-    <div class="max-w-lg fade-up">
+    <div class="max-w-2xl space-y-5 fade-up">
 
       <!-- Avatar card -->
-      <div class="rounded-xl bg-white border border-slate-100 p-6 mb-4 flex items-center gap-4">
-        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-600 text-2xl font-700 text-white">
+      <div class="rounded-2xl bg-white border border-slate-100 shadow-sm p-6 flex items-center gap-5">
+        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-500 text-2xl font-bold text-white flex-shrink-0">
           <?= mb_strtoupper(mb_substr($user['name'], 0, 1)) ?>
         </div>
         <div>
-          <p class="font-600 text-slate-800 text-base"><?= htmlspecialchars($user['name']) ?></p>
+          <p class="font-semibold text-slate-800 text-lg"><?= htmlspecialchars($user['name']) ?></p>
           <p class="text-sm text-slate-500"><?= htmlspecialchars($user['email']) ?></p>
-          <span class="mt-1 inline-flex items-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-500 text-emerald-700">Seller</span>
+          <div class="flex items-center gap-2 mt-1.5">
+            <span class="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-600">
+              🏪 <?= htmlspecialchars($user['restaurant_name'] ?? 'Chưa có nhà hàng') ?>
+            </span>
+            <?php if ($user['rating']): ?>
+              <span class="text-xs text-amber-500 font-semibold">⭐ <?= number_format($user['rating'], 1) ?></span>
+            <?php endif; ?>
+          </div>
         </div>
       </div>
 
-      <!-- Edit form -->
-      <div class="rounded-xl bg-white border border-slate-100 p-6">
-        <h2 class="text-sm font-600 text-slate-800 mb-5">Cập nhật thông tin</h2>
+      <!-- Thông báo -->
+      <?php if ($msg): ?>
+        <div class="rounded-xl px-4 py-3 text-sm font-medium
+          <?= $msg_type === 'ok'
+            ? 'bg-emerald-50 border border-emerald-100 text-emerald-700'
+            : 'bg-red-50 border border-red-100 text-red-600' ?>">
+          <?= htmlspecialchars($msg) ?>
+        </div>
+      <?php endif; ?>
 
-        <?php if ($msg): ?>
-          <div class="mb-4 rounded-lg bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700">
-            <?= htmlspecialchars($msg) ?>
-          </div>
-        <?php endif; ?>
-
+      <!-- Form hồ sơ cá nhân -->
+      <div class="rounded-2xl bg-white border border-slate-100 shadow-sm p-6">
+        <h2 class="text-sm font-semibold text-slate-800 mb-5">👤 Thông tin cá nhân</h2>
         <form method="POST" class="space-y-4">
-          <div>
-            <label class="block text-xs font-500 text-slate-600 mb-1">Họ tên</label>
-            <input type="text" name="name" value="<?= htmlspecialchars($user['name']) ?>"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+          <input type="hidden" name="action" value="profile"/>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Họ tên *</label>
+              <input type="text" name="name" value="<?= htmlspecialchars($user['name']) ?>"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Số điện thoại</label>
+              <input type="tel" name="phone" value="<?= htmlspecialchars($user['phone'] ?? '') ?>"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+            </div>
           </div>
           <div>
-            <label class="block text-xs font-500 text-slate-600 mb-1">Email (không thể đổi)</label>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Email (không thể thay đổi)</label>
             <input type="email" value="<?= htmlspecialchars($user['email']) ?>" disabled
               class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm bg-slate-50 text-slate-400 cursor-not-allowed"/>
           </div>
-          <div>
-            <label class="block text-xs font-500 text-slate-600 mb-1">Mật khẩu mới <span class="text-slate-400">(để trống nếu không đổi)</span></label>
-            <input type="password" name="password" placeholder="••••••••"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"/>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Mật khẩu mới
+                <span class="text-slate-400">(để trống nếu không đổi)</span>
+              </label>
+              <input type="password" name="password" placeholder="••••••••"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Xác nhận mật khẩu mới</label>
+              <input type="password" name="password_confirm" placeholder="••••••••"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+            </div>
           </div>
           <button type="submit"
-            class="w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-600 text-white hover:bg-emerald-700 transition">
-            Lưu thay đổi
+            class="w-full rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 transition">
+            Lưu thông tin cá nhân
           </button>
         </form>
       </div>
 
-      <!-- Info -->
-      <div class="mt-4 rounded-xl bg-white border border-slate-100 p-5">
-        <p class="text-xs text-slate-400">Tài khoản tạo lúc: <?= date('d/m/Y H:i', strtotime($user['created_at'])) ?></p>
+      <!-- Form thông tin nhà hàng -->
+      <?php if ($user['restaurant_id']): ?>
+      <div class="rounded-2xl bg-white border border-slate-100 shadow-sm p-6">
+        <h2 class="text-sm font-semibold text-slate-800 mb-5">🏪 Thông tin nhà hàng</h2>
+        <form method="POST" class="space-y-4">
+          <input type="hidden" name="action" value="restaurant"/>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Tên nhà hàng *</label>
+            <input type="text" name="r_name" value="<?= htmlspecialchars($user['restaurant_name'] ?? '') ?>"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">Mô tả</label>
+            <textarea name="r_desc" rows="2"
+              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none"
+              ><?= htmlspecialchars($user['restaurant_desc'] ?? '') ?></textarea>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Số điện thoại nhà hàng</label>
+              <input type="tel" name="r_phone" value="<?= htmlspecialchars($user['restaurant_phone'] ?? '') ?>"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Địa chỉ</label>
+              <input type="text" name="r_address" value="<?= htmlspecialchars($user['address'] ?? '') ?>"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Giờ mở cửa</label>
+              <input type="time" name="r_open" value="<?= htmlspecialchars($user['open_hour'] ?? '') ?>"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Giờ đóng cửa</label>
+              <input type="time" name="r_close" value="<?= htmlspecialchars($user['close_hour'] ?? '') ?>"
+                class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"/>
+            </div>
+          </div>
+          <button type="submit"
+            class="w-full rounded-lg bg-slate-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-900 transition">
+            Lưu thông tin nhà hàng
+          </button>
+        </form>
       </div>
+      <?php endif; ?>
+
+      <!-- Metadata -->
+      <div class="rounded-2xl bg-white border border-slate-100 shadow-sm p-4">
+        <p class="text-xs text-slate-400">
+          Tài khoản tạo lúc: <strong><?= date('d/m/Y H:i', strtotime($user['created_at'])) ?></strong>
+          &nbsp;·&nbsp; User ID: <strong>#<?= $user['user_id'] ?></strong>
+        </p>
+      </div>
+
     </div>
   </main>
 </div>
