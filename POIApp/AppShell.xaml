@@ -9,22 +9,19 @@
     Shell.TabBarTitleColor="#1565C0"
     Shell.TabBarUnselectedColor="#9E9E9E">
 
-    <!-- Tab 1: Bản đồ -->
-    <Tab Title="🗺️ Bản đồ" Route="MapTab">
+    <Tab x:Name="TabMap" Route="MapTab">
         <ShellContent>
             <local:MapPage />
         </ShellContent>
     </Tab>
 
-    <!-- Tab 2: POI -->
-    <Tab Title="🍽️ POI" Route="POITab">
+    <Tab x:Name="TabPOI" Route="POITab">
         <ShellContent>
             <local:POIPage />
         </ShellContent>
     </Tab>
 
-    <!-- Tab 3: Voice & Cài đặt -->
-    <Tab Title="⚙️ Cài đặt" Route="SettingsTab">
+    <Tab x:Name="TabSettings" Route="SettingsTab">
         <ShellContent>
             <local:SettingsPage />
         </ShellContent>

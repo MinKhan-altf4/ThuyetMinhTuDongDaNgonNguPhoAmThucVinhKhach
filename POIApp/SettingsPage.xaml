@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="POIApp.SettingsPage"
+             Title="Settings">
+
+    <ScrollView Padding="0">
+        <VerticalStackLayout Spacing="16" Padding="16">
+
+            <!-- Language Selection -->
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="LblLanguageHeader"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#1565C0" />
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Label x:Name="LblLanguageDesc"
+                               FontSize="14"
+                               TextColor="#37474F" />
+                        <Picker x:Name="LangPicker"
+                                FontSize="14"
+                                SelectedIndexChanged="OnPickerLanguageChanged" />
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- GPS Sensitivity -->
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="LblGPSHeader"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#1565C0" />
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Label x:Name="LblGPSDesc"
+                               FontSize="14"
+                               TextColor="#37474F" />
+                        <Picker x:Name="GPSPicker"
+                                FontSize="14"
+                                SelectedIndexChanged="OnGPSPickerChanged">
+                            <Picker.Items>
+                                <x:String>🔋 Tiết kiệm pin</x:String>
+                                <x:String>⚖️ Mặc định</x:String>
+                                <x:String>🎯 Chính xác cao</x:String>
+                            </Picker.Items>
+                        </Picker>
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- POI Radius -->
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="LblRadiusHeader"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#1565C0" />
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Label x:Name="LblRadiusDesc"
+                               FontSize="14"
+                               TextColor="#37474F" />
+                        <Picker x:Name="RadiusPicker"
+                                FontSize="14"
+                                SelectedIndexChanged="OnRadiusPickerChanged">
+                            <Picker.Items>
+                                <x:String>200m</x:String>
+                                <x:String>500m</x:String>
+                                <x:String>1000m</x:String>
+                                <x:String>2000m</x:String>
+                            </Picker.Items>
+                        </Picker>
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- API Configuration -->
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="LblApiHeader"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#1565C0"
+                       Text="⚙️ API Configuration" />
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Label x:Name="LblApiDesc"
+                               FontSize="12"
+                               TextColor="#37474F"
+                               Text="API Base URL (leave empty to use default: 10.0.2.2)" />
+                        <Entry x:Name="ApiUrlEntry"
+                               FontSize="12"
+                               Placeholder="http://10.0.2.2/POIApi/api.php"
+                               Completed="OnApiUrlEntryCompleted"
+                               TextColor="#37474F"
+                               PlaceholderColor="#B0BEC5" />
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- Offline Mode -->
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="LblOfflineHeader"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#1565C0"
+                       Text="📱 Offline Mode" />
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="12">
+                        <Label x:Name="LblOfflineStatus"
+                               FontSize="12"
+                               TextColor="#37474F"
+                               Text="Download POI data for offline use" />
+                        <Button x:Name="BtnEnableOffline"
+                                Text="📥 Enable Offline Mode"
+                                BackgroundColor="#1565C0"
+                                TextColor="White"
+                                FontSize="14"
+                                CornerRadius="8"
+                                Padding="12,10"
+                                Clicked="OnEnableOfflineClicked" />
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+
+            <!-- About -->
+            <VerticalStackLayout Spacing="4">
+                <Label x:Name="LblAboutHeader"
+                       FontSize="18"
+                       FontAttributes="Bold"
+                       TextColor="#1565C0" />
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="12"
+                       Padding="14"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="8">
+                        <Label x:Name="LblAppName"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               TextColor="#37474F" />
+                        <Label x:Name="LblVersion"
+                               FontSize="12"
+                               TextColor="#78909C" />
+                        <Label x:Name="LblMapCredit"
+                               FontSize="12"
+                               TextColor="#78909C" />
+                    </VerticalStackLayout>
+                </Frame>
+            </VerticalStackLayout>
+
+            <BoxView HeightRequest="30" Color="Transparent" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

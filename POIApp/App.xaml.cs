@@ -1,4 +1,3 @@
-﻿using Microsoft.Extensions.DependencyInjection;
 using POIApp.Services;
 
 namespace POIApp;
@@ -18,6 +17,7 @@ public partial class App : Application
 	protected override async void OnStart()
 	{
 		base.OnStart();
-		await LanguageService.Shared.InitializeAsync();
+		await LanguageService.Instance.InitializeAsync();
+		await TTSService.PreloadLocalesAsync();
 	}
 }

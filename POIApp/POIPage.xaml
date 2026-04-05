@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="POIApp.POIPage"
+             Title="Offline POI">
+
+    <Grid RowSpacing="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Frame Grid.Row="0"
+               Padding="16,10"
+               BackgroundColor="#1565C0"
+               CornerRadius="0"
+               HasShadow="False">
+            <VerticalStackLayout Spacing="6">
+                <Label x:Name="LblTitle"
+                       FontSize="20"
+                       FontAttributes="Bold"
+                       TextColor="White" />
+                <HorizontalStackLayout Spacing="8">
+                    <Label x:Name="LblSubtitle"
+                           FontSize="13"
+                           TextColor="#BBDEFB"
+                           VerticalOptions="Center" />
+                    <Picker x:Name="AudioLangPicker"
+                            WidthRequest="110"
+                            FontSize="12"
+                            Title="Ngôn ngữ voice"
+                            SelectedIndexChanged="OnAudioLangChanged">
+                        <Picker.Items>
+                            <x:String>🇻🇳 Tiếng Việt</x:String>
+                            <x:String>🇺🇸 English</x:String>
+                        </Picker.Items>
+                    </Picker>
+                </HorizontalStackLayout>
+            </VerticalStackLayout>
+        </Frame>
+
+        <!-- POI List -->
+        <ScrollView Grid.Row="1" Padding="0">
+            <VerticalStackLayout Spacing="0" Padding="0">
+
+                <!-- Loading -->
+                <ActivityIndicator x:Name="LoadingIndicator"
+                                   IsRunning="False"
+                                   IsVisible="False"
+                                   Color="#1565C0"
+                                   HorizontalOptions="Center"
+                                   Margin="0,20,0,0" />
+
+                <!-- POI Cards -->
+                <VerticalStackLayout x:Name="POIListContainer" Spacing="12" Padding="12" />
+
+                <!-- Empty state -->
+                <VerticalStackLayout x:Name="EmptyState"
+                                     IsVisible="False"
+                                     HorizontalOptions="Center"
+                                     Margin="0,60,0,0"
+                                     Spacing="12">
+                    <Label Text="🍽️" FontSize="48" HorizontalOptions="Center" />
+                    <Label x:Name="LblEmpty"
+                           FontSize="16"
+                           TextColor="#9E9E9E"
+                           HorizontalOptions="Center" />
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+</ContentPage>

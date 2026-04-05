@@ -15,8 +15,8 @@ public class GPSTrackingService : IDisposable
     // Khoảng cách tối thiểu để notify (mét)
     private const double MIN_DISTANCE_METERS = 5;
 
-    // Khoảng thời gian tối thiểu giữa 2 lần cập nhật (ms)
-    private const int MIN_TIME_BETWEEN_UPDATES_MS = 3000;
+    // Khoảng thời gian tối thiểu giữa 2 lần cập nhật (ms) - đọc từ settings
+    private static int MinUpdateIntervalMs => AppSettingsHelper.GetGpsIntervalMs();
 
     // =====================================================
     // BIẾN
@@ -101,7 +101,7 @@ public class GPSTrackingService : IDisposable
         {
             var location = await Geolocation.GetLocationAsync(new GeolocationRequest
             {
-                DesiredAccuracy = GeolocationAccuracy.Medium,
+                DesiredAccuracy = AppSettingsHelper.GetGpsAccuracy(),
                 Timeout = TimeSpan.FromSeconds(10)
             });
 
@@ -151,10 +151,10 @@ public class GPSTrackingService : IDisposable
         // Kiểm tra thời gian giữa 2 lần notify
         var now = DateTime.Now;
         var elapsed = (now - _lastNotifyTime).TotalMilliseconds;
-        if (elapsed < MIN_TIME_BETWEEN_UPDATES_MS && _lastLocation != null)
+        if (elapsed < MinUpdateIntervalMs && _lastLocation != null)
         {
             // Vẫn cập nhật current location, nhưng không notify
-            Debug.WriteLine($"[GPS] Bỏ qua notify (thời gian < {MIN_TIME_BETWEEN_UPDATES_MS}ms)");
+            Debug.WriteLine($"[GPS] Bỏ qua notify (thời gian < {MinUpdateIntervalMs}ms)");
             return;
         }
 

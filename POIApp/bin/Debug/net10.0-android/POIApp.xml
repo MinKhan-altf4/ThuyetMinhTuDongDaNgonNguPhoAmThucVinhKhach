@@ -12,6 +12,17 @@
             - Trigger TTS khi gần POI
             </summary>
         </member>
+        <member name="M:POIApp.Models.POI.GetLocalizedText(System.String,System.String,System.Func{POIApp.Models.POI,System.String})">
+            <summary>
+            Lấy text theo ngôn ngữ ưu tiên, fallback về tiếng Việt, cuối cùng là default.
+            Ưu tiên: TranslationSet (từ API) → legacy field → default
+            </summary>
+        </member>
+        <member name="T:POIApp.Models.TranslationSet">
+            <summary>
+            Bộ name + description cho 1 ngôn ngữ, map từ JSON: translations["vi"] = { name, description }
+            </summary>
+        </member>
         <member name="T:POIApp.Services.AnalyticsService">
             <summary>
             Service Analytics - Đếm số lần nghe POI
@@ -57,6 +68,161 @@
         <member name="M:POIApp.Services.AnalyticsService.ResetAsync">
             <summary>
             Reset tất cả thống kê
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.POIDetailResponse">
+            <summary>
+            Response cho endpoint ?id=X → trả 1 POI object (không phải list)
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.AppSettingsHelper">
+            <summary>
+            Helper đọc/ghi cài đặt ứng dụng từ Preferences.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AppSettingsHelper.GetGpsAccuracy">
+            <summary>Chuyển sensitivity string → GeolocationAccuracy.</summary>
+        </member>
+        <member name="M:POIApp.Services.AppSettingsHelper.GetGpsIntervalMs">
+            <summary>Chuyển sensitivity string → interval (ms).</summary>
+        </member>
+        <member name="T:POIApp.Services.AssetInfo">
+             <summary>
+             Hướng dẫn tổ chức file assets trong MAUI
+             =========================================
+            
+             CẤU TRÚC THƯ MỤC (MAUI Convention)
+            
+             1. AUDIO OFFLINE — Đặt trong: Resources/Raw/audio/
+                Format: audio/{lang}/poi_{restaurant_id}.mp3
+                Ví dụ:
+                  Resources/Raw/audio/vi/poi_1.mp3
+                  Resources/Raw/audio/en/poi_1.mp3
+                  Resources/Raw/audio/zh/poi_1.mp3
+                  Resources/Raw/audio/jp/poi_1.mp3
+                  Resources/Raw/audio/kr/poi_1.mp3
+            
+                Cách truy cập trong code:
+                  var path = $"audio/vi/poi_{poiId}.mp3";
+                  await using var stream = await FileSystem.OpenAppPackageFileAsync(path);
+            
+                Lưu ý: Đánh dấu file .mp3 là EmbeddedResource hoặc MauiAsset trong .csproj:
+                  <MauiAsset Include="Resources\Raw\audio\**" />
+            
+             2. HÌNH ẢNH RESTAURANT/MÓN ĂN
+                Cách 1: Từ URL API (Khuyến nghị)
+                  → API đã trả field image_url
+                  → Dùng: ImageSource.FromUri(poi.ImageUrl)
+                  → Không cần bundling, luôn up-to-date
+            
+                Cách 2: Bundle local (placeholder/fallback)
+                  → Đặt trong: Resources/Images/
+                  → Ví dụ: Resources/Images/restaurants/placeholder.png
+                  → Access: ImageSource.FromFile("restaurants_placeholder.png")
+            
+             3. CÁCH KIỂM TRA FILE TỒN TẠI TRONG APP BUNDLE
+                try {
+                    await FileSystem.OpenAppPackageFileAsync("audio/vi/poi_1.mp3");
+                    // file tồn tại
+                } catch {
+                    // file không có
+                }
+            
+             =========================================
+             CÁCH THÊM FILE VÀO PROJECT
+             =========================================
+            
+             1. Tạo thư mục Resources/Raw/audio/vi/
+             2. Copy file .mp3 vào
+             3. Trong Solution Explorer: Add Existing Item → chọn file
+             4. Set Build Action:
+                  .mp3, .json, .txt → MauiAsset
+                  .png, .jpg        → MauiImage
+             5. Hoặc thêm trực tiếp trong .csproj:
+                <MauiAsset Include="Resources\Raw\audio\**" />
+            
+             =========================================
+             TẢI AUDIO TỪ SERVER (Fallback khi chưa bundling)
+             =========================================
+            
+             Nếu file chưa bundling, tải từ server và lưu local:
+            
+             var audioPath = Path.Combine(
+                 FileSystem.AppDataDirectory,
+                 $"audio_{poiId}_{lang}.mp3");
+            
+             if (!File.Exists(audioPath)) {
+                 var bytes = await _httpClient.GetByteArrayAsync($"/audio/{lang}/poi_{poiId}.mp3");
+                 await File.WriteAllBytesAsync(audioPath, bytes);
+             }
+            
+             </summary>
+        </member>
+        <member name="M:POIApp.Services.AssetInfo.HasBundledAudioAsync(System.Int32,System.String)">
+            <summary>
+            Kiểm tra audio file có trong app bundle không
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AssetInfo.GetBundledAudioPath(System.Int32,System.String)">
+            <summary>
+            Lấy đường dẫn file audio trong bundle
+            </summary>
+        </member>
+        <member name="F:POIApp.Services.AssetInfo.SupportedAudioLanguages">
+            <summary>
+            Danh sách ngôn ngữ audio được hỗ trợ
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AssetInfo.GetLocalAudioFolder">
+            <summary>
+            Thư mục lưu audio download về máy
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.AudioResourceService">
+            <summary>
+            Service ánh xạ POI tên → Local audio resource
+            Audio files nằm trong Resources/Raw/audio/{lang}/
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AudioResourceService.NormalizeAudioFileName(System.String)">
+            <summary>
+            Chuyển POI name → tên file audio (loại bỏ ký tự đặc biệt, thêm .mp3)
+            Ví dụ: "Lâu Cá Kéo" → "lau_ca_keo"
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AudioResourceService.GetAudioResourcePath(System.String,System.String)">
+            <summary>
+            Lấy full path của audio file từ Resources/Raw
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AudioResourceService.AudioFileExists(System.String,System.String)">
+            <summary>
+            Kiểm tra audio file có tồn tại trong Resources/Raw không
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AudioResourceService.GetAudioStreamAsync(System.String,System.String)">
+            <summary>
+            Lấy stream audio từ resource
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.AudioService">
+            <summary>
+            Service audio offline — CHỈ phát file audio có sẵn.
+            KHÔNG dùng TTS, KHÔNG gọi API, KHÔNG generate audio.
+            Path: Resources/Raw/audio/{lang}/poi{id}-{lang}.mp3
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AudioService.PlayAsync(POIApp.Models.POI,System.String)">
+            <summary>
+            Phát audio offline theo ngôn ngữ.
+            vi → audio/vi/poi{id}-vi.mp3
+            en → audio/en/poi{id}-en.mp3
+            Không tồn tại → log lỗi, không crash, không fallback.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AudioService.Stop">
+            <summary>
+            Dừng audio ngay lập tức. Không chồng tiếng.
             </summary>
         </member>
         <member name="T:POIApp.Services.CacheService">
@@ -145,40 +311,26 @@
         </member>
         <member name="T:POIApp.Services.LanguageService">
             <summary>
-            i18n Service — loads translations from bundled JSON files.
-            Lazy-loads only the needed language to minimize startup time.
+            Service ngôn ngữ — chỉ hỗ trợ vi, en.
+            Dùng file JSON embedded: Resources/i18n/vi.json, en.json
+            Load 1 lần, cache, notify UI khi đổi ngôn ngữ.
             </summary>
         </member>
-        <member name="M:POIApp.Services.LanguageService.ResolveDefaultLanguageAsync(System.Nullable{System.Double},System.Nullable{System.Double})">
+        <member name="M:POIApp.Services.LanguageService.InitializeAsync">
             <summary>
-            Resolve default language:
-            1. Saved preference → 2. Device locale → 3. Geo fallback (VN → vi, else en)
-            </summary>
-        </member>
-        <member name="M:POIApp.Services.LanguageService.InitializeAsync(System.String)">
-            <summary>
-            Initialize service — loads strings for the given language.
-            Call once on app startup.
+            Initialize — gọi 1 lần trong App.OnStart().
+            KHÔNG chạy logic phức tạp ở đây.
             </summary>
         </member>
         <member name="M:POIApp.Services.LanguageService.SetLanguageAsync(System.String)">
             <summary>
-            Change current language. Persists to cache.
+            Đổi ngôn ngữ. Notify UI, KHÔNG reload navigation.
             </summary>
         </member>
-        <member name="P:POIApp.Services.LanguageService.Item(System.String)">
+        <member name="T:POIApp.Services.LocalizationService">
             <summary>
-            Get translated string. Falls back to key if not found.
-            </summary>
-        </member>
-        <member name="M:POIApp.Services.LanguageService.Getf(System.String,System.Object[])">
-            <summary>
-            Get translation with format arguments, e.g. Get("greeting", "Alice")
-            </summary>
-        </member>
-        <member name="P:POIApp.Services.LanguageService.IsLoaded">
-            <summary>
-            Returns true if the language has been loaded.
+            Facade over LanguageService for backward compatibility.
+            All pages use LocalizationService.Instance (existing code).
             </summary>
         </member>
         <member name="T:POIApp.Services.LocationService">
@@ -205,6 +357,49 @@
         <member name="M:POIApp.Services.LocationService.DistanceToPOI(Microsoft.Maui.Devices.Sensors.Location,POIApp.Models.POI)">
             <summary>
             Tính khoảng cách từ Location đến POI
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.OfflineDataService">
+            <summary>
+            Service quản lý dữ liệu Offline - Lưu POI từ API vào local storage
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.OfflineDataService.SavePOIsOfflineAsync(System.Collections.Generic.List{POIApp.Models.POI})">
+            <summary>
+            Lưu POI từ API vào offline storage
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.OfflineDataService.LoadPOIsOfflineAsync">
+            <summary>
+            Tải POI từ offline storage
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.OfflineDataService.HasOfflineData">
+            <summary>
+            Kiểm tra xem offline data có tồn tại không
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.OfflineDataService.ClearOfflineData">
+            <summary>
+            Xóa offline data
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.TranslateService">
+            <summary>
+            Dịch text sang ngôn ngữ đích qua MyMemory API (miễn phí, không giới hạn).
+            Cache kết quả để tránh gọi lại nhiều lần.
+            Fallback: dùng text gốc tiếng Việt.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TranslateService.TranslateAsync(System.String,System.String)">
+            <summary>
+            Dịch text tiếng Việt sang ngôn ngữ đích.
+            Kết quả được cache theo "text_lang".
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TranslateService.ClearCache">
+            <summary>
+            Xóa cache — gọi khi cần reset translation.
             </summary>
         </member>
         <member name="T:POIApp.Services.TTSCooldownHelper">
@@ -249,12 +444,31 @@
         </member>
         <member name="T:POIApp.Services.TTSService">
             <summary>
-            Service Text To Speech - Dùng TTS mặc định của Android
+            TTS Service — KHÔNG crash, load locale 1 lần duy nhất khi app start.
+            TUYỆT ĐỐI: không tạo locale thủ công bằng new Locale(...).
+            TUYỆT ĐỐI: không load lại danh sách locale nhiều lần.
             </summary>
         </member>
-        <member name="M:POIApp.Services.TTSService.SpeakAsync(System.String)">
+        <member name="M:POIApp.Services.TTSService.PreloadLocalesAsync">
             <summary>
-            Phát giọng nói từ text
+            Load danh sách locale 1 lần duy nhất. Gọi ở App.OnStart().
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TTSService.FindLocale(System.String)">
+            <summary>
+            Tìm locale hợp lệ theo language code.
+            Fallback: locale bắt đầu bằng "en".
+            TUYỆT ĐỐI: không tạo locale bằng new Locale(...).
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TTSService.SpeakAsync(System.String,System.String)">
+            <summary>
+            Phát giọng nói từ text.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TTSService.Stop">
+            <summary>
+            Dừng phát giọng nói.
             </summary>
         </member>
         <member name="T:POIApp.Resource">

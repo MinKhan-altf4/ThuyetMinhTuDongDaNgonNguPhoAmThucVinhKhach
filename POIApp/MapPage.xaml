@@ -2,13 +2,13 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="POIApp.MapPage"
-             Title="Ban do Vinh Khánh">
+             Title="Thuyết Minh Map">
 
     <Grid RowSpacing="0" ColumnSpacing="0">
         <Grid.RowDefinitions>
             <!-- Row 0: Search bar -->
             <RowDefinition Height="Auto" />
-            <!-- Row 1: Map (full height, overlays float on top) -->
+            <!-- Row 1: Map area (contains map + overlay panels) -->
             <RowDefinition Height="*" />
             <!-- Row 2: Bottom POI chips bar -->
             <RowDefinition Height="Auto" />
@@ -31,7 +31,7 @@
                        Margin="2,0,8,0" />
                 <Entry x:Name="SearchEntry"
                        Grid.Column="1"
-                       Placeholder="Tim nha hang Vinh Khánh..."
+                       Placeholder="Tìm nhà hàng Vĩnh Khánh..."
                        FontSize="14"
                        VerticalOptions="Center"
                        Completed="OnSearchCompleted"
@@ -52,8 +52,8 @@
             </Grid>
         </Frame>
 
-        <!-- ── MAP AREA (Row 1) — the only child in this row ── -->
-        <Grid Grid.Row="1">
+        <!-- ── MAP AREA (Row 1) — ZIndex overlay hoạt động đúng vì overlay nằm TRONG local Grid ── -->
+        <Grid Grid.Row="1" ZIndex="1">
 
             <!-- Map fills entire area -->
             <WebView x:Name="MapWebView"
@@ -70,7 +70,7 @@
                    ZIndex="5">
                 <VerticalStackLayout Spacing="2">
                     <Label x:Name="LblUserStatus"
-                           Text="Dang lay vi tri..."
+                           Text="Đang lấy vị trí..."
                            FontSize="12"
                            TextColor="#0D47A1" />
                     <Label x:Name="LblNearestStatus"
@@ -96,12 +96,34 @@
                 </ScrollView>
             </Frame>
 
-            <!-- Floating controls (bottom-left) -->
+            <!-- Floating controls (bottom-left, vertical stack: ZoomIn → ZoomOut → Refresh) -->
             <VerticalStackLayout VerticalOptions="End"
                                  HorizontalOptions="Start"
                                  Margin="12,0,0,12"
-                                 Spacing="8"
+                                 Spacing="6"
                                  ZIndex="10">
+                <Button x:Name="BtnZoomIn"
+                        Text="+"
+                        FontSize="20"
+                        FontAttributes="Bold"
+                        WidthRequest="48"
+                        HeightRequest="48"
+                        CornerRadius="24"
+                        Padding="0"
+                        BackgroundColor="White"
+                        TextColor="#1565C0"
+                        Clicked="OnZoomInClicked" />
+                <Button x:Name="BtnZoomOut"
+                        Text="−"
+                        FontSize="20"
+                        FontAttributes="Bold"
+                        WidthRequest="48"
+                        HeightRequest="48"
+                        CornerRadius="24"
+                        Padding="0"
+                        BackgroundColor="White"
+                        TextColor="#1565C0"
+                        Clicked="OnZoomOutClicked" />
                 <Button x:Name="BtnReloadPOI"
                         Text="🔄"
                         FontSize="18"
@@ -114,7 +136,7 @@
                         Clicked="OnReloadPOIClicked" />
             </VerticalStackLayout>
 
-            <!-- POI Detail Panel (floats on map) -->
+            <!-- POI Detail Panel (floats on map, highest z-index) -->
             <Frame x:Name="POIDetailPanel"
                    VerticalOptions="End"
                    Margin="12,0,12,12"
@@ -123,7 +145,7 @@
                    CornerRadius="18"
                    HasShadow="True"
                    IsVisible="False"
-                   ZIndex="10">
+                   ZIndex="15">
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <Label x:Name="LblPOIName"
@@ -164,19 +186,18 @@
                     </HorizontalStackLayout>
 
                     <VerticalStackLayout Spacing="4">
-                        <Label Text="Ngon ngu thuyet minh"
+                        <Label Text="Ngôn ngữ thuyết minh"
                                FontSize="12"
                                TextColor="#607D8B" />
                         <Picker x:Name="LanguagePicker"
-                                Title="Chon ngon ngu"
+                                Title="Chọn ngôn ngữ"
                                 FontSize="13"
                                 SelectedIndexChanged="OnLanguageChanged" />
                     </VerticalStackLayout>
 
                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                         <Button x:Name="BtnPlayAudio"
-                                Text="▶ Phat"
-                                FontSize="13"
+                                Text="▶ Phát"                                FontSize="13"
                                 HeightRequest="42"
                                 CornerRadius="21"
                                 BackgroundColor="#FF9800"
@@ -184,7 +205,7 @@
                                 Clicked="OnPlayAudioClicked" />
                         <Button Grid.Column="1"
                                 x:Name="BtnPauseAudio"
-                                Text="⏸ Tam dung"
+                                Text="⏸ Tạm dừng"
                                 FontSize="13"
                                 HeightRequest="42"
                                 CornerRadius="21"
@@ -204,7 +225,7 @@
                                        Color="#FF9800"
                                        HorizontalOptions="Center" />
 
-                    <Button Text="📍 Chi duong den day"
+                    <Button Text="📍 Chỉ đường đến đây"
                             FontSize="13"
                             HeightRequest="42"
                             CornerRadius="21"
@@ -215,22 +236,26 @@
             </Frame>
         </Grid>
 
-        <!-- ── BOTTOM: POI CHIPS (Row 2) ── -->
-        <Frame Grid.Row="2"
-               BackgroundColor="White"
-               Padding="10,8"
-               CornerRadius="14,14,0,0"
-               HasShadow="True"
-               ZIndex="5">
-            <VerticalStackLayout Spacing="6">
-                <Label Text="Dia diem gan ban"
-                       FontSize="14"
-                       FontAttributes="Bold"
-                       TextColor="#263238" />
-                <ScrollView Orientation="Horizontal" HorizontalScrollBarVisibility="Never">
-                    <HorizontalStackLayout x:Name="POIChipsContainer" Spacing="8" />
-                </ScrollView>
-            </VerticalStackLayout>
-        </Frame>
+        <!-- ── BOTTOM: POI CHIPS (Row 2) — layout đơn giản không bo tròn ── -->
+        <Grid Grid.Row="2"
+              BackgroundColor="White"
+              Padding="12,10"
+              ZIndex="5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Label Grid.Row="0"
+                   Text="Địa điểm gần bạn"
+                   FontSize="14"
+                   FontAttributes="Bold"
+                   TextColor="#263238"
+                   Margin="0,0,0,6" />
+            <ScrollView Grid.Row="1"
+                        Orientation="Horizontal"
+                        HorizontalScrollBarVisibility="Never">
+                <HorizontalStackLayout x:Name="POIChipsContainer" Spacing="8" />
+            </ScrollView>
+        </Grid>
     </Grid>
 </ContentPage>

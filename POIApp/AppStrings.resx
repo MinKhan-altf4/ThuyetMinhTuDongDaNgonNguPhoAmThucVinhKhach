@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter</value>
+  </resheader>
+
+  <!-- App Shell -->
+  <data name="TabMap" xml:space="preserve"><value>🗺️ Bản đồ</value></data>
+  <data name="TabPOI" xml:space="preserve"><value>🍽️ Địa điểm</value></data>
+  <data name="TabSettings" xml:space="preserve"><value>⚙️ Cài đặt</value></data>
+
+  <!-- Map Page -->
+  <data name="SearchPlaceholder" xml:space="preserve"><value>Tìm nhà hàng Vĩnh Khánh...</value></data>
+  <data name="GettingLocation" xml:space="preserve"><value>Đang lấy vị trí...</value></data>
+  <data name="NoPOIData" xml:space="preserve"><value>Không có dữ liệu POI</value></data>
+  <data name="NearPlaces" xml:space="preserve"><value>Địa điểm gần bạn</value></data>
+  <data name="Distance" xml:space="preserve"><value>Khoảng cách: {0}m</value></data>
+  <data name="Coords" xml:space="preserve"><value>Tọa độ: {0:F6}, {1:F6}</value></data>
+
+  <!-- POI Detail -->
+  <data name="Description" xml:space="preserve"><value>Mô tả</value></data>
+  <data name="CommentaryLanguage" xml:space="preserve"><value>Ngôn ngữ thuyết minh</value></data>
+  <data name="Play" xml:space="preserve"><value>▶ Phát</value></data>
+  <data name="Pause" xml:space="preserve"><value>⏸ Tạm dừng</value></data>
+  <data name="Navigate" xml:space="preserve"><value>📍 Chỉ đường đến đây</value></data>
+  <data name="Close" xml:space="preserve"><value>Đóng</value></data>
+  <data name="ReadyToPlay" xml:space="preserve"><value>Sẵn sàng phát thuyết minh</value></data>
+  <data name="LoadingAudio" xml:space="preserve"><value>Đang tải audio...</value></data>
+  <data name="AudioError" xml:space="preserve"><value>Lỗi phát audio</value></data>
+  <data name="Paused" xml:space="preserve"><value>Đã tạm dừng</value></data>
+
+  <!-- POI Page -->
+  <data name="AllPlaces" xml:space="preserve"><value>Tất cả địa điểm</value></data>
+  <data name="OpenHours" xml:space="preserve"><value>Mở cửa: {0} - {1}</value></data>
+  <data name="Listen" xml:space="preserve"><value>🔊 Nghe</value></data>
+  <data name="Directions" xml:space="preserve"><value>🧭 Chỉ đường</value></data>
+
+  <!-- Settings Page -->
+  <data name="VoiceOffline" xml:space="preserve"><value>🔊 Voice Offline</value></data>
+  <data name="VoiceOfflineDesc" xml:space="preserve"><value>Tải sẵn audio thuyết minh để nghe offline, không cần mạng.</value></data>
+  <data name="DownloadVoicePackage" xml:space="preserve"><value>⬇ Tải gói tiếng Anh</value></data>
+  <data name="OfflineNotDownloaded" xml:space="preserve"><value>Chưa tải · Dung lượng: ~12 MB</value></data>
+  <data name="Downloading" xml:space="preserve"><value>Đang tải: {0}%</value></data>
+  <data name="DownloadSuccess" xml:space="preserve"><value>✅ Tải thành công!</value></data>
+  <data name="OfflineReady" xml:space="preserve"><value>Đã tải · Sẵn sàng nghe offline</value></data>
+  <data name="DownloadFailed" xml:space="preserve"><value>❌ Lỗi tải: {0}</value></data>
+  <data name="Retry" xml:space="preserve"><value>⬇ Tải lại</value></data>
+
+  <data name="VoiceSettings" xml:space="preserve"><value>🗣️ Giọng TTS</value></data>
+  <data name="SelectVoice" xml:space="preserve"><value>Chọn giọng đọc thuyết minh</value></data>
+  <data name="TestVoice" xml:space="preserve"><value>🔊 Nghe thử</value></data>
+  <data name="SystemDefaultVoice" xml:space="preserve"><value>Giọng mặc định hệ thống</value></data>
+  <data name="VietnameseFemale" xml:space="preserve"><value>Giọng nữ tiếng Việt</value></data>
+  <data name="VietnameseMale" xml:space="preserve"><value>Giọng nam tiếng Việt</value></data>
+  <data name="EnglishFemale" xml:space="preserve"><value>Giọng nữ tiếng Anh</value></data>
+
+  <data name="GPSSettings" xml:space="preserve"><value>📡 Cài đặt GPS</value></data>
+  <data name="GPSSensitivity" xml:space="preserve"><value>Độ nhạy GPS</value></data>
+  <data name="NotificationRadius" xml:space="preserve"><value>Bán kính thông báo</value></data>
+  <data name="SearchRadius" xml:space="preserve"><value>Bán kính tìm kiếm POI</value></data>
+  <data name="BackgroundGPS" xml:space="preserve"><value>GPS chạy nền</value></data>
+  <data name="BackgroundGPSDesc" xml:space="preserve"><value>Tiết kiệm pin khi app ở background</value></data>
+
+  <data name="About" xml:space="preserve"><value>ℹ️ Thông tin</value></data>
+  <data name="AppTitle" xml:space="preserve"><value>Thuyết Minh Tự Động - Food App</value></data>
+  <data name="Version" xml:space="preserve"><value>Phiên bản</value></data>
+  <data name="SupportedLanguages" xml:space="preserve"><value>Hỗ trợ</value></data>
+  <data name="MapCredit" xml:space="preserve"><value>Bản đồ: OpenStreetMap · Leaflet.js</value></data>
+
+  <!-- Language -->
+  <data name="Language" xml:space="preserve"><value>Ngôn ngữ</value></data>
+  <data name="SelectLanguage" xml:space="preserve"><value>Chọn ngôn ngữ thuyết minh</value></data>
+  <data name="CurrentLanguage" xml:space="preserve"><value>Ngôn ngữ hiện tại: {0}</value></data>
+  <data name="Vietnamese" xml:space="preserve"><value>Tiếng Việt</value></data>
+  <data name="English" xml:space="preserve"><value>English</value></data>
+  <data name="Chinese" xml:space="preserve"><value>中文</value></data>
+  <data name="Korean" xml:space="preserve"><value>한국어</value></data>
+
+  <!-- TTS Test -->
+  <data name="TTSTestVI" xml:space="preserve"><value>Xin chào! Đây là giọng đọc thuyết minh tự động. Chúc bạn ngon miệng!</value></data>
+  <data name="TTSTestEN" xml:space="preserve"><value>Hello! This is the automatic tour guide voice. Enjoy your meal!</value></data>
+  <data name="TTSTestZH" xml:space="preserve"><value>您好！这是自动语音导览。祝您用餐愉快！</value></data>
+  <data name="TTSTestKO" xml:space="preserve"><value>안녕하세요! 이것은 자동 음성 가이드입니다. 맛있는 식사 되세요!</value></data>
+</root>

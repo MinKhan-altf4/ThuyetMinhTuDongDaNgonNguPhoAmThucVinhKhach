@@ -12,16 +12,17 @@ public partial class MapPage : ContentPage
     private const string LangVi = "vi";
     private const string LangEn = "en";
     private const string LangZh = "zh";
-    private const string LangJp = "jp";
-    private const string LangKr = "kr";
+    private const string LangJa = "ja";
+    private const string LangKo = "ko";
 
+    // THỐNG NHẤT: vi | en | zh | ja | ko
     private static readonly List<(string Label, string Code)> Languages =
     [
         ("Tiếng Việt 🇻🇳", LangVi),
         ("English 🇺🇸",    LangEn),
         ("中文 🇨🇳",        LangZh),
-        ("日本語 🇯🇵",       LangJp),
-        ("한국어 🇰🇷",        LangKr)
+        ("日本語 🇯🇵",       LangJa),
+        ("한국어 🇰🇷",        LangKo)
     ];
 
     private List<POI> _allPois = new();   // full POI list
@@ -33,12 +34,19 @@ public partial class MapPage : ContentPage
     private System.Timers.Timer? _searchDebounceTimer;
     private System.Timers.Timer? _refreshTimer;
     private bool _mapReady = false;
+    private int _currentRadius = 1000;
+    private string _currentGpsSensitivity = "medium"; // ── BUG FIX 1: Track GPS sensitivity to detect changes ──
+
+    // ── GPS Realtime Tracking ──
+    private bool _isTracking = false;
+    private CancellationTokenSource? _trackingCts;
 
     private readonly GeofenceHelper _geofenceHelper = new();
     private readonly GPSTrackingService _gpsTracking = new();
     private readonly CacheService _cacheService = new();
-    private readonly OfflineAudioService _offlineAudioService = new();
     private readonly APIService _apiService = new();
+    private readonly TTSService _ttsService = new();
+    private readonly TranslateService _translateService = TranslateService.Instance;
 
     public MapPage()
     {
@@ -61,14 +69,48 @@ public partial class MapPage : ContentPage
         MapWebView.Navigating += OnWebViewNavigating;
         MapWebView.Navigated += OnWebViewNavigated;
         LblAudioStatus.Text = "Sẵn sàng phát thuyết minh";
+
+        // Load radius từ settings
+        _currentRadius = AppSettingsHelper.GetRadius();
     }
 
     private void OnWebViewNavigated(object? sender, WebNavigatedEventArgs e)
     {
         _mapReady = true;
-        Debug.WriteLine("[Map] WebView loaded OK");
-        // NOTE: Do NOT call RefreshMap() here — that creates an infinite loop
-        // because setting Source triggers Navigated again.
+
+        // ── BƯỚC 6: Log WebView navigation result ──
+        if (e.Result == WebNavigationResult.Failure)
+        {
+            Debug.WriteLine($"[Map] ❌ WebView navigation FAIL: {e.Url}");
+        }
+        else
+        {
+            Debug.WriteLine($"[Map] ✅ WebView loaded OK: {e.Url}");
+        }
+
+        // Health check: gọi JS để xác nhận Leaflet map đã init
+        CheckMapHealthAsync();
+    }
+
+    private async void CheckMapHealthAsync()
+    {
+        try
+        {
+            // Inject JS để kiểm tra map tồn tại
+            var result = await MapWebView.EvaluateJavaScriptAsync(
+                "typeof map !== 'undefined' && map !== null ? 'MAP_OK' : 'MAP_NULL'");
+
+            Debug.WriteLine($"[Map] 🩺 Map health: {result}");
+
+            if (result != "MAP_OK")
+            {
+                Debug.WriteLine("[Map] ⚠️  Leaflet map chưa init — có thể do _pois rỗng hoặc JS lỗi");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Map] ❌ Map health check lỗi: {ex.Message}");
+        }
     }
 
     protected override async void OnAppearing()
@@ -81,6 +123,24 @@ public partial class MapPage : ContentPage
         _gpsTracking.LocationChanged += OnLocationChanged;
         _gpsTracking.LocationError += OnError;
 
+        // ── BUG FIX #2: Reload radius in case it changed in SettingsPage ──
+        int newRadius = AppSettingsHelper.GetRadius();
+        if (newRadius != _currentRadius)
+        {
+            _currentRadius = newRadius;
+            Debug.WriteLine($"[Map] Radius changed to {_currentRadius}m — will refresh map");
+        }
+
+        // ── BUG FIX #1: Reload GPS sensitivity and force restart if it changed ──
+        string newGpsSensitivity = AppSettingsHelper.GetGpsSensitivity();
+        if (newGpsSensitivity != _currentGpsSensitivity)
+        {
+            _currentGpsSensitivity = newGpsSensitivity;
+            Debug.WriteLine($"[Map] GPS sensitivity changed to {_currentGpsSensitivity} — will restart tracking with new interval");
+            // Force stop the old tracking loop so a new one starts with the new interval
+            StopTracking();
+        }
+
         // Load POIs FIRST, then render map
         await LoadPOIsAsync();
 
@@ -89,19 +149,20 @@ public partial class MapPage : ContentPage
 
         _refreshTimer?.Start();
 
-        // Start GPS tracking last (may not resolve immediately on emulator)
-        _ = _gpsTracking.StartTrackingAsync();
+        // Start realtime tracking loop (will use new interval if sensitivity changed)
+        _ = StartTrackingAsync();
     }
 
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
+        StopTracking();                          // dừng realtime tracking loop
         _refreshTimer?.Stop();
         _searchDebounceTimer?.Stop();
         _gpsTracking.LocationChanged -= OnLocationChanged;
         _gpsTracking.LocationError -= OnError;
         _gpsTracking.StopTracking();
-        _offlineAudioService.Stop();
+        _ttsService.Stop();
         _mapReady = false;
     }
 
@@ -148,7 +209,7 @@ public partial class MapPage : ContentPage
         {
             UpdateChips();
             UpdateStatus();
-            RefreshMap();
+            UpdateUserMarker();   // chỉ update marker, KHÔNG reload map
         });
     }
 
@@ -207,7 +268,7 @@ public partial class MapPage : ContentPage
         foreach (var poi in _pois)
         {
             poi.Distance = _geofenceHelper.CalculateDistance(_userLat, _userLon, poi.Latitude, poi.Longitude);
-            poi.IsNear = poi.Distance < 100;
+            poi.IsNear = poi.Distance < 400;
         }
         _pois = _pois.OrderBy(p => p.Distance).ToList();
     }
@@ -216,11 +277,13 @@ public partial class MapPage : ContentPage
     {
         LblUserStatus.Text = $"📍 {_userLat:F6}, {_userLon:F6}";
         var nearest = _pois.FirstOrDefault();
-        LblNearestStatus.Text = nearest == null
-            ? "Khong co du lieu POI"
-            : nearest.IsNear
-                ? $"🎯 {nearest.Name} ({nearest.Distance:F0}m)"
-                : $"📌 {nearest.Name} ({nearest.Distance:F0}m)";
+        if (nearest == null)
+        {
+            LblNearestStatus.Text = "Không có dữ liệu POI";
+            return;
+        }
+        var icon = nearest.Distance < 400 ? "🎯" : (nearest.Distance <= 1000 ? "📍" : "📌");
+        LblNearestStatus.Text = $"{icon} {nearest.DisplayName} ({nearest.Distance:F0}m)";
     }
 
     private void UpdateChips()
@@ -229,10 +292,14 @@ public partial class MapPage : ContentPage
 
         foreach (var poi in _pois.Take(6))
         {
+            string distIcon = poi.Distance < 400 ? "🎯" : (poi.Distance <= 1000 ? "📍" : "📌");
+            Color bgColor = poi.Distance < 400 ? Color.FromArgb("#E8F5E9") : (poi.Distance <= 1000 ? Color.FromArgb("#FFF3E0") : Color.FromArgb("#F5F7FA"));
+            Color borderColor = poi.Distance < 400 ? Color.FromArgb("#43A047") : (poi.Distance <= 1000 ? Color.FromArgb("#FF9800") : Color.FromArgb("#CFD8DC"));
+
             var chip = new Frame
             {
-                BackgroundColor = poi.IsNear ? Color.FromArgb("#E8F5E9") : Color.FromArgb("#F5F7FA"),
-                BorderColor = poi.IsNear ? Color.FromArgb("#43A047") : Color.FromArgb("#CFD8DC"),
+                BackgroundColor = bgColor,
+                BorderColor = borderColor,
                 CornerRadius = 16,
                 Padding = new Thickness(10, 6),
                 HasShadow = false,
@@ -242,7 +309,7 @@ public partial class MapPage : ContentPage
                     Children =
                     {
                         new Label { Text = poi.Name, FontSize = 11, FontAttributes = FontAttributes.Bold, TextColor = Color.FromArgb("#263238") },
-                        new Label { Text = poi.IsNear ? $"🎯 {poi.Distance:F0}m" : $"{poi.Distance:F0}m", FontSize = 10, TextColor = Color.FromArgb("#607D8B") }
+                        new Label { Text = $"{distIcon} {poi.Distance:F0}m", FontSize = 10, TextColor = Color.FromArgb("#607D8B") }
                     }
                 }
             };
@@ -258,6 +325,91 @@ public partial class MapPage : ContentPage
         }
     }
 
+    // ═══════════════════════════════════════════════════════
+    // GPS REALTIME TRACKING LOOP
+    // ═══════════════════════════════════════════════════════
+
+    private async Task StartTrackingAsync()
+    {
+        if (_isTracking) return;
+        if (!_mapReady)
+        {
+            Debug.WriteLine("[Map] Tracking: chờ map ready...");
+            await Task.Delay(1000);
+            if (!_mapReady) return;
+        }
+
+        _isTracking = true;
+        _trackingCts = new CancellationTokenSource();
+        Debug.WriteLine($"[Map] ▶ Tracking bắt đầu (interval: {AppSettingsHelper.GetGpsIntervalMs()}ms, accuracy: {AppSettingsHelper.GetGpsAccuracy()})");
+
+        try
+        {
+            while (_isTracking && !_trackingCts.Token.IsCancellationRequested)
+            {
+                try
+                {
+                    var location = await Geolocation.GetLocationAsync(new GeolocationRequest
+                    {
+                        DesiredAccuracy = AppSettingsHelper.GetGpsAccuracy(),
+                        Timeout = TimeSpan.FromSeconds(10)
+                    });
+
+                    if (location != null)
+                    {
+                        _userLat = location.Latitude;
+                        _userLon = location.Longitude;
+                        UpdatePOIDistances();
+
+                        MainThread.BeginInvokeOnMainThread(() =>
+                        {
+                            UpdateChips();
+                            UpdateStatus();
+                            UpdateUserMarker();
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Map] Tracking loop lỗi: {ex.Message}");
+                }
+
+                await Task.Delay(AppSettingsHelper.GetGpsIntervalMs(), _trackingCts.Token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            Debug.WriteLine("[Map] Tracking bị hủy");
+        }
+        finally
+        {
+            _isTracking = false;
+            _trackingCts?.Dispose();
+            _trackingCts = null;
+        }
+    }
+
+    private void StopTracking()
+    {
+        if (!_isTracking) return;
+        _isTracking = false;
+        _trackingCts?.Cancel();
+        Debug.WriteLine("[Map] ■ Tracking đã dừng");
+    }
+
+    // ── Chỉ cập nhật user marker trên map (KHÔNG reload toàn bộ) ──
+    private void UpdateUserMarker()
+    {
+        if (!_mapReady) return;
+        var inv = CultureInfo.InvariantCulture;
+        _ = MapWebView.EvaluateJavaScriptAsync($@"
+if(window.map && window._userMarker){{
+  window._userMarker.setLatLng([{_userLat.ToString(inv)},{_userLon.ToString(inv)}]);
+  window.userLat={_userLat.ToString(inv)};
+  window.userLng={_userLon.ToString(inv)};
+}}");
+    }
+
     private void RefreshMap()
     {
         // Set source first. If _mapReady is true, it will render immediately.
@@ -269,8 +421,20 @@ public partial class MapPage : ContentPage
     private void CenterMapOnPOI(POI poi)
     {
         if (!_mapReady) return;
-        // Use EvaluateJavaScriptAsync to fly the map to the POI
-        var js = $"if(window.map){{map.flyTo([{poi.Latitude},{poi.Longitude}],18,{{animate:true,duration:1}});}}";
+        var inv = CultureInfo.InvariantCulture;
+        // Fly to POI: zoom +2 levels above current, smooth 1.2s animation, no map rebuild
+        var js = $@"
+if(window.map){{
+  var targetZoom=Math.min(map.getZoom()+2,19);
+  map.flyTo([{poi.Latitude.ToString(inv)},{poi.Longitude.ToString(inv)}],targetZoom,{{animate:true,duration:1.2}});
+  if(window._lastSelected!=={poi.Id}){{
+    var prev=document.querySelector('.poi-pin.selected');
+    if(prev){{prev.classList.remove('selected');var prevBody=prev.querySelector('.body');if(prevBody)prevBody.style.boxShadow='';}}
+    var cur=document.querySelector('[data-poi-id=""{poi.Id}""]');
+    if(cur){{cur.classList.add('selected');var curBody=cur.querySelector('.body');if(curBody)curBody.style.boxShadow='0 0 0 8px rgba(255,152,0,.3),0 4px 12px rgba(0,0,0,.3)';}}
+    window._lastSelected={poi.Id};
+  }}
+}}";
         MapWebView.EvaluateJavaScriptAsync(js);
     }
 
@@ -289,7 +453,7 @@ public partial class MapPage : ContentPage
         sb.Append("<script src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'></script>");
         sb.Append("<style>");
         sb.Append("*{margin:0;padding:0;box-sizing:border-box;}html,body,#map{height:100%;width:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;}");
-        sb.Append(".leaflet-control-zoom a{width:44px!important;height:44px!important;line-height:42px!important;font-size:22px!important;border-radius:12px!important;border:none!important;background:#fff!important;color:#1E3A8A!important;box-shadow:0 4px 12px rgba(0,0,0,.18)!important;margin-bottom:8px!important;}");
+        sb.Append(".leaflet-control-zoom{top:12px!important;right:12px!important;left:auto!important;bottom:auto!important;box-shadow:0 4px 12px rgba(0,0,0,.18)!important;border-radius:10px!important;overflow:hidden!important;}.leaflet-control-zoom a{width:40px!important;height:40px!important;line-height:40px!important;font-size:20px!important;border-radius:0!important;border:none!important;background:#fff!important;color:#1E3A8A!important;}.leaflet-control-zoom a:first-child{border-radius:10px 10px 0 0!important;}.leaflet-control-zoom a:last-child{border-radius:0 0 10px 10px!important;}");
         sb.Append(".poi-pin{position:relative;transform:translate(-50%,-100%);display:inline-block;}");
         sb.Append(".poi-pin .body{width:36px;height:36px;border-radius:18px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.3);position:relative;z-index:2;transition:transform .2s;}");
         sb.Append(".poi-pin .tail{position:absolute;left:50%;bottom:-10px;width:14px;height:14px;background:inherit;transform:translateX(-50%) rotate(45deg);border-right:3px solid #fff;border-bottom:3px solid #fff;z-index:1;}");
@@ -302,7 +466,6 @@ public partial class MapPage : ContentPage
         sb.Append($"var userLat={_userLat.ToString(inv)},userLng={_userLon.ToString(inv)};");
         sb.Append($"var map=L.map('map',{{zoomControl:false,attributionControl:false}}).setView([{cLat.ToString(inv)},{cLon.ToString(inv)}],16);");
         sb.Append("L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);");
-        sb.Append("L.control.zoom({position:'bottomleft'}).addTo(map);");
         sb.Append(@"
 L.Control.Recenter=L.Control.extend({options:{position:'bottomright'},onAdd:function(){
   var btn=L.DomUtil.create('button','leaflet-bar leaflet-control');
@@ -315,20 +478,34 @@ L.Control.Recenter=L.Control.extend({options:{position:'bottomright'},onAdd:func
 new L.Control.Recenter().addTo(map);
 ");
         sb.Append("var userIcon=L.divIcon({html:\"<div style='width:20px;height:20px;border-radius:10px;background:#2563EB;border:3px solid #fff;box-shadow:0 0 0 12px rgba(37,99,235,.15)'></div>\",className:'',iconSize:[20,20],iconAnchor:[10,10]});");
-        sb.Append("L.marker([userLat,userLng],{icon:userIcon}).addTo(map);");
+        sb.Append("window._userMarker=L.marker([userLat,userLng],{icon:userIcon}).addTo(map);");
         sb.Append("L.circle([userLat,userLng],{color:'#2563EB',fillColor:'#3B82F6',fillOpacity:.08,radius:60,weight:1}).addTo(map);");
 
-        // POI markers (built directly in C# foreach — reliable, no JS complexity)
+        // POI markers: màu theo khoảng cách
+        // Gần (<400m): xanh lá | Trung bình (400m-1km): cam | Xa (>1km): đỏ
         foreach (var poi in _pois)
         {
-            var isNear = poi.IsNear;
+            var dist = poi.Distance;
+            var withinRadius = dist <= _currentRadius;
+            var isNear = dist < 400;
+            var isMedium = dist >= 400 && dist <= 1000;
+            var isFar = dist > 1000;
             var isSelected = _selectedPOI?.Id == poi.Id;
-            var color = isSelected ? "#FF9800" : (isNear ? "#43A047" : "#EF5350");
+
+            string color;
+            if (isSelected) color = "#FF9800";
+            else if (isNear) color = "#43A047";
+            else if (isMedium) color = "#FF9800";
+            else color = "#EF5350";
+
             var nearClass = isNear ? "near" : "";
             var selClass = isSelected ? "selected" : "";
-            sb.Append($"var pin{poi.Id}=L.divIcon({{html:\"<div class='poi-pin {nearClass} {selClass}'><div class='body' style='background:{color};'>•</div><div class='tail' style='background:{color};'></div></div>\",className:'',iconSize:[36,46],iconAnchor:[18,46]}});");
-            sb.Append($"L.marker([{poi.Latitude.ToString(inv)},{poi.Longitude.ToString(inv)}],{{icon:pin{poi.Id}}}).addTo(map).on('click',function(){{window.location='poi://detail/{poi.Id}';}});");
-            if (isNear)
+            var markerOpacity = withinRadius ? 1.0 : 0.0;
+            sb.Append($"var pin{poi.Id}=L.divIcon({{html:\"<div class='poi-pin {nearClass} {selClass}' data-poi-id='{poi.Id}' data-dist='{dist:F0}'><div class='body' style='background:{color};'>•</div><div class='tail' style='background:{color};'></div></div>\",className:'',iconSize:[36,46],iconAnchor:[18,46]}});");
+            sb.Append($"L.marker([{poi.Latitude.ToString(inv)},{poi.Longitude.ToString(inv)}],{{icon:pin{poi.Id},riseOnHover:true,opacity:{markerOpacity}}}).addTo(map).on('click',function(){{window.location='poi://detail/{poi.Id}';}});");
+
+            // Geofence circle: chỉ hiện khi gần (<400m)
+            if (isNear && withinRadius)
                 sb.Append($"L.circle([{poi.Latitude.ToString(inv)},{poi.Longitude.ToString(inv)}],{{color:'#43A047',fillColor:'#43A047',fillOpacity:.12,radius:80,weight:1}}).addTo(map);");
         }
 
@@ -341,12 +518,12 @@ new L.Control.Recenter().addTo(map);
     {
         _selectedPOI = poi;
         BindPOIDetailText(poi);
-        LblPOIDistance.Text = $"Khoang cach: {poi.Distance:F0}m";
+        LblPOIDistance.Text = $"Khoảng cách: {poi.Distance:F0}m";
         LblPOICoords.Text = $"{poi.Latitude:F6}, {poi.Longitude:F6}";
-        LblPOIDistance.TextColor = poi.IsNear ? Color.FromArgb("#2E7D32") : Color.FromArgb("#607D8B");
-        LblAudioStatus.Text = "San sang phat thuyet minh";
+        LblPOIDistance.TextColor = poi.Distance < 400 ? Color.FromArgb("#43A047") : (poi.Distance <= 1000 ? Color.FromArgb("#FF9800") : Color.FromArgb("#EF5350"));
+        LblAudioStatus.Text = "Sẵn sàng phát thuyết minh";
         POIDetailPanel.IsVisible = true;
-        RefreshMap();
+        // No RefreshMap() — marker state updated via JS in CenterMapOnPOI
     }
 
     private void BindPOIDetailText(POI poi)
@@ -359,8 +536,17 @@ new L.Control.Recenter().addTo(map);
     {
         POIDetailPanel.IsVisible = false;
         _selectedPOI = null;
-        _offlineAudioService.Stop();
-        RefreshMap();
+        _ttsService.Stop();
+        // Reset marker style via JS — no map rebuild
+        if (_mapReady)
+        {
+            MapWebView.EvaluateJavaScriptAsync(@"
+if(window._lastSelected!==undefined){
+  var el=document.querySelector('[data-poi-id=""'+window._lastSelected+'""]');
+  if(el){el.classList.remove('selected');var body=el.querySelector('.body');if(body)body.style.boxShadow='';}
+  window._lastSelected=null;
+}");
+        }
     }
 
     private async void OnPlayAudioClicked(object? sender, EventArgs e)
@@ -372,10 +558,25 @@ new L.Control.Recenter().addTo(map);
             BtnPlayAudio.IsEnabled = false;
             AudioLoading.IsRunning = true;
             AudioLoading.IsVisible = true;
-            LblAudioStatus.Text = "Dang tai audio...";
+            LblAudioStatus.Text = "Đang xử lý...";
 
-            var result = await _offlineAudioService.PlayAsync(_selectedPOI, _selectedLanguage);
-            LblAudioStatus.Text = result.Message;
+            var originalText = $"{_selectedPOI.Name}. {_selectedPOI.Description}";
+            var lang = _selectedLanguage;
+
+            if (lang == LangVi)
+            {
+                LblAudioStatus.Text = "Đang phát TTS tiếng Việt...";
+                await _ttsService.SpeakAsync(originalText, LangVi);
+                LblAudioStatus.Text = "Đã phát TTS (Tiếng Việt)";
+            }
+            else
+            {
+                LblAudioStatus.Text = "Đang dịch...";
+                var translatedText = await _translateService.TranslateAsync(originalText, lang);
+                LblAudioStatus.Text = "Đang phát TTS...";
+                await _ttsService.SpeakAsync(translatedText, lang);
+                LblAudioStatus.Text = $"Đã phát TTS ({lang.ToUpper()})";
+            }
         }
         catch (Exception ex)
         {
@@ -392,7 +593,7 @@ new L.Control.Recenter().addTo(map);
 
     private void OnPauseAudioClicked(object? sender, EventArgs e)
     {
-        _offlineAudioService.Pause();
+        _ttsService.Stop();
         LblAudioStatus.Text = "Đã tạm dừng";
     }
 
@@ -414,6 +615,18 @@ new L.Control.Recenter().addTo(map);
     private void OnReloadPOIClicked(object? sender, EventArgs e)
     {
         _ = LoadPOIsAsync();
+    }
+
+    private void OnZoomInClicked(object? sender, EventArgs e)
+    {
+        if (!_mapReady) return;
+        MapWebView.EvaluateJavaScriptAsync("if(window.map){map.zoomIn();}");
+    }
+
+    private void OnZoomOutClicked(object? sender, EventArgs e)
+    {
+        if (!_mapReady) return;
+        MapWebView.EvaluateJavaScriptAsync("if(window.map){map.zoomOut();}");
     }
 
     private void OnClearSearchClicked(object? sender, EventArgs e)
@@ -462,35 +675,65 @@ new L.Control.Recenter().addTo(map);
 
         try
         {
-            // First try local filter (instant)
-            var localResults = _allPois
-                .Where(p => p.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
-                            (p.Description?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                            (p.Address?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false))
-                .OrderBy(p => p.Distance)
-                .Take(8)
-                .ToList();
+            // ── DEBUG: Log trạng thái trước khi tìm ──
+            Debug.WriteLine($"[Map] SearchAsync: query=\"{query}\"");
+            Debug.WriteLine($"[Map] SearchAsync: _allPois.Count={_allPois.Count}");
 
-            MainThread.BeginInvokeOnMainThread(() => ShowSearchSuggestions(localResults));
-
-            // Also try API for broader results
-            try
+            // ── B1: LOCAL FILTER ──
+            List<POI> localResults;
+            if (_allPois.Count > 0)
             {
-                var apiResults = await _apiService.SearchRestaurantsAsync(query, _userLat, _userLon);
-                if (apiResults.Count > 0)
+                // Log toàn bộ POI trong RAM — xác nhận có dữ liệu
+                foreach (var p in _allPois)
+                    Debug.WriteLine($"[Map]   [RAM] #{p.Id}: \"{p.Name}\" | lat={p.Latitude:F6}");
+
+                localResults = _allPois
+                    .Where(p => p.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                                (p.Description?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                                (p.Address?.Contains(query, StringComparison.OrdinalIgnoreCase) ?? false))
+                    .OrderBy(p => p.Distance)
+                    .Take(8)
+                    .ToList();
+
+                Debug.WriteLine($"[Map] SearchAsync: local filter → {localResults.Count} kết quả");
+
+                // Local có kết quả → hiển thị, KHÔNG cần gọi API
+                if (localResults.Count > 0)
                 {
-                    // Merge with local results, dedupe by id
-                    var merged = localResults.Concat(
-                        apiResults.Where(a => !localResults.Any(l => l.Id == a.Id))
-                    ).Take(8).ToList();
-                    MainThread.BeginInvokeOnMainThread(() => ShowSearchSuggestions(merged));
+                    MainThread.BeginInvokeOnMainThread(() => ShowSearchSuggestions(localResults));
+                    return;
                 }
             }
-            catch { /* silent fail, local results already shown */ }
+            else
+            {
+                Debug.WriteLine($"[Map] SearchAsync: ⚠️ _allPois rỗng — chưa load được dữ liệu!");
+                localResults = new List<POI>();
+            }
+
+            // ── B2: GỌI API SEARCH (chỉ khi local không có) ──
+            Debug.WriteLine($"[Map] SearchAsync: Gọi API...");
+            var apiResults = await _apiService.SearchRestaurantsAsync(query, _userLat, _userLon);
+
+            Debug.WriteLine($"[Map] SearchAsync: API trả {apiResults.Count} kết quả");
+            foreach (var p in apiResults)
+                Debug.WriteLine($"[Map]   [API] #{p.Id}: \"{p.Name}\" | lat={p.Latitude:F6}");
+
+            if (apiResults.Count > 0)
+            {
+                var merged = localResults.Concat(
+                    apiResults.Where(a => !localResults.Any(l => l.Id == a.Id))
+                ).Take(8).ToList();
+                MainThread.BeginInvokeOnMainThread(() => ShowSearchSuggestions(merged));
+            }
+            else if (localResults.Count == 0)
+            {
+                Debug.WriteLine($"[Map] SearchAsync: ❌ Không tìm thấy \"{query}\" ở cả local và API");
+                MainThread.BeginInvokeOnMainThread(() => SearchSuggestionsPanel.IsVisible = false);
+            }
         }
         catch (Exception ex)
         {
-            Debug.WriteLine("[Map] Lỗi tìm kiếm: " + ex.Message);
+            Debug.WriteLine($"[Map] ❌ Lỗi tìm kiếm: {ex.Message}");
         }
     }
 
@@ -587,9 +830,24 @@ new L.Control.Recenter().addTo(map);
     {
         try
         {
+            Debug.WriteLine($"[Map] ▶ LoadPOIsAsync() — language={_selectedLanguage}");
             var pois = await _apiService.GetPOIsAsync();
+
+            Debug.WriteLine($"[Map] ✅ Nhận {pois.Count} POI");
+            foreach (var p in pois)
+                Debug.WriteLine($"[Map]   #{p.Id}: \"{p.Name}\" | lat={p.Latitude:F6}, lng={p.Longitude:F6} | audio={p.AudioUrl ?? "(null)"}");
+
             _allPois = pois;
             _pois = pois;
+
+            if (_pois.Count == 0)
+            {
+                Debug.WriteLine("[Map] ⚠️  KHÔNG có POI nào — kiểm tra: (1) API có chạy? (2) MySQL có start? (3) database đã import?");
+                LblNearestStatus.Text = "Không có dữ liệu POI - kiểm tra API/database";
+                // ❌ KHÔNG refresh map khi không có POI — tránh map trắng
+                return;
+            }
+
             UpdatePOIDistances();
             UpdateChips();
             UpdateStatus();
@@ -597,7 +855,7 @@ new L.Control.Recenter().addTo(map);
         }
         catch (Exception ex)
         {
-            Debug.WriteLine("[Map] Lỗi tải POI: " + ex.Message);
+            Debug.WriteLine($"[Map] ❌ Lỗi tải POI: {ex.Message}");
             LblNearestStatus.Text = "Lỗi tải dữ liệu POI";
         }
     }
