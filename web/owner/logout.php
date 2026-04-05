@@ -3,5 +3,5 @@
 session_start();
 session_unset();
 session_destroy();
-header('Location: /seller/login.php');
+header('Location: login.php');
 exit;

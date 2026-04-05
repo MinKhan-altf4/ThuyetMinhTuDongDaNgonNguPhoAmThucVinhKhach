@@ -10,7 +10,7 @@ import Permissions from "./pages/Permissions";
 import SystemSettings from "./pages/SystemSettings";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login"; // ✅ thêm
-
+import AddStallOwner from "./components/AddStallOwner";
 const queryClient = new QueryClient();
 
 // ✅ Component bảo vệ route — chuyển về /login nếu chưa đăng nhập
@@ -33,6 +33,7 @@ const App = () => (
           {/* ✅ Các route được bảo vệ */}
           <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/stall-owners" element={<ProtectedRoute><StallOwners /></ProtectedRoute>} />
+          <Route path="/stall-owners/add" element={<ProtectedRoute><AddStallOwner /></ProtectedRoute>} />
           <Route path="/stalls" element={<ProtectedRoute><Stalls /></ProtectedRoute>} />
           <Route path="/permissions" element={<ProtectedRoute><Permissions /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SystemSettings /></ProtectedRoute>} />
