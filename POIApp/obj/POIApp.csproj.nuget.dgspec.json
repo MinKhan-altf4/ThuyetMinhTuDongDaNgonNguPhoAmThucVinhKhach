@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "D:\\TMATTĐ\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj": {}
+    "D:\\xampp\\htdocs\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj": {}
   },
   "projects": {
-    "D:\\TMATTĐ\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj": {
+    "D:\\xampp\\htdocs\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\TMATTĐ\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj",
+        "projectUniqueName": "D:\\xampp\\htdocs\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj",
         "projectName": "POIApp",
-        "projectPath": "D:\\TMATTĐ\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj",
+        "projectPath": "D:\\xampp\\htdocs\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj",
         "packagesPath": "C:\\Users\\LOQ\\.nuget\\packages\\",
-        "outputPath": "D:\\TMATTĐ\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\obj\\",
+        "outputPath": "D:\\xampp\\htdocs\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\obj\\",
         "projectStyle": "PackageReference",
         "crossTargeting": true,
         "configFilePaths": [
@@ -30,15 +30,15 @@
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
-          "net10.0-android": {
+          "net10.0-android36.0": {
             "targetAlias": "net10.0-android",
             "projectReferences": {}
           },
-          "net10.0-ios": {
+          "net10.0-ios26.2": {
             "targetAlias": "net10.0-ios",
             "projectReferences": {}
           },
-          "net10.0-maccatalyst": {
+          "net10.0-maccatalyst26.2": {
             "targetAlias": "net10.0-maccatalyst",
             "projectReferences": {}
           },
@@ -60,7 +60,7 @@
         "SdkAnalysisLevel": "10.0.200"
       },
       "frameworks": {
-        "net10.0-android": {
+        "net10.0-android36.0": {
           "targetAlias": "net10.0-android",
           "dependencies": {
             "Microsoft.Extensions.Logging.Debug": {
@@ -70,6 +70,12 @@
             "Microsoft.Maui.Controls": {
               "target": "Package",
               "version": "[10.0.20, )"
+            },
+            "Microsoft.NET.ILLink.Tasks": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[10.0.5, )",
+              "autoReferenced": true
             }
           },
           "imports": [
@@ -84,6 +90,12 @@
           "assetTargetFallback": true,
           "warn": true,
           "frameworkReferences": {
+            "Microsoft.Android": {
+              "privateAssets": "all"
+            },
+            "Microsoft.Android.Runtimes": {
+              "privateAssets": "all"
+            },
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
@@ -364,7 +376,7 @@
             "System.Xml.XPath.XDocument": "(,5.0.32767]"
           }
         },
-        "net10.0-ios": {
+        "net10.0-ios26.2": {
           "targetAlias": "net10.0-ios",
           "dependencies": {
             "Microsoft.Extensions.Logging.Debug": {
@@ -374,6 +386,12 @@
             "Microsoft.Maui.Controls": {
               "target": "Package",
               "version": "[10.0.20, )"
+            },
+            "Microsoft.NET.ILLink.Tasks": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[10.0.5, )",
+              "autoReferenced": true
             }
           },
           "imports": [
@@ -388,6 +406,12 @@
           "assetTargetFallback": true,
           "warn": true,
           "frameworkReferences": {
+            "Microsoft.iOS": {
+              "privateAssets": "all"
+            },
+            "Microsoft.iOS.Runtimes": {
+              "privateAssets": "all"
+            },
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
@@ -668,7 +692,7 @@
             "System.Xml.XPath.XDocument": "(,5.0.32767]"
           }
         },
-        "net10.0-maccatalyst": {
+        "net10.0-maccatalyst26.2": {
           "targetAlias": "net10.0-maccatalyst",
           "dependencies": {
             "Microsoft.Extensions.Logging.Debug": {
@@ -678,9 +702,16 @@
             "Microsoft.Maui.Controls": {
               "target": "Package",
               "version": "[10.0.20, )"
+            },
+            "Microsoft.NET.ILLink.Tasks": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[10.0.5, )",
+              "autoReferenced": true
             }
           },
           "imports": [
+            "xamarinios10",
             "net461",
             "net462",
             "net47",
@@ -692,6 +723,12 @@
           "assetTargetFallback": true,
           "warn": true,
           "frameworkReferences": {
+            "Microsoft.MacCatalyst": {
+              "privateAssets": "all"
+            },
+            "Microsoft.MacCatalyst.Runtimes": {
+              "privateAssets": "all"
+            },
             "Microsoft.NETCore.App": {
               "privateAssets": "all"
             }
@@ -1287,6 +1324,18 @@
         }
       },
       "runtimes": {
+        "android-arm64": {
+          "#import": []
+        },
+        "android-x64": {
+          "#import": []
+        },
+        "iossimulator-x64": {
+          "#import": []
+        },
+        "maccatalyst-x64": {
+          "#import": []
+        },
         "win-x64": {
           "#import": []
         }

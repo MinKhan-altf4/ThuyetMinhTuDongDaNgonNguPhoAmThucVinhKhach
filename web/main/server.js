@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt';
 
 const app = express();
 app.use(cors());
-app.use(express.json()); // Để đọc body JSON từ frontend
+app.use(express.json());
 
 const pool = mysql.createPool({
   host: 'localhost',
@@ -16,19 +16,20 @@ const pool = mysql.createPool({
 });
 
 // ============================================================
-// GET /api/stats
+// GET /api/stats — Dữ liệu tổng quan cho Dashboard
+// owners = tổng số users trong bảng users
 // ============================================================
 app.get('/api/stats', async (req, res) => {
   try {
-    const [users]       = await pool.query("SELECT COUNT(*) as total FROM users WHERE role = 'admin'");
+    const [users]       = await pool.query("SELECT COUNT(*) as total FROM users");
     const [restaurants] = await pool.query("SELECT COUNT(*) as total FROM restaurant");
     const [dishes]      = await pool.query("SELECT COUNT(*) as total FROM dish WHERE is_active = 1");
 
     res.json({
       stats: {
-        owners:      users[0].total,
-        stores:      restaurants[0].total,
-        dishes:      dishes[0].total,
+        owners:      users[0].total,       // Tổng users từ bảng users
+        stores:      restaurants[0].total, // Tổng gian hàng
+        dishes:      dishes[0].total,      // Tổng món ăn đang hoạt động
         ordersToday: 0
       },
       chartData: [
@@ -48,12 +49,12 @@ app.get('/api/stats', async (req, res) => {
 });
 
 // ============================================================
-// GET /api/users — Lấy danh sách (chỉ role = admin)
+// GET /api/users — Danh sách users cho trang StallOwners
 // ============================================================
 app.get('/api/users', async (req, res) => {
   try {
     const [rows] = await pool.query(
-      "SELECT user_id, name, role, created_at FROM users WHERE role = 'admin' ORDER BY created_at DESC"
+      "SELECT user_id, name, role, created_at FROM users ORDER BY created_at DESC"
     );
     res.json(rows);
   } catch (error) {
@@ -62,16 +63,13 @@ app.get('/api/users', async (req, res) => {
 });
 
 // ============================================================
-// POST /api/users — Thêm quản trị viên mới
-// Body: { name, password }
+// POST /api/users — Thêm user mới
 // ============================================================
 app.post('/api/users', async (req, res) => {
   const { name, password } = req.body;
-
   if (!name || !password) {
     return res.status(400).json({ error: 'Thiếu tên hoặc mật khẩu' });
   }
-
   try {
     const password_hash = await bcrypt.hash(password, 10);
     const [result] = await pool.query(
@@ -85,7 +83,7 @@ app.post('/api/users', async (req, res) => {
 });
 
 // ============================================================
-// DELETE /api/users/:id — Xóa người dùng
+// DELETE /api/users/:id — Xóa user
 // ============================================================
 app.delete('/api/users/:id', async (req, res) => {
   const { id } = req.params;
