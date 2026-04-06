@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "5feWuFeX1CE=",
+  "dgSpecHash": "pZ26nTJOfhU=",
   "success": true,
-  "projectFilePath": "D:\\xampp\\htdocs\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj",
+  "projectFilePath": "D:\\xampp\\htdocs\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\poiapp\\POIApp.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\LOQ\\.nuget\\packages\\googlegson\\2.13.1.1\\googlegson.2.13.1.1.nupkg.sha512",
     "C:\\Users\\LOQ\\.nuget\\packages\\microsoft.extensions.configuration\\10.0.0\\microsoft.extensions.configuration.10.0.0.nupkg.sha512",
