@@ -44,13 +44,7 @@
                                TextColor="#37474F" />
                         <Picker x:Name="GPSPicker"
                                 FontSize="14"
-                                SelectedIndexChanged="OnGPSPickerChanged">
-                            <Picker.Items>
-                                <x:String>🔋 Tiết kiệm pin</x:String>
-                                <x:String>⚖️ Mặc định</x:String>
-                                <x:String>🎯 Chính xác cao</x:String>
-                            </Picker.Items>
-                        </Picker>
+                                SelectedIndexChanged="OnGPSPickerChanged" />
                     </VerticalStackLayout>
                 </Frame>
             </VerticalStackLayout>
@@ -71,14 +65,7 @@
                                TextColor="#37474F" />
                         <Picker x:Name="RadiusPicker"
                                 FontSize="14"
-                                SelectedIndexChanged="OnRadiusPickerChanged">
-                            <Picker.Items>
-                                <x:String>200m</x:String>
-                                <x:String>500m</x:String>
-                                <x:String>1000m</x:String>
-                                <x:String>2000m</x:String>
-                            </Picker.Items>
-                        </Picker>
+                                SelectedIndexChanged="OnRadiusPickerChanged" />
                     </VerticalStackLayout>
                 </Frame>
             </VerticalStackLayout>
@@ -88,8 +75,7 @@
                 <Label x:Name="LblApiHeader"
                        FontSize="18"
                        FontAttributes="Bold"
-                       TextColor="#1565C0"
-                       Text="⚙️ API Configuration" />
+                       TextColor="#1565C0" />
                 <Frame BackgroundColor="#F5F5F5"
                        CornerRadius="12"
                        Padding="14"
@@ -97,11 +83,9 @@
                     <VerticalStackLayout Spacing="10">
                         <Label x:Name="LblApiDesc"
                                FontSize="12"
-                               TextColor="#37474F"
-                               Text="API Base URL (leave empty to use default: 10.0.2.2)" />
+                               TextColor="#37474F" />
                         <Entry x:Name="ApiUrlEntry"
                                FontSize="12"
-                               Placeholder="http://10.0.2.2/POIApi/api.php"
                                Completed="OnApiUrlEntryCompleted"
                                TextColor="#37474F"
                                PlaceholderColor="#B0BEC5" />
@@ -114,8 +98,7 @@
                 <Label x:Name="LblOfflineHeader"
                        FontSize="18"
                        FontAttributes="Bold"
-                       TextColor="#1565C0"
-                       Text="📱 Offline Mode" />
+                       TextColor="#1565C0" />
                 <Frame BackgroundColor="#F5F5F5"
                        CornerRadius="12"
                        Padding="14"
@@ -123,10 +106,8 @@
                     <VerticalStackLayout Spacing="12">
                         <Label x:Name="LblOfflineStatus"
                                FontSize="12"
-                               TextColor="#37474F"
-                               Text="Download POI data for offline use" />
+                               TextColor="#37474F" />
                         <Button x:Name="BtnEnableOffline"
-                                Text="📥 Enable Offline Mode"
                                 BackgroundColor="#1565C0"
                                 TextColor="White"
                                 FontSize="14"

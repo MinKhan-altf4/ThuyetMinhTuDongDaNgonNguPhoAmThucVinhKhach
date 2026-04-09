@@ -9,10 +9,10 @@ public partial class SettingsPage : ContentPage
     private readonly OfflineDataService _offlineDataService = new();
     private readonly APIService _apiService = new();
 
-    // GPS index mapping: 0=low, 1=medium, 2=high
+    // GPS sensitivity values (index = picker index)
     private static readonly string[] GpsValues = { "low", "medium", "high" };
 
-    // Radius index mapping: 0=200, 1=500, 2=1000, 3=2000
+    // Radius values in meters (index = picker index)
     private static readonly int[] RadiusValues = { 200, 500, 1000, 2000 };
 
     public SettingsPage()
@@ -25,9 +25,12 @@ public partial class SettingsPage : ContentPage
     {
         base.OnAppearing();
         _pageLoaded = true;
+
+        // Populate pickers ONCE (before ApplyLocalizedStrings so items are ready)
+        PopulatePickers();
         ApplyLocalizedStrings();
         SyncPickers();
-        UpdateOfflineStatus(); // Refresh offline status when page appears
+        UpdateOfflineStatus();
     }
 
     protected override void OnDisappearing()
@@ -39,7 +42,37 @@ public partial class SettingsPage : ContentPage
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         if (!_pageLoaded) return;
-        MainThread.BeginInvokeOnMainThread(ApplyLocalizedStrings);
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            // Update localized strings (picker labels & UI labels)
+            ApplyLocalizedStrings();
+        });
+    }
+
+    /// <summary>
+    /// Populate picker ItemsSource programmatically — KHÔNG hardcode trong XAML.
+    /// Gọi 1 lần trong OnAppearing để items luôn sync với ngôn ngữ hiện tại.
+    /// </summary>
+    private void PopulatePickers()
+    {
+        var L = LanguageService.Instance;
+
+        // GPS sensitivity picker
+        GPSPicker.ItemsSource = new List<string>
+        {
+            L["gps_battery_saver"],
+            L["gps_default"],
+            L["gps_high_accuracy"]
+        };
+
+        // Radius picker
+        RadiusPicker.ItemsSource = new List<string>
+        {
+            "200m",
+            "500m",
+            "1000m",
+            "2000m"
+        };
     }
 
     private void ApplyLocalizedStrings()
@@ -59,11 +92,11 @@ public partial class SettingsPage : ContentPage
         LblRadiusDesc.Text = L["poi_radius_desc"];
 
         // API section
-        LblApiHeader.Text = "⚙️ API Configuration";
-        LblApiDesc.Text = "API Base URL (leave empty to use default: 10.0.2.2)";
+        LblApiHeader.Text = "⚙️ " + L["api_config"];
+        LblApiDesc.Text = L["api_config_desc"];
 
         // Offline section
-        LblOfflineHeader.Text = "📱 Offline Mode";
+        LblOfflineHeader.Text = "📱 " + L["offline_mode"];
         UpdateOfflineStatus();
 
         // About section
@@ -72,7 +105,10 @@ public partial class SettingsPage : ContentPage
         LblVersion.Text = L["version"] + ": 1.0.0";
         LblMapCredit.Text = L["map_credit"] ?? "© OpenStreetMap contributors";
 
-        // Language picker sync
+        // ── Re-populate pickers so their labels update with current language ──
+        PopulatePickers();
+
+        // Language picker
         LangPicker.ItemsSource = LanguageService.SupportedLanguages
             .Select(l => l.Label)
             .ToList();
@@ -86,15 +122,16 @@ public partial class SettingsPage : ContentPage
 
     private void UpdateOfflineStatus()
     {
+        var L = LanguageService.Instance;
         if (AppSettingsHelper.IsOfflineDataAvailable())
         {
-            LblOfflineStatus.Text = "✅ Offline data ready — POI page will use local data";
-            BtnEnableOffline.Text = "🔄 Update Offline Data";
+            LblOfflineStatus.Text = L["offline_ready"];
+            BtnEnableOffline.Text = L["offline_update"];
         }
         else
         {
-            LblOfflineStatus.Text = "Download POI data for offline use";
-            BtnEnableOffline.Text = "📥 Enable Offline Mode";
+            LblOfflineStatus.Text = L["offline_desc"];
+            BtnEnableOffline.Text = L["offline_download"];
         }
     }
 
@@ -154,12 +191,13 @@ public partial class SettingsPage : ContentPage
 
     private async void OnEnableOfflineClicked(object? sender, EventArgs e)
     {
+        var L = LanguageService.Instance;
+
         try
         {
             BtnEnableOffline.IsEnabled = false;
-            LblOfflineStatus.Text = "⏳ Downloading POI data...";
+            LblOfflineStatus.Text = L["downloading"];
 
-            // Fetch POIs from API
             var pois = await _apiService.GetPOIsAsync();
 
             if (pois == null || pois.Count == 0)
@@ -170,11 +208,10 @@ public partial class SettingsPage : ContentPage
                 return;
             }
 
-            // Save to offline storage
             await _offlineDataService.SavePOIsOfflineAsync(pois);
 
             LblOfflineStatus.Text = $"✅ Offline data ready — {pois.Count} POIs saved";
-            BtnEnableOffline.Text = "🔄 Update Offline Data";
+            BtnEnableOffline.Text = L["offline_update"];
             BtnEnableOffline.IsEnabled = true;
 
             await DisplayAlert("Success", $"Offline mode enabled! {pois.Count} POIs saved.", "OK");

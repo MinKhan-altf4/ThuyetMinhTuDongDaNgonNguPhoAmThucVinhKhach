@@ -2,7 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="POIApp.POIPage"
-             Title="Offline POI">
+             Title="POI">
 
     <Grid RowSpacing="0">
         <Grid.RowDefinitions>
@@ -26,16 +26,11 @@
                            FontSize="13"
                            TextColor="#BBDEFB"
                            VerticalOptions="Center" />
+                    <!-- Audio language picker — items populated in code-behind -->
                     <Picker x:Name="AudioLangPicker"
                             WidthRequest="110"
                             FontSize="12"
-                            Title="Ngôn ngữ voice"
-                            SelectedIndexChanged="OnAudioLangChanged">
-                        <Picker.Items>
-                            <x:String>🇻🇳 Tiếng Việt</x:String>
-                            <x:String>🇺🇸 English</x:String>
-                        </Picker.Items>
-                    </Picker>
+                            SelectedIndexChanged="OnAudioLangChanged" />
                 </HorizontalStackLayout>
             </VerticalStackLayout>
         </Frame>
@@ -66,6 +61,11 @@
                            FontSize="16"
                            TextColor="#9E9E9E"
                            HorizontalOptions="Center" />
+                    <Label x:Name="LblEmptyHint"
+                           FontSize="13"
+                           TextColor="#BDBDBD"
+                           HorizontalOptions="Center"
+                           HorizontalTextAlignment="Center" />
                 </VerticalStackLayout>
             </VerticalStackLayout>
         </ScrollView>

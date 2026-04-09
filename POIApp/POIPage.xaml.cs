@@ -21,7 +21,6 @@ public partial class POIPage : ContentPage
         InitializeComponent();
         _gpsTracking.LocationChanged += OnLocationChanged;
         LanguageService.Instance.LanguageChanged += OnLanguageChanged;
-        AudioLangPicker.SelectedIndex = 0; // default: tiếng Việt
     }
 
     protected override async void OnAppearing()
@@ -30,10 +29,13 @@ public partial class POIPage : ContentPage
         if (!_pageLoaded)
             _pageLoaded = true;
 
+        // Populate audio language picker ONCE with localized items
+        PopulateAudioLangPicker();
+        ApplyLocalizedStrings();
+
         LoadingIndicator.IsRunning = true;
         LoadingIndicator.IsVisible = true;
 
-        ApplyLocalizedStrings();
         await _gpsTracking.StartTrackingAsync();
         await LoadPOIsAsync();
     }
@@ -41,23 +43,37 @@ public partial class POIPage : ContentPage
     protected override void OnDisappearing()
     {
         base.OnDisappearing();
+        LanguageService.Instance.LanguageChanged -= OnLanguageChanged;
         _audioService.Stop();
         _gpsTracking.StopTracking();
     }
 
+    /// <summary>
+    /// Subscribe vào LanguageService.LanguageChanged — tự động trigger khi user đổi ngôn ngữ.
+    /// Đảm bảo TẤT CẢ text (kể cả picker items) update NGAY lập tức khi đổi ngôn ngữ.
+    /// </summary>
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         if (!_pageLoaded) return;
         MainThread.BeginInvokeOnMainThread(() =>
         {
+            // Re-populate picker items với ngôn ngữ mới
+            PopulateAudioLangPicker();
             ApplyLocalizedStrings();
             BindPOIList();
         });
     }
 
-    private void OnLocationChanged(object? sender, Location loc)
+    private void PopulateAudioLangPicker()
     {
-        UpdateDistances(loc.Latitude, loc.Longitude);
+        var L = LanguageService.Instance;
+        AudioLangPicker.ItemsSource = new List<string>
+        {
+            L["audio_vi"],
+            L["audio_en"]
+        };
+        AudioLangPicker.Title = L["select_language"];
+        AudioLangPicker.SelectedIndex = 0;
     }
 
     private void ApplyLocalizedStrings()
@@ -66,6 +82,7 @@ public partial class POIPage : ContentPage
         Title = L["tab_poi"];
         LblTitle.Text = L["poi_near_you"];
         LblEmpty.Text = L["no_poi_data"];
+        LblEmptyHint.Text = L["offline_desc"];
         var count = _pois.Count;
         LblSubtitle.Text = $"{L["district"]} · {count} {L["poi_count"]}";
     }
@@ -87,7 +104,7 @@ public partial class POIPage : ContentPage
     {
         try
         {
-            // ── BUG FIX: Check if offline mode is enabled ──
+            var L = LanguageService.Instance;
             List<POI>? pois = null;
 
             if (AppSettingsHelper.IsOfflineDataAvailable())
@@ -97,7 +114,8 @@ public partial class POIPage : ContentPage
 
                 if (pois == null || pois.Count == 0)
                 {
-                    LblEmpty.Text = "❌ Offline data not found or empty. Please enable offline mode in Settings.";
+                    LblEmpty.Text = "❌ " + L["no_poi_data"];
+                    LblEmptyHint.Text = L["offline_desc"];
                     Debug.WriteLine("[POIPage] ❌ Offline data not found");
                 }
                 else
@@ -107,9 +125,9 @@ public partial class POIPage : ContentPage
             }
             else
             {
-                // No offline mode enabled - show message
                 EmptyState.IsVisible = true;
-                LblEmpty.Text = "📱 Offline mode not enabled.\nPlease go to Settings → Enable Offline Mode to download POI data.";
+                LblEmpty.Text = "📱 " + L["offline_mode"];
+                LblEmptyHint.Text = L["offline_desc"];
                 Debug.WriteLine("[POIPage] ℹ️  Offline mode not enabled");
             }
 
@@ -147,6 +165,7 @@ public partial class POIPage : ContentPage
             MainThread.BeginInvokeOnMainThread(() =>
             {
                 LblEmpty.Text = $"❌ Error: {ex.Message}";
+                LblEmptyHint.Text = LanguageService.Instance["retry"];
                 EmptyState.IsVisible = true;
                 LoadingIndicator.IsRunning = false;
                 LoadingIndicator.IsVisible = false;
@@ -173,7 +192,6 @@ public partial class POIPage : ContentPage
             var nearBorder = poi.IsNear ? "#43A047" : "#E0E0E0";
             var ratingStars = BuildStars(poi.Rating);
 
-            // Header grid: name + distance
             var nameLabel = new Label
             {
                 Text = poi.Name,
@@ -183,7 +201,7 @@ public partial class POIPage : ContentPage
             };
             var distLabel = new Label
             {
-                Text = poi.IsNear ? $"🎯 {poi.Distance:F0}m" : $"{poi.Distance:F0}m",
+                Text = poi.IsNear ? $"🎯 {poi.Distance:F0}{L["meters"]}" : $"{poi.Distance:F0}{L["meters"]}",
                 FontSize = 12,
                 TextColor = poi.IsNear ? Color.FromArgb("#43A047") : Color.FromArgb("#607D8B"),
                 FontAttributes = FontAttributes.Bold,
@@ -201,7 +219,6 @@ public partial class POIPage : ContentPage
             headerGrid.Add(nameLabel, 0, 0);
             headerGrid.Add(distLabel, 1, 0);
 
-            // Button row: Play + Stop
             var playBtn = new Button
             {
                 Text = "🔊 " + L["play"],
@@ -286,6 +303,11 @@ public partial class POIPage : ContentPage
         {
             Debug.WriteLine($"[POIPage] Play error: {ex.Message}");
         }
+    }
+
+    private void OnLocationChanged(object? sender, Location loc)
+    {
+        UpdateDistances(loc.Latitude, loc.Longitude);
     }
 
     private static string BuildStars(float rating)
