@@ -307,11 +307,13 @@ function getDishes($conn) {
     $dishes = [];
     while ($row = $result->fetch_assoc()) {
         $dishes[] = [
-            'id'          => (int)$row['dish_id'],
+            'dish_id'      => (int)$row['dish_id'],
+            'restaurant_id' => $id,
             'name'        => $row['name'],
             'description' => $row['description'],
             'price'       => (float)$row['price'],
             'image_url'   => $row['image_url'],
+            'is_active'   => (int)$row['is_active'],
         ];
     }
 

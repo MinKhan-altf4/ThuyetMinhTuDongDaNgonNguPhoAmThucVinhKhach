@@ -206,3 +206,22 @@ public class StringToIntConverter : JsonConverter<int>
         writer.WriteNumberValue(value);
     }
 }
+
+public class StringToDecimalConverter : JsonConverter<decimal>
+{
+    public override decimal Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        return reader.TokenType switch
+        {
+            JsonTokenType.Number => reader.GetDecimal(),
+            JsonTokenType.String => decimal.TryParse(reader.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0m,
+            JsonTokenType.Null => 0m,
+            _ => 0m
+        };
+    }
+
+    public override void Write(Utf8JsonWriter writer, decimal value, JsonSerializerOptions options)
+    {
+        writer.WriteNumberValue(value);
+    }
+}

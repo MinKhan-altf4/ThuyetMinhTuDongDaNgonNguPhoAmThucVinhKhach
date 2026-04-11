@@ -222,6 +222,69 @@
                             BackgroundColor="#43A047"
                             TextColor="White"
                             Clicked="OnNavigateClicked" />
+
+                    <!-- ═════════════════════════════════════════════════════════════ -->
+                    <!-- THÊM MỚI: MENU MÓN ĂN SECTION (TTS MENU)                     -->
+                    <!-- ═════════════════════════════════════════════════════════════ -->
+                    <BoxView HeightRequest="1" Color="#E0E0E0" Margin="0,6,0,6" />
+
+                    <Label FontSize="13"
+                           FontAttributes="Bold"
+                           TextColor="#0D47A1"
+                           Text="📋 MENU MÓN ĂN" />
+
+                    <!-- Danh sách món ăn -->
+                    <ScrollView x:Name="MenuScrollView"
+                                HeightRequest="150"
+                                IsVisible="False">
+                        <VerticalStackLayout x:Name="MenuItemsContainer"
+                                             Spacing="6"
+                                             Padding="0,4" />
+                    </ScrollView>
+
+                    <!-- Thông báo chưa có menu -->
+                    <Label x:Name="LblMenuEmpty"
+                           FontSize="12"
+                           TextColor="#9E9E9E"
+                           HorizontalTextAlignment="Center"
+                           Margin="0,8"
+                           Text="Chưa có menu" />
+
+                    <!-- Loading indicator menu -->
+                    <ActivityIndicator x:Name="MenuLoading"
+                                       IsRunning="False"
+                                       IsVisible="False"
+                                       Color="#FF9800"
+                                       HorizontalOptions="Center"
+                                       Margin="0,8" />
+
+                    <!-- TTS Menu buttons -->
+                    <Grid x:Name="MenuButtonsGrid"
+                          ColumnDefinitions="*,*"
+                          ColumnSpacing="8"
+                          IsVisible="False">
+                        <Button x:Name="BtnPlayMenu"
+                                FontSize="13"
+                                HeightRequest="42"
+                                CornerRadius="21"
+                                BackgroundColor="#9C27B0"
+                                TextColor="White"
+                                Text="🔊 Phát menu"
+                                Clicked="OnPlayMenuClicked" />
+                        <Button Grid.Column="1"
+                                x:Name="BtnStopMenu"
+                                FontSize="13"
+                                HeightRequest="42"
+                                CornerRadius="21"
+                                BackgroundColor="#455A64"
+                                TextColor="White"
+                                Text="⏹ Dừng menu"
+                                Clicked="OnStopMenuClicked" />
+                    </Grid>
+
+                    <Label x:Name="LblMenuStatus"
+                           FontSize="11"
+                           TextColor="#9C27B0" />
                 </VerticalStackLayout>
             </Frame>
         </Grid>

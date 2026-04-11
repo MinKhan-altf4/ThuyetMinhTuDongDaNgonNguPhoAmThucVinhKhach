@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using POIApp.Models;
 
 namespace POIApp.Services;
 
@@ -9,7 +10,8 @@ namespace POIApp.Services;
 /// </summary>
 public sealed class TTSService
 {
-    private CancellationTokenSource? _cts;
+    private CancellationTokenSource? _cts;           // ← Cho TTS description nhà hàng
+    private CancellationTokenSource? _menuCts;       // ← Cho TTS menu món ăn (THÊM MỚI)
 
     // ── Cache locale 1 lần duy nhất ──
     private static IReadOnlyList<Locale>? _cachedLocales;
@@ -129,6 +131,111 @@ public sealed class TTSService
         catch (Exception ex)
         {
             Debug.WriteLine($"[TTS] Lỗi Stop: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Phát thuyết minh menu món ăn — TTS RIÊNG KHÔNG ĐỤNG TTS DESCRIPTION NHẬP HÀNG.
+    /// Format: "Món {name}. Mô tả: {description}. Giá: {price} đồng."
+    /// THÊM MỚI: Sử dụng _menuCts riêng biệt để độc lập với TTS description.
+    /// </summary>
+    public async Task SpeakMenuAsync(List<Models.Dish> dishes, string languageCode = "vi")
+    {
+        if (dishes == null || dishes.Count == 0)
+        {
+            Debug.WriteLine("[TTS-MENU] ⚠️ Danh sách mon ăn rỗng → không phát");
+            return;
+        }
+
+        // Dừng TTS menu cũ (nếu đang phát)
+        _menuCts?.Cancel();
+        _menuCts = new CancellationTokenSource();
+
+        try
+        {
+            Debug.WriteLine($"[TTS-MENU] Bắt đầu phát menu {dishes.Count} món | lang={languageCode}");
+
+            // Phát lần lượt từng món ăn
+            for (int i = 0; i < dishes.Count; i++)
+            {
+                var dish = dishes[i];
+                
+                // Format: "Món {name}. Mô tả: {description}. Giá: {price} đồng."
+                string dishText = $"Món {dish.Name}";
+                if (!string.IsNullOrWhiteSpace(dish.Description))
+                    dishText += $". Mô tả: {dish.Description}";
+                dishText += $". Giá: {(long)dish.Price:N0} đồng.";
+
+                Debug.WriteLine($"[TTS-MENU] [{i + 1}/{dishes.Count}] {dishText}");
+
+                // Phát từng món
+                await SpeakMenuItemAsync(dishText, languageCode, _menuCts.Token);
+                
+                // Delay 500ms giữa các items để TTS kịp phát
+                if (i < dishes.Count - 1)
+                    await Task.Delay(500, _menuCts.Token);
+            }
+
+            Debug.WriteLine("[TTS-MENU] ✅ Phát xong toàn bộ menu");
+        }
+        catch (OperationCanceledException)
+        {
+            Debug.WriteLine("[TTS-MENU] Đã dừng phát menu");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[TTS-MENU] ❌ Lỗi: {ex.GetType().Name} - {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Phát từng item trong menu (helper để SpeakMenuAsync).
+    /// </summary>
+    private async Task SpeakMenuItemAsync(string text, string languageCode, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        try
+        {
+            var locale = FindLocale(languageCode);
+            var options = new SpeechOptions();
+
+            if (locale != null)
+                options.Locale = locale;
+
+            Debug.WriteLine($"[TTS-MENU] 🔊 Phát ({locale?.Language ?? "default"}): {text.Substring(0, Math.Min(50, text.Length))}...");
+
+            await TextToSpeech.Default.SpeakAsync(text, options, cancellationToken);
+            Debug.WriteLine($"[TTS-MENU] ✅ Phát xong: {text.Substring(0, Math.Min(40, text.Length))}...");
+        }
+        catch (OperationCanceledException)
+        {
+            // Bình thường khi user bấm stop
+            Debug.WriteLine("[TTS-MENU] Item bị hủy");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[TTS-MENU] ❌ Lỗi phát item: {ex.GetType().Name} - {ex.Message}");
+            throw;  // ← Rethrow để SpeakMenuAsync biết có lỗi
+        }
+    }
+
+    /// <summary>
+    /// Dừng phát menu (TTS MENU).
+    /// THÊM MỚI: Riêng biệt với Stop() để không ảnh hưởng TTS description.
+    /// </summary>
+    public void StopMenu()
+    {
+        try
+        {
+            _menuCts?.Cancel();
+            Debug.WriteLine("[TTS-MENU] Đã dừng menu TTS");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[TTS-MENU] Lỗi StopMenu: {ex.Message}");
         }
     }
 }

@@ -30,6 +30,7 @@ public partial class MapPage : ContentPage
     private double _userLat = 10.7598;
     private double _userLon = 106.6982;
     private POI? _selectedPOI;
+    private List<Dish> _currentDishes = new();   // ← THÊM MỚI: Danh sách món ăn
     private string _selectedLanguage = LangVi;
     private System.Timers.Timer? _searchDebounceTimer;
     private System.Timers.Timer? _refreshTimer;
@@ -570,6 +571,7 @@ new L.Control.Recenter().addTo(map);
 
     /// <summary>
     /// Hiện modal POI detail. Mỗi lần mở → load lại text từ LanguageService (không reuse view cũ).
+    /// THÊM MỚI: Load danh sách món ăn async.
     /// </summary>
     private void ShowDetail(POI poi)
     {
@@ -585,6 +587,9 @@ new L.Control.Recenter().addTo(map);
         LblAudioStatus.Text = L["audio_ready"];
 
         POIDetailPanel.IsVisible = true;
+
+        // ── THÊM MỚI: Load danh sách món ăn (async, không block UI) ──
+        _ = LoadDishesAsync(poi.Id);
     }
 
     private void BindPOIDetailText(POI poi)
@@ -601,7 +606,9 @@ new L.Control.Recenter().addTo(map);
     {
         POIDetailPanel.IsVisible = false;
         _selectedPOI = null;
-        _ttsService.Stop();
+        _currentDishes.Clear();   // ← THÊM MỚI: Reset menu
+        _ttsService.Stop();       // ← Stop description TTS
+        _ttsService.StopMenu();   // ← THÊM MỚI: Stop menu TTS
         if (_mapReady)
         {
             MapWebView.EvaluateJavaScriptAsync(@"
@@ -626,7 +633,12 @@ if(window._lastSelected!==undefined){
             AudioLoading.IsVisible = true;
             LblAudioStatus.Text = L["audio_loading"];
 
+            // ── THÊM MỚI: Ghép menu vào description TTS ──
             var originalText = $"{_selectedPOI.Name}. {_selectedPOI.Description}";
+            var menuText = BuildMenuText(_currentDishes);
+            if (!string.IsNullOrWhiteSpace(menuText))
+                originalText += " " + menuText;
+            
             var lang = _selectedLanguage;
 
             if (lang == LangVi)
@@ -676,6 +688,216 @@ if(window._lastSelected!==undefined){
         {
             Debug.WriteLine("[Map] Lỗi chỉ đường: " + ex.Message);
         }
+    }
+
+    // ═════════════════════════════════════════════════════════════
+    // THÊM MỚI: MENU MÓN ĂN - LOAD + RENDER + TTS
+    // ═════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Load danh sách món ăn từ API.
+    /// THÊM MỚI: Async load dishes khi người dùng mở modal POI.
+    /// </summary>
+    private async Task LoadDishesAsync(int restaurantId)
+    {
+        try
+        {
+            // Reset UI
+            MenuItemsContainer.Clear();
+            _currentDishes.Clear();
+            MenuLoading.IsRunning = true;
+            MenuLoading.IsVisible = true;
+            MenuScrollView.IsVisible = false;
+            MenuButtonsGrid.IsVisible = false;
+            LblMenuEmpty.IsVisible = false;
+            LblMenuStatus.Text = "";
+
+            Debug.WriteLine($"[MAP-MENU] Loading dishes for restaurant #{restaurantId}...");
+
+            // Gọi API
+            var dishes = await _apiService.GetDishesAsync(restaurantId);
+
+            if (dishes == null || dishes.Count == 0)
+            {
+                Debug.WriteLine($"[MAP-MENU] ⚠️ Không tìm thấy món ăn cho restaurant #{restaurantId}");
+                LblMenuEmpty.IsVisible = true;
+                MenuLoading.IsVisible = false;
+                return;
+            }
+
+            // Lưu danh sách
+            _currentDishes = dishes;
+            Debug.WriteLine($"[MAP-MENU] ✅ Nhận {dishes.Count} món ăn");
+
+            // Render UI
+            BindMenuUI(dishes);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MAP-MENU] ❌ Lỗi load dishes: {ex.Message}");
+            LblMenuEmpty.IsVisible = true;
+            LblMenuEmpty.Text = "Lỗi tải menu";
+        }
+        finally
+        {
+            MenuLoading.IsRunning = false;
+            MenuLoading.IsVisible = false;
+        }
+    }
+
+    /// <summary>
+    /// Render danh sách món ăn vào UI.
+    /// THÊM MỚI: Hiển thị name + price cho từng món.
+    /// </summary>
+    private void BindMenuUI(List<Dish> dishes)
+    {
+        MenuItemsContainer.Clear();
+
+        foreach (var dish in dishes)
+        {
+            // Tạo item layout: name | price
+            var itemLayout = new VerticalStackLayout
+            {
+                Spacing = 2,
+                Padding = new Thickness(4)
+            };
+
+            // Tên món
+            var nameLabel = new Label
+            {
+                Text = dish.Name,
+                FontSize = 12,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Color.FromArgb("#0D47A1"),
+                LineBreakMode = LineBreakMode.WordWrap
+            };
+            itemLayout.Add(nameLabel);
+
+            // Mô tả (nếu có)
+            if (!string.IsNullOrWhiteSpace(dish.Description))
+            {
+                var descLabel = new Label
+                {
+                    Text = dish.Description,
+                    FontSize = 11,
+                    TextColor = Color.FromArgb("#555555"),
+                    MaxLines = 2,
+                    LineBreakMode = LineBreakMode.TailTruncation
+                };
+                itemLayout.Add(descLabel);
+            }
+
+            // Giá
+            var priceLabel = new Label
+            {
+                Text = dish.FormattedPrice,
+                FontSize = 11,
+                FontAttributes = FontAttributes.Bold,
+                TextColor = Color.FromArgb("#FF9800")
+            };
+            itemLayout.Add(priceLabel);
+
+            // Thêm item vào container
+            MenuItemsContainer.Add(itemLayout);
+
+            // Thêm đường căn giữa
+            var separator = new BoxView
+            {
+                HeightRequest = 1,
+                Color = Color.FromArgb("#E0E0E0"),
+                Margin = new Thickness(0, 4)
+            };
+            MenuItemsContainer.Add(separator);
+        }
+
+        // Show menu + buttons
+        MenuScrollView.IsVisible = true;
+        MenuButtonsGrid.IsVisible = true;
+        LblMenuEmpty.IsVisible = false;
+        LblMenuStatus.Text = "";
+
+        Debug.WriteLine($"[MAP-MENU] ✅ Rendered {dishes.Count} menu items");
+    }
+
+    /// <summary>
+    /// Phát TTS menu (danh sách tất cả món ăn).
+    /// THÊM MỚI: Gọi TTSService.SpeakMenuAsync() với danh sách dishes.
+    /// </summary>
+    private async void OnPlayMenuClicked(object? sender, EventArgs e)
+    {
+        if (_currentDishes == null || _currentDishes.Count == 0)
+        {
+            LblMenuStatus.Text = "Chưa có menu";
+            Debug.WriteLine("[MAP-MENU] OnPlayMenuClicked: _currentDishes rỗng");
+            return;
+        }
+
+        try
+        {
+            BtnPlayMenu.IsEnabled = false;
+            LblMenuStatus.Text = "Đang phát menu...";
+            Debug.WriteLine($"[MAP-MENU] OnPlayMenuClicked: Phát {_currentDishes.Count} món, lang={_selectedLanguage}");
+
+            // Gọi TTS menu (riêng biệt, không ảnh hưởng TTS description)
+            await _ttsService.SpeakMenuAsync(_currentDishes, _selectedLanguage);
+
+            LblMenuStatus.Text = "Phát xong menu";
+            Debug.WriteLine("[MAP-MENU] OnPlayMenuClicked: Phát xong");
+        }
+        catch (OperationCanceledException)
+        {
+            LblMenuStatus.Text = "Đã dừng menu";
+            Debug.WriteLine("[MAP-MENU] OnPlayMenuClicked: Bị hủy");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[MAP-MENU] ❌ Lỗi phát menu: {ex.GetType().Name} - {ex.Message}");
+            LblMenuStatus.Text = $"Lỗi: {ex.Message}";
+        }
+        finally
+        {
+            BtnPlayMenu.IsEnabled = true;
+        }
+    }
+
+    /// <summary>
+    /// Dừng phát TTS menu.
+    /// THÊM MỚI: Gọi TTSService.StopMenu().
+    /// </summary>
+    private void OnStopMenuClicked(object? sender, EventArgs e)
+    {
+        _ttsService.StopMenu();
+        LblMenuStatus.Text = "Đã dừng";
+        Debug.WriteLine("[MAP-MENU] Dừng menu TTS");
+    }
+
+    // ═════════════════════════════════════════════════════════════
+
+    /// <summary>
+    /// Xây dựng chuỗi text để đọc menu món ăn.
+    /// THÊM MỚI: Format: "Menu của quán bao gồm: Món {name}, giá {price} đồng."
+    /// </summary>
+    private string BuildMenuText(List<Dish> dishes)
+    {
+        if (dishes == null || dishes.Count == 0)
+            return string.Empty;
+
+        var sb = new StringBuilder();
+        sb.Append("Menu của quán bao gồm: ");
+
+        for (int i = 0; i < dishes.Count; i++)
+        {
+            var dish = dishes[i];
+            sb.Append($"Món {dish.Name}, giá {(long)dish.Price:N0} đồng.");
+            
+            // Thêm dấu cách giữa các món (ngoại trừ cái cuối)
+            if (i < dishes.Count - 1)
+                sb.Append(" ");
+        }
+
+        var result = sb.ToString();
+        Debug.WriteLine($"[MAP-MENU] Xây dựng menu text: {result.Substring(0, Math.Min(80, result.Length))}...");
+        return result;
     }
 
     private void OnReloadPOIClicked(object? sender, EventArgs e)

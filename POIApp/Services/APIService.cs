@@ -404,7 +404,7 @@ public class APIService
     // ──────────────────────────────────────────────
     // Lấy danh sách món ăn
     // ──────────────────────────────────────────────
-    public async Task<List<Dish>> GetDishesAsync(int restaurantId)
+    public async Task<List<Models.Dish>> GetDishesAsync(int restaurantId)
     {
         try
         {
@@ -412,15 +412,15 @@ public class APIService
             var response = await _httpClient.GetAsync(url);
 
             if (!response.IsSuccessStatusCode)
-                return new List<Dish>();
+                return new List<Models.Dish>();
 
-            var result = await response.Content.ReadFromJsonAsync<DishesResponse>();
-            return result?.Data ?? new List<Dish>();
+            var result = await response.Content.ReadFromJsonAsync<DishResponse>();
+            return result?.Data ?? new List<Models.Dish>();
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[API] Lỗi get dishes: {ex.Message}");
-            return new List<Dish>();
+            return new List<Models.Dish>();
         }
     }
 
@@ -518,13 +518,6 @@ public class AudioResponse
     [JsonPropertyName("error")] public string? Error { get; set; }
 }
 
-public class DishesResponse
-{
-    [JsonPropertyName("success")] public bool Success { get; set; }
-    [JsonPropertyName("data")] public List<Dish> Data { get; set; } = new();
-    [JsonPropertyName("error")] public string? Error { get; set; }
-}
-
 public class AudioInfo
 {
     [JsonPropertyName("restaurant_id")] public int RestaurantId { get; set; }
@@ -532,13 +525,4 @@ public class AudioInfo
     [JsonPropertyName("audio_url")] public string AudioUrl { get; set; } = string.Empty;
     [JsonPropertyName("duration")] public int Duration { get; set; }
     [JsonPropertyName("version")] public int Version { get; set; }
-}
-
-public class Dish
-{
-    [JsonPropertyName("id")] public int Id { get; set; }
-    [JsonPropertyName("name")] public string Name { get; set; } = string.Empty;
-    [JsonPropertyName("description")] public string Description { get; set; } = string.Empty;
-    [JsonPropertyName("price")] public double Price { get; set; }
-    [JsonPropertyName("image_url")] public string? ImageUrl { get; set; }
 }
