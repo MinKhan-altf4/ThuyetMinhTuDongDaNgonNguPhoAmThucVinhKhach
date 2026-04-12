@@ -74,5 +74,8 @@
   "offline_ready": "✅ Dữ liệu offline sẵn sàng — trang POI sẽ dùng dữ liệu cục bộ",
   "offline_desc": "Tải dữ liệu POI để sử dụng khi không có mạng",
   "audio_vi": "🇻🇳 Tiếng Việt",
-  "audio_en": "🇺🇸 English"
+  "audio_en": "🇺🇸 English",
+  "audio_zh": "🇨🇳 Tiếng Trung",
+  "audio_kr": "🇰🇷 Tiếng Hàn",
+  "audio_jp": "🇯🇵 Tiếng Nhật"
 }

@@ -23,16 +23,24 @@ public sealed class AudioService
     /// Phát audio offline theo ngôn ngữ.
     /// vi → audio/vi/poi{id}-vi.mp3
     /// en → audio/en/poi{id}-en.mp3
+    /// zh/kr/jp → audio/{lang}/poi{id}-{lang}.mp3
     /// Không tồn tại → log lỗi, không crash, không fallback.
     /// </summary>
     public async Task PlayAsync(POI poi, string languageCode)
     {
         if (poi == null) return;
 
+        // Validate language
+        if (!AudioPathHelper.IsSupportedLanguage(languageCode))
+        {
+            Debug.WriteLine($"[Audio] ❌ Unsupported language: {languageCode}");
+            return;
+        }
+
         Stop(); // stop audio cũ trước khi phát mới
 
-        var lang = languageCode == "vi" ? "vi" : "en";
-        var bundledPath = $"audio/{lang}/poi{poi.Id}-{lang}.mp3";
+        // Use helper to get audio path
+        var bundledPath = AudioPathHelper.GetAudioPath(languageCode, poi.Id);
 
         Debug.WriteLine($"[Audio] ▶ Play: {bundledPath}");
 
