@@ -17,15 +17,26 @@ interface Restaurant {
   rating: number;
   dish_count: number;
   image_url: string;
-  owner_name: string;
+  owner_name: string | null;
+  owner_locked: boolean; // true nếu chủ đang bị khóa (có trong deleted_users)
   status: string; // 'open', 'closed', 'maintenance'
 }
 
+// Trạng thái gian hàng theo status gốc
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   open: { label: "Đang mở cửa", variant: "default" },
   closed: { label: "Đóng cửa", variant: "destructive" },
   maintenance: { label: "Bảo trì", variant: "secondary" },
 };
+
+// Hàm xác định trạng thái hiển thị cuối cùng của gian hàng
+// Ưu tiên: chủ bị khóa → "Ngưng hoạt động" (bất kể status gốc)
+function resolveStatus(stall: Restaurant): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } {
+  if (stall.owner_locked) {
+    return { label: "Ngưng hoạt động", variant: "outline" };
+  }
+  return statusConfig[stall.status] ?? { label: "Không xác định", variant: "outline" };
+}
 
 export default function Stalls() {
   const navigate = useNavigate();
@@ -39,10 +50,16 @@ export default function Stalls() {
   };
 
   // Lấy dữ liệu từ server.js
+  // Yêu cầu API trả về thêm field owner_locked (boolean):
+  //   SELECT r.*, u.name AS owner_name,
+  //          CASE WHEN d.user_id IS NOT NULL THEN true ELSE false END AS owner_locked
+  //   FROM restaurants r
+  //   LEFT JOIN users u ON u.restaurant_id = r.restaurant_id
+  //   LEFT JOIN deleted_users d ON d.user_id = u.user_id  ← hoặc join theo restaurant_id nếu lưu vậy
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/restaurants"); // Port của server.js
+        const res = await fetch("http://localhost:3000/api/restaurants");
         const data = await res.json();
         setRestaurants(data);
       } catch (error) {
@@ -55,7 +72,7 @@ export default function Stalls() {
   }, []);
 
   // Logic tìm kiếm
-  const filtered = restaurants.filter(r => 
+  const filtered = restaurants.filter(r =>
     r.name.toLowerCase().includes(search.toLowerCase()) ||
     (r.owner_name && r.owner_name.toLowerCase().includes(search.toLowerCase()))
   );
@@ -65,9 +82,9 @@ export default function Stalls() {
       <div className="flex flex-col gap-4 animate-fade-in">
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input 
-            placeholder="Tìm gian hàng..." 
-            className="pl-9" 
+          <Input
+            placeholder="Tìm gian hàng..."
+            className="pl-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -77,47 +94,55 @@ export default function Stalls() {
           <div className="flex h-64 items-center justify-center">Đang tải dữ liệu...</div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((stall) => (
-              <div key={stall.restaurant_id} className="rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-card-foreground">{stall.name}</h3>
-                    <p className="text-sm text-muted-foreground italic">Chủ: {stall.owner_name || "Chưa xác định"}</p>
-                  </div>
-                  <Badge variant={statusConfig[stall.status]?.variant || "outline"}>
-                    {statusConfig[stall.status]?.label || "Ngoại tuyến"}
-                  </Badge>
-                </div>
-
-                <div className="mt-4 space-y-2 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-3.5 w-3.5 text-primary" />
-                    <span className="truncate">{stall.address}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                      <span className="font-medium text-foreground">{stall.rating || "0"}</span>
+            {filtered.map((stall) => {
+              const displayStatus = resolveStatus(stall);
+              return (
+                <div key={stall.restaurant_id} className="rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-card-foreground">{stall.name}</h3>
+                      <p className="text-sm text-muted-foreground italic">
+                        Chủ: {stall.owner_name || "Chưa xác định"}
+                        {stall.owner_locked && (
+                          <span className="ml-1 text-destructive">(đã khóa)</span>
+                        )}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <UtensilsCrossed className="h-3 w-3" />
-                      <span>{stall.dish_count || 0} món ăn</span>
-                    </div>
+                    <Badge variant={displayStatus.variant}>
+                      {displayStatus.label}
+                    </Badge>
                   </div>
 
-                  {(stall.open_hour && stall.close_hour) && (
-                    <div className="flex items-center gap-2 pt-1 border-t mt-2">
-                      <Clock className="h-3 w-3" />
-                      <span>{stall.open_hour} - {stall.close_hour}</span>
+                  <div className="mt-4 space-y-2 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3.5 w-3.5 text-primary" />
+                      <span className="truncate">{stall.address}</span>
                     </div>
-                  )}
+
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1">
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        <span className="font-medium text-foreground">{stall.rating || "0"}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <UtensilsCrossed className="h-3 w-3" />
+                        <span>{stall.dish_count || 0} món ăn</span>
+                      </div>
+                    </div>
+
+                    {(stall.open_hour && stall.close_hour) && (
+                      <div className="flex items-center gap-2 pt-1 border-t mt-2">
+                        <Clock className="h-3 w-3" />
+                        <span>{stall.open_hour} - {stall.close_hour}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
-        
+
         {filtered.length === 0 && !loading && (
           <div className="flex h-64 items-center justify-center rounded-xl border bg-card">
             <p className="text-muted-foreground">Không tìm thấy gian hàng nào</p>

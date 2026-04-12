@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Plus, Trash2, X, Edit2, RotateCcw } from "lucide-react";
+import { Search, Plus, Lock, X, Edit2, RotateCcw } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
@@ -158,7 +158,7 @@ export default function StallOwners() {
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`Xóa tài khoản "${name}"? Dữ liệu sẽ được backup.`)) return;
+    if (!confirm(`Khóa tài khoản "${name}"?`)) return;
     try {
       const res = await fetch(`http://localhost:3000/api/users/${id}`, { 
         method: "DELETE" 
@@ -170,7 +170,7 @@ export default function StallOwners() {
         return;
       }
 
-      setSuccessModalMessage("✅ Đã xóa và backup dữ liệu thành công");
+      setSuccessModalMessage("✅ Đã khóa tài khoản thành công");
       setShowSuccessModal(true);
       
       fetchUsers();
@@ -413,8 +413,9 @@ export default function StallOwners() {
                         <button
                           onClick={() => handleDelete(user.user_id, user.name)}
                           className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                          title="Khóa"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Lock className="h-4 w-4" />
                         </button>
                       </div>
                     </TableCell>
@@ -431,7 +432,7 @@ export default function StallOwners() {
           <div className="space-y-4">
             {deletedUsers.length === 0 ? (
               <div className="rounded-lg border bg-muted/50 p-6 text-center">
-                <p className="text-muted-foreground">Không có tài khoản bị xóa nào</p>
+                <p className="text-muted-foreground">Không có tài khoản bị khóa nào</p>
               </div>
             ) : (
               <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
@@ -443,7 +444,7 @@ export default function StallOwners() {
                       <TableHead>Email</TableHead>
                       <TableHead>Số điện thoại</TableHead>
                       <TableHead>Gian hàng</TableHead>
-                      <TableHead>Ngày xóa</TableHead>
+                      <TableHead>Ngày khóa</TableHead>
                       <TableHead className="w-24"></TableHead>
                     </TableRow>
                   </TableHeader>
