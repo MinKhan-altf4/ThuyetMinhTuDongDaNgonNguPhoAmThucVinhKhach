@@ -55,9 +55,17 @@ interface MapPickerProps {
 
 function MapPicker({ lat, lng, onPick, label = "📍 Chọn vị trí trên bản đồ" }: MapPickerProps) {
   const [geocoding, setGeocoding] = useState(false);
-  const center: [number, number] = lat && lng
+
+  // 👉 FIX: ép kiểu tuple chuẩn
+  const center: [number, number] = (lat && lng
     ? [parseFloat(lat), parseFloat(lng)]
-    : [10.7769, 106.7009]; // Mặc định: TP.HCM
+    : [10.7769, 106.7009]) as [number, number];
+
+  // 👉 helper chuẩn hóa latlng
+  const toLatLng = (lat: string, lng: string): [number, number] => [
+    parseFloat(lat),
+    parseFloat(lng),
+  ];
 
   const handleClick = useCallback(async (clat: number, clng: number) => {
     setGeocoding(true);
@@ -69,16 +77,23 @@ function MapPicker({ lat, lng, onPick, label = "📍 Chọn vị trí trên bả
   return (
     <div className="space-y-2">
       <Label className="block">{label}</Label>
-      <p className="text-xs text-muted-foreground">Click vào bản đồ để chọn vị trí — hệ thống tự chuyển sang địa chỉ</p>
+
       <div className="rounded-lg overflow-hidden border h-72">
-        <MapContainer center={center} zoom={15} style={{ height: "100%", width: "100%" }}>
+        <MapContainer
+          center={center}
+          zoom={15}
+          style={{ height: "100%", width: "100%" }}
+        >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            attribution="&copy; OpenStreetMap"
           />
+
           <MapClickHandler onMapClick={handleClick} />
+
+          {/* 👉 FIX: ép kiểu Marker */}
           {lat && lng && (
-            <Marker position={[parseFloat(lat), parseFloat(lng)]}>
+            <Marker position={toLatLng(lat, lng)}>
               <Popup>
                 <span className="text-xs">
                   Lat: {parseFloat(lat).toFixed(6)}<br />
@@ -89,6 +104,7 @@ function MapPicker({ lat, lng, onPick, label = "📍 Chọn vị trí trên bả
           )}
         </MapContainer>
       </div>
+
       <p className="text-xs text-muted-foreground">
         {geocoding
           ? "⏳ Đang tra địa chỉ..."
@@ -355,12 +371,12 @@ export default function StallOwners() {
   };
 
   const handleDelete = async (id: number, name: string) => {
-    if (!confirm(`Khóa tài khoản "${name}"?`)) return;
+    if (!confirm(`Khóa tài khoản "${name}" và gian hàng của họ?`)) return;
     try {
       const res = await fetch(`http://localhost:3000/api/users/${id}`, { method: "DELETE" });
       if (!res.ok) { const e = await res.json(); alert("Lỗi: " + (e.error || "?")); return; }
-      showSuccess("✅ Đã khóa tài khoản thành công");
-      fetchUsers(); fetchDeletedUsers();
+      showSuccess("✅ Đã khóa tài khoản và gian hàng thành công");
+      fetchUsers(); fetchDeletedUsers(); fetchRestaurants();
     } catch (e) { alert("❌ Lỗi: " + (e instanceof Error ? e.message : "?")); }
   };
 

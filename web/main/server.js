@@ -143,6 +143,14 @@ app.delete('/api/users/:id', async (req, res) => {
       const [[user]] = await conn.query("SELECT * FROM users WHERE user_id=?", [req.params.id]);
       if (!user) throw Object.assign(new Error('Không tìm thấy user'), { status: 404 });
 
+      // Khóa gian hàng nếu user có restaurant_id
+      if (user.restaurant_id) {
+        await conn.query(
+          "UPDATE restaurant SET status='closed' WHERE restaurant_id=?",
+          [user.restaurant_id]
+        );
+      }
+
       await conn.query(
         `INSERT INTO users_deleted (user_id, name, password_hash, email, phone, restaurant_id, created_at, deleted_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, 'admin')`,
@@ -151,7 +159,7 @@ app.delete('/api/users/:id', async (req, res) => {
       );
       await conn.query("DELETE FROM users WHERE user_id=?", [req.params.id]);
     });
-    res.json({ success: true, message: 'Đã khóa tài khoản và backup dữ liệu' });
+    res.json({ success: true, message: 'Đã khóa tài khoản và gian hàng' });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
@@ -164,6 +172,14 @@ app.post('/api/users/restore/:id', async (req, res) => {
       const [[ud]] = await conn.query("SELECT * FROM users_deleted WHERE deleted_id=?", [req.params.id]);
       if (!ud) throw Object.assign(new Error('Không tìm thấy trong backup'), { status: 404 });
 
+      // Mở khóa gian hàng nếu user có restaurant_id
+      if (ud.restaurant_id) {
+        await conn.query(
+          "UPDATE restaurant SET status='open' WHERE restaurant_id=?",
+          [ud.restaurant_id]
+        );
+      }
+
       await conn.query(
         `INSERT INTO users (user_id, name, password_hash, email, phone, restaurant_id, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -171,7 +187,7 @@ app.post('/api/users/restore/:id', async (req, res) => {
       );
       await conn.query("DELETE FROM users_deleted WHERE deleted_id=?", [req.params.id]);
     });
-    res.json({ success: true, message: 'Khôi phục user thành công' });
+    res.json({ success: true, message: 'Khôi phục user và gian hàng thành công' });
   } catch (err) {
     res.status(err.status || 500).json({ error: err.message });
   }
