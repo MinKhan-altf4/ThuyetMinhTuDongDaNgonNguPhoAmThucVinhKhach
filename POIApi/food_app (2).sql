@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Máy chủ: 127.0.0.1
--- Thời gian đã tạo: Th4 05, 2026 lúc 10:15 PM
+-- Thời gian đã tạo: Th4 12, 2026 lúc 06:52 AM
 -- Phiên bản máy phục vụ: 10.4.32-MariaDB
 -- Phiên bản PHP: 8.2.12
 
@@ -247,6 +247,31 @@ INSERT INTO `languages` (`language_id`, `language_code`) VALUES
 -- --------------------------------------------------------
 
 --
+-- Cấu trúc bảng cho bảng `owner_permissions`
+--
+
+CREATE TABLE `owner_permissions` (
+  `permission_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `can_edit` tinyint(1) DEFAULT 1,
+  `can_delete` tinyint(1) DEFAULT 0,
+  `can_view_reports` tinyint(1) DEFAULT 1,
+  `can_manage_menu` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Đang đổ dữ liệu cho bảng `owner_permissions`
+--
+
+INSERT INTO `owner_permissions` (`permission_id`, `user_id`, `can_edit`, `can_delete`, `can_view_reports`, `can_manage_menu`, `created_at`, `updated_at`) VALUES
+(1, 13, 1, 0, 1, 1, '2026-04-05 19:25:22', '2026-04-05 19:25:22'),
+(2, 15, 1, 0, 1, 1, '2026-04-05 19:25:29', '2026-04-05 19:25:29');
+
+-- --------------------------------------------------------
+
+--
 -- Cấu trúc bảng cho bảng `restaurant`
 --
 
@@ -260,29 +285,30 @@ CREATE TABLE `restaurant` (
   `address` varchar(255) DEFAULT NULL,
   `open_hour` varchar(50) DEFAULT NULL,
   `close_hour` varchar(50) DEFAULT NULL,
-  `rating` float DEFAULT 0
+  `rating` float DEFAULT 0,
+  `status` varchar(20) NOT NULL DEFAULT 'open' COMMENT 'open | closed | maintenance'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Đang đổ dữ liệu cho bảng `restaurant`
 --
 
-INSERT INTO `restaurant` (`restaurant_id`, `name`, `description`, `lat`, `lng`, `phone`, `address`, `open_hour`, `close_hour`, `rating`) VALUES
-(1, 'Ốc Phát - Ốc Ngon Quận 4', 'Ốc Phát là quán ốc nổi tiếng tại đường Vĩnh Khánh, Quận 4. Quán nổi bật với các món ốc tươi sống được chế biến ngay tại bàn. Đặc biệt là ốc hấp sả thơm lừng, ốc mỡ hành giòn bùi, và ốc len xào dừa béo ngậy. Không gian quán rộng rãi, thoáng mát, phù hợp cho buổi họp mặt bạn bè cuối ngày.', 10.761955, 106.702091, '0901 234 567', '1 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.4),
-(2, 'Quán Ốc Thảo Quận 4', 'Quán Ốc Thảo là điểm đến quen thuộc của tín đồ ẩm thực đường phố Sài Gòn. Thực đơn phong phú với hơn 15 loại ốc tươi mỗi ngày. Ốc hấp gừng thơm nồng, ốc xào củ chuối giòn sần, ốc nướng muối ớt đậm đà. Quán mở cửa từ chiều đến khuya, là địa chỉ lý tưởng cho những ai yêu thích hương vị mặn mà của ẩm thực ốc.', 10.761681, 106.702362, '0902 345 678', '2 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:59', 4.3),
-(3, 'Quán Ốc Vũ', 'Quán Ốc Vũ nằm trên tuyến đường Vĩnh Khánh sầm uất, chuyên phục vụ các món ốc tươi sống với hơn 20 loại khác nhau. Từ ốc hương rang me chua ngọt, đến ốc tỏi chiên giòn, hay ốc xào rau muống đậm đà. Vị ốc tươi ngon, nêm nếm vừa miệng, mang đậm hương vị ẩm thực Sài Gòn đậm chất miền Nam.', 10.761394, 106.702695, '0903 456 789', '3 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.5),
-(4, 'Ốc Loan', 'Ốc Loan là quán ốc bình dân được lòng thực khách Sài Gòn bởi hương vị ốc tươi ngon và giá cả phải chăng. Quán có các món ốc hấp, ốc xào, ốc nướng với topping đa dạng. Ốc mỡ hành ở đây được khách hàng đặc biệt yêu thích bởi lớp mỡ hành thơm phức, ốc dai giòn sần sật. Không gian quán mát mẻ, phục vụ đến khuya.', 10.761225, 106.702629, '0904 567 890', '4 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.2),
-(5, 'Ốc Hồng Nhung', 'Ốc Hồng Nhung là quán ốc nhỏ xinh trên đường Vĩnh Khánh, Quận 4. Quán nổi tiếng với các món ốc tươi được chế biến đa dạng: hấp, xào, nướng, hấp gừng. Ốc mỡ hành thơm lừng, ốc len xào dừa béo ngậy, ốc hấp sả cay nồng. Vị ốc tươi, chế biến cẩn thận, mang đến trải nghiệm ẩm thực ốc đường phố đích thực cho thực khách.', 10.761225, 106.702629, '0905 678 901', '5 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.3),
-(6, 'Lẩu nướng Vĩnh Khánh', 'Lẩu nướng Vĩnh Khánh là điểm đến lý tưởng cho những ai đam mê buffet lẩu nướng. Quán cung cấp hơn 50 loại nguyên liệu tươi sống mỗi ngày, từ thịt bò Mỹ, hải sản đến rau củ tươi xanh. Không gian rộng rãi, bếp nướng than hoa rực rỡ, nồi lẩu sôi sùng sục. Phù hợp cho nhóm bạn và gia đình muốn tận hưởng bữa ăn thả ga.', 10.760939, 106.703049, '0906 789 012', '6 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '10:00', '23:00', 4.6),
-(7, 'Bún Thịt Nướng Cô Nga', 'Bún Thịt Nướng Cô Nga là quán bún thịt nướng nổi tiếng tại Vĩnh Khánh, Quận 4. Thịt heo nướng than hoa thơm lừng, bì giòn sần, nước mắm pha chuẩn vị miền Nam. Ăn kèm rau sống tươi xanh và đồ chua dưa hấu thanh mát. Quán nhỏ nhưng luôn đông khách, phục vụ bữa sáng và bữa trưa với giá cả hợp lý.', 10.760789, 106.706805, '0907 890 123', '7 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '06:00', '14:00', 4.5),
-(8, 'Nhân Vip Coffee', 'Nhân Vip Coffee là quán cà phê hiện đại nằm trên đường Vĩnh Khánh, Quận 4. Không gian quán được thiết kế trẻ trung, thoáng mát, phù hợp để họp nhóm hay làm việc. Đồ uống đa dạng từ cà phê truyền thống Sài Gòn đến các loại trà và sinh tố hiện đại. Cà phê sữa đá đặc sánh, trà đá mát lạnh, phục vụ từ sáng sớm đến tối muộn.', 10.760672, 106.704456, '0908 901 234', '8 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '07:00', '22:30', 4.1),
-(9, 'RONG Buffet', 'RONG Buffet là điểm đến buffet hấp dẫn tại Vĩnh Khánh, Quận 4. Thực đơn buffet phong phú với hơn 30 món từ hải sản tươi sống đến thịt nướng, rau xanh và đồ chiên giòn. Đặc biệt có các món ốc hấp, ốc nướng và lẩu hải sản. Không gian quán rộng rãi, phục vụ cả ngày. Combo buffet cho 2 đến 4 người với giá cực kỳ hợp lý.', 10.760717, 106.704603, '0909 012 345', '9 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '10:00', '22:00', 4.4),
-(10, 'Link Coffee & Tea', 'Link Coffee & Tea là quán trà sữa và cà phê mang phong cách trẻ trung tại Vĩnh Khánh, Quận 4. Thực đơn đa dạng với trà sữa các loại, cà phê, đá xay và nước ép hoa quả. Không gian quán được trang trí xinh xắn, là điểm hẹn lý tưởng cho giới trẻ. Phục vụ từ sáng sớm đến tối muộn, thích hợp cho buổi họp nhóm hay thư giãn cuối ngày.', 10.760889, 106.704928, '0910 123 456', '10 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '07:00', '22:30', 4),
-(11, 'Ốc Đào 2', 'Ốc Đào 2 là quán ốc chuyên nghiệp tại Vĩnh Khánh, Quận 4, được nhiều thực khách yêu thích. Ốc đào hấp sả thơm nồng, ốc hương rang me chua ngọt đậm đà, ốc len xào dừa béo ngậy. Nguyên liệu ốc tươi được chọn kỹ lưỡng mỗi ngày. Không gian mát mẻ, giá cả phải chăng, phục vụ từ chiều đến khuya.', 10.761171, 106.704948, '0911 234 567', '11 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.6),
-(12, 'Quán ăn A Hiền', 'Quán ăn A Hiền là quán bình dân tọa lạc trên đường Vĩnh Khánh, Quận 4. Quán phục vụ các món ăn đa dạng từ cơm tấm, bún thịt nướng đến mì xào. Thực đơn thay đổi theo ngày với các món nóng hổi vừa ra lò. Giá cả bình dân, phần ăn no nê, phục vụ từ sáng sớm đến tối muộn. Là địa điểm quen thuộc của dân văn phòng và cư dân khu vực.', 10.761209, 106.705168, '0912 345 678', '12 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '06:00', '21:00', 4.2),
-(13, 'Ớt Xiêm Quán', 'Ớt Xiêm Quán là điểm đến cho những ai đam mê vị cay tại Vĩnh Khánh, Quận 4. Chuyên các món ăn cay đặc trưng miền Nam: bún mắm cay nồng, mì cay từ 1 đến 5 sao, lẩu tokbaytomyum chua cay. Độ cay có thể điều chỉnh từ nhẹ đến cực cay. Không gian quán rộng rãi, phục vụ đến khuya, phù hợp cho nhóm bạn thích thử thách độ cay.', 10.761159, 106.705698, '0913 456 789', '13 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '09:00', '23:00', 4.5),
-(14, 'Lẩu gà lá é Con Gà Trống', 'Lẩu gà lá é Con Gà Trống là quán chuyên lẩu gà nổi tiếng tại Vĩnh Khánh, Quận 4. Lẩu gà lá é thơm ngon với nước dùng ngọt thanh từ xương gà hầm nhiều giờ, thịt gà mềm ngọt, rau muống, nấm và mì. Đây là món ăn giải nhiệt tuyệt vời trong tiết trời oi ả Sài Gòn. Ngoài ra còn có gà nướng than hoa thơm lừng và gà xào sả ớt đậm đà.', 10.760856, 106.706721, '0914 567 890', '14 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '10:00', '22:00', 4.7),
-(15, 'Quán ốc Bụi', 'Quán ốc Bụi là quán ốc bình dân nằm trên đường Vĩnh Khánh, Quận 4. Quán nổi tiếng với các món ốc đa dạng: ốc hấp, ốc nướng, ốc mỡ hành, ốc hấp sả. Vị ốc tươi ngon, chế biến nhanh, giá cả rất phải chăng. Không gian ngoài trời mát mẻ, phù hợp cho những buổi tụ họp bạn bè nhâm nhi ly bia mát lạnh cùng đĩa ốc thơm lừng.', 10.760601, 106.703934, '0915 678 901', '15 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.3);
+INSERT INTO `restaurant` (`restaurant_id`, `name`, `description`, `lat`, `lng`, `phone`, `address`, `open_hour`, `close_hour`, `rating`, `status`) VALUES
+(1, 'Ốc Phát - Ốc Ngon Quận 4', 'Ốc Phát là quán ốc nổi tiếng tại đường Vĩnh Khánh, Quận 4. Quán nổi bật với các món ốc tươi sống được chế biến ngay tại bàn. Đặc biệt là ốc hấp sả thơm lừng, ốc mỡ hành giòn bùi, và ốc len xào dừa béo ngậy. Không gian quán rộng rãi, thoáng mát, phù hợp cho buổi họp mặt bạn bè cuối ngày.', 10.761955, 106.702091, '0901 234 567', '1 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.4, 'open'),
+(2, 'Quán Ốc Thảo Quận 4', 'Quán Ốc Thảo là điểm đến quen thuộc của tín đồ ẩm thực đường phố Sài Gòn. Thực đơn phong phú với hơn 15 loại ốc tươi mỗi ngày. Ốc hấp gừng thơm nồng, ốc xào củ chuối giòn sần, ốc nướng muối ớt đậm đà. Quán mở cửa từ chiều đến khuya, là địa chỉ lý tưởng cho những ai yêu thích hương vị mặn mà của ẩm thực ốc.', 10.761681, 106.702362, '0902 345 678', '2 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:59', 4.3, 'open'),
+(3, 'Quán Ốc Vũ', 'Quán Ốc Vũ nằm trên tuyến đường Vĩnh Khánh sầm uất, chuyên phục vụ các món ốc tươi sống với hơn 20 loại khác nhau. Từ ốc hương rang me chua ngọt, đến ốc tỏi chiên giòn, hay ốc xào rau muống đậm đà. Vị ốc tươi ngon, nêm nếm vừa miệng, mang đậm hương vị ẩm thực Sài Gòn đậm chất miền Nam.', 10.761394, 106.702695, '0903 456 789', '3 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.5, 'open'),
+(4, 'Ốc Loan', 'Ốc Loan là quán ốc bình dân được lòng thực khách Sài Gòn bởi hương vị ốc tươi ngon và giá cả phải chăng. Quán có các món ốc hấp, ốc xào, ốc nướng với topping đa dạng. Ốc mỡ hành ở đây được khách hàng đặc biệt yêu thích bởi lớp mỡ hành thơm phức, ốc dai giòn sần sật. Không gian quán mát mẻ, phục vụ đến khuya.', 10.761225, 106.702629, '0904 567 890', '4 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.2, 'open'),
+(5, 'Ốc Hồng Nhung', 'Ốc Hồng Nhung là quán ốc nhỏ xinh trên đường Vĩnh Khánh, Quận 4. Quán nổi tiếng với các món ốc tươi được chế biến đa dạng: hấp, xào, nướng, hấp gừng. Ốc mỡ hành thơm lừng, ốc len xào dừa béo ngậy, ốc hấp sả cay nồng. Vị ốc tươi, chế biến cẩn thận, mang đến trải nghiệm ẩm thực ốc đường phố đích thực cho thực khách.', 10.761225, 106.702629, '0905 678 901', '5 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.3, 'open'),
+(6, 'Lẩu nướng Vĩnh Khánh', 'Lẩu nướng Vĩnh Khánh là điểm đến lý tưởng cho những ai đam mê buffet lẩu nướng. Quán cung cấp hơn 50 loại nguyên liệu tươi sống mỗi ngày, từ thịt bò Mỹ, hải sản đến rau củ tươi xanh. Không gian rộng rãi, bếp nướng than hoa rực rỡ, nồi lẩu sôi sùng sục. Phù hợp cho nhóm bạn và gia đình muốn tận hưởng bữa ăn thả ga.', 10.760939, 106.703049, '0906 789 012', '6 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '10:00', '23:00', 4.6, 'open'),
+(7, 'Bún Thịt Nướng Cô Nga', 'Bún Thịt Nướng Cô Nga là quán bún thịt nướng nổi tiếng tại Vĩnh Khánh, Quận 4. Thịt heo nướng than hoa thơm lừng, bì giòn sần, nước mắm pha chuẩn vị miền Nam. Ăn kèm rau sống tươi xanh và đồ chua dưa hấu thanh mát. Quán nhỏ nhưng luôn đông khách, phục vụ bữa sáng và bữa trưa với giá cả hợp lý.', 10.760789, 106.706805, '0907 890 123', '7 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '06:00', '14:00', 4.5, 'open'),
+(8, 'Nhân Vip Coffee', 'Nhân Vip Coffee là quán cà phê hiện đại nằm trên đường Vĩnh Khánh, Quận 4. Không gian quán được thiết kế trẻ trung, thoáng mát, phù hợp để họp nhóm hay làm việc. Đồ uống đa dạng từ cà phê truyền thống Sài Gòn đến các loại trà và sinh tố hiện đại. Cà phê sữa đá đặc sánh, trà đá mát lạnh, phục vụ từ sáng sớm đến tối muộn.', 10.760672, 106.704456, '0908 901 234', '8 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '07:00', '22:30', 4.1, 'open'),
+(9, 'RONG Buffet', 'RONG Buffet là điểm đến buffet hấp dẫn tại Vĩnh Khánh, Quận 4. Thực đơn buffet phong phú với hơn 30 món từ hải sản tươi sống đến thịt nướng, rau xanh và đồ chiên giòn. Đặc biệt có các món ốc hấp, ốc nướng và lẩu hải sản. Không gian quán rộng rãi, phục vụ cả ngày. Combo buffet cho 2 đến 4 người với giá cực kỳ hợp lý.', 10.760717, 106.704603, '0909 012 345', '9 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '10:00', '22:00', 4.4, 'open'),
+(10, 'Link Coffee & Tea', 'Link Coffee & Tea là quán trà sữa và cà phê mang phong cách trẻ trung tại Vĩnh Khánh, Quận 4. Thực đơn đa dạng với trà sữa các loại, cà phê, đá xay và nước ép hoa quả. Không gian quán được trang trí xinh xắn, là điểm hẹn lý tưởng cho giới trẻ. Phục vụ từ sáng sớm đến tối muộn, thích hợp cho buổi họp nhóm hay thư giãn cuối ngày.', 10.760889, 106.704928, '0910 123 456', '10 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '07:00', '22:30', 4, 'open'),
+(11, 'Ốc Đào 2', 'Ốc Đào 2 là quán ốc chuyên nghiệp tại Vĩnh Khánh, Quận 4, được nhiều thực khách yêu thích. Ốc đào hấp sả thơm nồng, ốc hương rang me chua ngọt đậm đà, ốc len xào dừa béo ngậy. Nguyên liệu ốc tươi được chọn kỹ lưỡng mỗi ngày. Không gian mát mẻ, giá cả phải chăng, phục vụ từ chiều đến khuya.', 10.761171, 106.704948, '0911 234 567', '11 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.6, 'open'),
+(12, 'Quán ăn A Hiền', 'Quán ăn A Hiền là quán bình dân tọa lạc trên đường Vĩnh Khánh, Quận 4. Quán phục vụ các món ăn đa dạng từ cơm tấm, bún thịt nướng đến mì xào. Thực đơn thay đổi theo ngày với các món nóng hổi vừa ra lò. Giá cả bình dân, phần ăn no nê, phục vụ từ sáng sớm đến tối muộn. Là địa điểm quen thuộc của dân văn phòng và cư dân khu vực.', 10.761209, 106.705168, '0912 345 678', '12 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '06:00', '21:00', 4.2, 'open'),
+(13, 'Ớt Xiêm Quán', 'Ớt Xiêm Quán là điểm đến cho những ai đam mê vị cay tại Vĩnh Khánh, Quận 4. Chuyên các món ăn cay đặc trưng miền Nam: bún mắm cay nồng, mì cay từ 1 đến 5 sao, lẩu tokbaytomyum chua cay. Độ cay có thể điều chỉnh từ nhẹ đến cực cay. Không gian quán rộng rãi, phục vụ đến khuya, phù hợp cho nhóm bạn thích thử thách độ cay.', 10.761159, 106.705698, '0913 456 789', '13 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '09:00', '23:00', 4.5, 'open'),
+(14, 'Lẩu gà lá é Con Gà Trống', 'Lẩu gà lá é Con Gà Trống là quán chuyên lẩu gà nổi tiếng tại Vĩnh Khánh, Quận 4. Lẩu gà lá é thơm ngon với nước dùng ngọt thanh từ xương gà hầm nhiều giờ, thịt gà mềm ngọt, rau muống, nấm và mì. Đây là món ăn giải nhiệt tuyệt vời trong tiết trời oi ả Sài Gòn. Ngoài ra còn có gà nướng than hoa thơm lừng và gà xào sả ớt đậm đà.', 10.760856, 106.706721, '0914 567 890', '14 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '10:00', '22:00', 4.7, 'open'),
+(15, 'Quán ốc Bụi', 'Quán ốc Bụi là quán ốc bình dân nằm trên đường Vĩnh Khánh, Quận 4. Quán nổi tiếng với các món ốc đa dạng: ốc hấp, ốc nướng, ốc mỡ hành, ốc hấp sả. Vị ốc tươi ngon, chế biến nhanh, giá cả rất phải chăng. Không gian ngoài trời mát mẻ, phù hợp cho những buổi tụ họp bạn bè nhâm nhi ly bia mát lạnh cùng đĩa ốc thơm lừng.', 10.760601, 106.703934, '0915 678 901', '15 Đ. Vĩnh Khánh, Phường 8, Quận 4, TP.HCM, Việt Nam', '15:00', '23:30', 4.3, 'open');
 
 -- --------------------------------------------------------
 
@@ -358,6 +384,25 @@ INSERT INTO `users` (`user_id`, `name`, `email`, `phone`, `restaurant_id`, `pass
 -- --------------------------------------------------------
 
 --
+-- Cấu trúc bảng cho bảng `users_deleted`
+--
+
+CREATE TABLE `users_deleted` (
+  `deleted_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `password_hash` varchar(255) DEFAULT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `restaurant_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `deleted_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `deleted_by` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Cấu trúc đóng vai cho view `v_visit_stats`
 -- (See below for the actual view)
 --
@@ -416,6 +461,13 @@ ALTER TABLE `languages`
   ADD UNIQUE KEY `language_code` (`language_code`);
 
 --
+-- Chỉ mục cho bảng `owner_permissions`
+--
+ALTER TABLE `owner_permissions`
+  ADD PRIMARY KEY (`permission_id`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- Chỉ mục cho bảng `restaurant`
 --
 ALTER TABLE `restaurant`
@@ -436,6 +488,14 @@ ALTER TABLE `users`
   ADD PRIMARY KEY (`user_id`),
   ADD UNIQUE KEY `email` (`email`),
   ADD UNIQUE KEY `uq_users_restaurant` (`restaurant_id`);
+
+--
+-- Chỉ mục cho bảng `users_deleted`
+--
+ALTER TABLE `users_deleted`
+  ADD PRIMARY KEY (`deleted_id`),
+  ADD UNIQUE KEY `unique_deleted_user` (`user_id`,`deleted_at`),
+  ADD KEY `idx_deleted_restaurant` (`restaurant_id`);
 
 --
 -- AUTO_INCREMENT cho các bảng đã đổ
@@ -466,6 +526,12 @@ ALTER TABLE `languages`
   MODIFY `language_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
+-- AUTO_INCREMENT cho bảng `owner_permissions`
+--
+ALTER TABLE `owner_permissions`
+  MODIFY `permission_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
 -- AUTO_INCREMENT cho bảng `restaurant`
 --
 ALTER TABLE `restaurant`
@@ -482,6 +548,12 @@ ALTER TABLE `restaurant_image`
 --
 ALTER TABLE `users`
   MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+
+--
+-- AUTO_INCREMENT cho bảng `users_deleted`
+--
+ALTER TABLE `users_deleted`
+  MODIFY `deleted_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- Các ràng buộc cho các bảng đã đổ
@@ -505,6 +577,12 @@ ALTER TABLE `customer_visits`
 --
 ALTER TABLE `dish`
   ADD CONSTRAINT `dish_ibfk_1` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurant` (`restaurant_id`) ON DELETE CASCADE;
+
+--
+-- Các ràng buộc cho bảng `owner_permissions`
+--
+ALTER TABLE `owner_permissions`
+  ADD CONSTRAINT `owner_permissions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
 -- Các ràng buộc cho bảng `restaurant_image`
