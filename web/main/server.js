@@ -22,6 +22,26 @@ const pool = mysql.createPool({
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const offlineAudioRootCandidates = [
+  path.join(__dirname, '..', '..', 'POIApp', 'Resources', 'Raw', 'audio'),
+  path.join(__dirname, '..', 'Raw', 'audio'),
+  path.join(__dirname, 'audio'), // fallback: ./audio/ cạnh server.js
+];
+// Dùng thư mục đầu tiên tồn tại, fallback về ./audio/
+const offlineAudioRoot = offlineAudioRootCandidates.find((dir) => fs.existsSync(dir))
+  ?? path.join(__dirname, 'audio');
+
+// Tự tạo thư mục + các subdir ngôn ngữ để /offline-audio luôn hoạt động
+if (!fs.existsSync(offlineAudioRoot)) {
+  fs.mkdirSync(offlineAudioRoot, { recursive: true });
+}
+for (const lang of ['vi', 'en', 'zh', 'jp', 'kr']) {
+  const langDir = path.join(offlineAudioRoot, lang);
+  if (!fs.existsSync(langDir)) fs.mkdirSync(langDir, { recursive: true });
+}
+console.log(`[Audio] offlineAudioRoot = ${offlineAudioRoot}`);
+
+const supportedAudioLanguages = ['vi', 'en', 'zh', 'jp', 'kr'];
 
 const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -34,7 +54,19 @@ const upload = multer({
     filename: (_, file, cb) => cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`),
   }),
 });
+
+const audioUpload = multer({
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (_, file, cb) => {
+    /mp3|wav|m4a|ogg/.test(path.extname(file.originalname).toLowerCase()) && /audio/.test(file.mimetype)
+      ? cb(null, true) : cb(new Error('Chỉ chấp nhận file audio!'));
+  },
+  storage: multer.memoryStorage(),
+});
+
 app.use('/uploads', express.static(uploadDir));
+// Luôn mount /offline-audio - thư mục đã được tạo tự động ở trên
+app.use('/offline-audio', express.static(offlineAudioRoot));
 
 // ── Helper ──────────────────────────────────────────────────────
 // Transaction helper: tự động commit/rollback/release
@@ -53,24 +85,111 @@ async function withTransaction(fn) {
   }
 }
 
+function normalizeLanguageCode(languageCode) {
+  return String(languageCode || '').trim().toLowerCase();
+}
+
+function sanitizeAudioFileName(fileName) {
+  return path.basename(String(fileName || '').trim());
+}
+
+function getOfflineAudioPath(languageCode, fileName) {
+  return path.join(offlineAudioRoot, normalizeLanguageCode(languageCode), sanitizeAudioFileName(fileName));
+}
+
+function getOfflineAudioPathFromUrl(audioUrl) {
+  const normalized = String(audioUrl || '').replace(/\\/g, '/').replace(/^\/+/, '');
+  const parts = normalized.split('/').filter(Boolean);
+  if (parts.length < 3 || parts[0] !== 'audio') return null;
+  return getOfflineAudioPath(parts[1], parts.slice(2).join('/'));
+}
+
+async function deletePhysicalAudioIfUnused(audioUrl) {
+  const audioPath = getOfflineAudioPathFromUrl(audioUrl);
+  if (!audioPath || !fs.existsSync(audioPath)) return;
+
+  const [[{ total }]] = await pool.query('SELECT COUNT(*) AS total FROM audio WHERE audio_url = ?', [audioUrl]);
+  if (Number(total) === 0) {
+    fs.unlinkSync(audioPath);
+  }
+}
+
+function listOfflineAudioFilesByLanguage() {
+  const result = {};
+
+  for (const languageCode of supportedAudioLanguages) {
+    const languageDir = path.join(offlineAudioRoot, languageCode);
+    result[languageCode] = fs.existsSync(languageDir)
+      ? fs.readdirSync(languageDir)
+          .filter((fileName) => fileName.toLowerCase().endsWith('.mp3'))
+          .sort((a, b) => a.localeCompare(b))
+      : [];
+  }
+
+  return result;
+}
+
+function toOfflineAudioUrl(languageCode, fileName) {
+  return `/offline-audio/${normalizeLanguageCode(languageCode)}/${encodeURIComponent(sanitizeAudioFileName(fileName))}`;
+}
+
 // ── Stats ───────────────────────────────────────────────────────
 app.get('/api/stats', async (req, res) => {
   try {
     const [[{ total: owners }]] = await pool.query("SELECT COUNT(*) as total FROM users");
     const [[{ total: stores }]] = await pool.query("SELECT COUNT(*) as total FROM restaurant");
     const [[{ total: dishes }]] = await pool.query("SELECT COUNT(*) as total FROM dish WHERE is_active = 1");
+    const [[{ total: totalVisits }]] = await pool.query(`
+      SELECT COALESCE(SUM(visit_count), 0) as total
+      FROM customer_visited
+    `);
     const [topRestaurants] = await pool.query(`
-      SELECT r.name, r.rating, COUNT(d.dish_id) as dish_count
+      SELECT
+        r.name,
+        r.rating,
+        COALESCE(dish_stats.dish_count, 0) AS dish_count,
+        COALESCE(visit_stats.total_views, 0) AS total_views
       FROM restaurant r
-      LEFT JOIN dish d ON d.restaurant_id = r.restaurant_id AND d.is_active = 1
-      GROUP BY r.restaurant_id, r.name, r.rating
-      ORDER BY r.rating DESC LIMIT 5
+      LEFT JOIN (
+        SELECT restaurant_id, COUNT(*) AS dish_count
+        FROM dish
+        WHERE is_active = 1
+        GROUP BY restaurant_id
+      ) AS dish_stats ON dish_stats.restaurant_id = r.restaurant_id
+      LEFT JOIN (
+        SELECT restaurant_id, SUM(visit_count) AS total_views
+        FROM customer_visited
+        GROUP BY restaurant_id
+      ) AS visit_stats ON visit_stats.restaurant_id = r.restaurant_id
+      ORDER BY total_views DESC, r.rating DESC, r.name ASC
+      LIMIT 5
     `);
     const [activities] = await pool.query(`
       SELECT name, restaurant_id, NOW() as created_at
       FROM restaurant ORDER BY restaurant_id DESC LIMIT 5
     `);
-    res.json({ stats: { owners, stores, dishes, ordersToday: 0 }, topRestaurants, activities });
+    const [heatmapData] = await pool.query(`
+      SELECT
+        r.name,
+        CAST(r.lat AS DECIMAL(10, 8)) as lat,
+        CAST(r.lng AS DECIMAL(11, 8)) as lng,
+        GREATEST(COALESCE(SUM(cv.visit_count), 0), 1) as weight
+      FROM restaurant r
+      LEFT JOIN customer_visited cv ON cv.restaurant_id = r.restaurant_id
+      WHERE r.lat IS NOT NULL
+        AND r.lng IS NOT NULL
+        AND r.lat <> ''
+        AND r.lng <> ''
+      GROUP BY r.restaurant_id, r.name, r.lat, r.lng
+      HAVING lat IS NOT NULL AND lng IS NOT NULL
+      ORDER BY weight DESC, r.name ASC
+    `);
+    res.json({
+      stats: { owners, stores, dishes, totalVisits },
+      topRestaurants,
+      activities,
+      heatmapData,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -195,6 +314,29 @@ app.post('/api/users/restore/:id', async (req, res) => {
 
 // ── Restaurants ─────────────────────────────────────────────────
 // Trả về owner_locked = true nếu chủ đang bị khóa (có trong users_deleted)
+app.delete('/api/users/permanent/:id', async (req, res) => {
+  try {
+    await withTransaction(async (conn) => {
+      const [[ud]] = await conn.query("SELECT * FROM users_deleted WHERE deleted_id=?", [req.params.id]);
+      if (!ud) throw Object.assign(new Error('Không tìm thấy user trong danh sách ngưng hoạt động'), { status: 404 });
+
+      if (ud.restaurant_id) {
+        await conn.query("DELETE FROM customer_visits WHERE restaurant_id=?", [ud.restaurant_id]);
+        await conn.query("DELETE FROM customer_visited WHERE restaurant_id=?", [ud.restaurant_id]);
+        await conn.query("DELETE FROM restaurant_image WHERE restaurant_id=?", [ud.restaurant_id]);
+        await conn.query("DELETE FROM dish WHERE restaurant_id=?", [ud.restaurant_id]);
+        await conn.query("DELETE FROM restaurant WHERE restaurant_id=?", [ud.restaurant_id]);
+      }
+
+      await conn.query("DELETE FROM users_deleted WHERE deleted_id=?", [req.params.id]);
+    });
+
+    res.json({ success: true, message: 'Đã xóa vĩnh viễn user và toàn bộ dữ liệu liên quan' });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
 app.get('/api/restaurants', async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -213,6 +355,251 @@ app.get('/api/restaurants', async (req, res) => {
 });
 
 // ── Restaurant CRUD (admin) ─────────────────────────────────────
+app.get('/api/audio/catalog', async (req, res) => {
+  try {
+    const [restaurants] = await pool.query(`
+      SELECT restaurant_id, name
+      FROM restaurant
+      ORDER BY name ASC
+    `);
+    const [languages] = await pool.query(`
+      SELECT language_id, language_code
+      FROM languages
+      ORDER BY language_code ASC
+    `);
+
+    res.json({
+      restaurants,
+      languages,
+      filesByLanguage: listOfflineAudioFilesByLanguage(),
+      offlineAudioRoot,
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/audio', async (req, res) => {
+  try {
+    const where = [];
+    const params = [];
+
+    if (req.query.restaurant_id) {
+      where.push('a.restaurant_id = ?');
+      params.push(req.query.restaurant_id);
+    }
+
+    if (req.query.language_code) {
+      where.push('l.language_code = ?');
+      params.push(normalizeLanguageCode(req.query.language_code));
+    }
+
+    if (req.query.is_active === '1' || req.query.is_active === '0') {
+      where.push('a.is_active = ?');
+      params.push(Number(req.query.is_active));
+    }
+
+    const [rows] = await pool.query(`
+      SELECT
+        a.audio_id,
+        a.restaurant_id,
+        r.name AS restaurant_name,
+        a.language_id,
+        l.language_code,
+        a.audio_url,
+        a.duration,
+        a.version,
+        a.is_active,
+        a.last_updated
+      FROM audio a
+      JOIN restaurant r ON r.restaurant_id = a.restaurant_id
+      JOIN languages l ON l.language_id = a.language_id
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY r.name ASC, l.language_code ASC, a.version DESC, a.audio_id DESC
+    `, params);
+
+    const audios = rows.map((audio) => {
+      // audio_url dạng "audio/vi/poi_1.mp3" → chỉ lấy tên file cuối
+      const fileName = path.basename(String(audio.audio_url || '').replace(/\\/g, '/'));
+      const physicalPath = getOfflineAudioPath(audio.language_code, fileName);
+      const fileExists = fs.existsSync(physicalPath);
+      console.log(`[Audio] id=${audio.audio_id} url="${audio.audio_url}" file="${fileName}" exists=${fileExists} path="${physicalPath}"`);
+      return {
+        ...audio,
+        audio_url: audio.audio_url, // giữ nguyên full path cho client parse
+        file_name: fileName,
+        file_exists: fileExists,
+        preview_url: fileExists ? toOfflineAudioUrl(audio.language_code, fileName) : null,
+      };
+    });
+
+    res.json(audios);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/audio', async (req, res) => {
+  const { restaurant_id, language_code, file_name, duration, is_active = 1 } = req.body;
+  const languageCode = normalizeLanguageCode(language_code);
+  const fileName = sanitizeAudioFileName(file_name);
+
+  if (!restaurant_id || !languageCode || !fileName) {
+    return res.status(400).json({ error: 'Thieu restaurant_id, language_code hoac file_name' });
+  }
+
+  if (!supportedAudioLanguages.includes(languageCode)) {
+    return res.status(400).json({ error: 'Ngon ngu audio khong hop le' });
+  }
+
+  if (!fs.existsSync(getOfflineAudioPath(languageCode, fileName))) {
+    return res.status(400).json({ error: 'File audio khong ton tai trong thu muc offline' });
+  }
+
+  try {
+    const [[restaurant]] = await pool.query(
+      'SELECT restaurant_id FROM restaurant WHERE restaurant_id = ?',
+      [restaurant_id]
+    );
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Khong tim thay gian hang' });
+    }
+
+    const [[language]] = await pool.query(
+      'SELECT language_id FROM languages WHERE language_code = ?',
+      [languageCode]
+    );
+    if (!language) {
+      return res.status(404).json({ error: 'Khong tim thay ngon ngu' });
+    }
+
+    const [[{ total: activeCount }]] = await pool.query(`
+      SELECT COUNT(*) AS total
+      FROM audio
+      WHERE restaurant_id = ? AND language_id = ? AND is_active = 1
+    `, [restaurant_id, language.language_id]);
+
+    if (Number(is_active) === 1 && activeCount >= 3) {
+      return res.status(400).json({ error: 'Moi quan chi duoc toi da 3 file active cho moi ngon ngu' });
+    }
+
+    const [[{ next_version }]] = await pool.query(`
+      SELECT COALESCE(MAX(version), 0) + 1 AS next_version
+      FROM audio
+      WHERE restaurant_id = ? AND language_id = ?
+    `, [restaurant_id, language.language_id]);
+
+    const audioUrl = `audio/${languageCode}/${fileName}`;
+    const [result] = await pool.query(`
+      INSERT INTO audio (restaurant_id, language_id, audio_url, duration, version, is_active, last_updated)
+      VALUES (?, ?, ?, ?, ?, ?, NOW())
+    `, [
+      restaurant_id,
+      language.language_id,
+      audioUrl,
+      Number.isFinite(Number(duration)) ? Number(duration) : null,
+      next_version,
+      Number(is_active) ? 1 : 0,
+    ]);
+
+    res.json({ success: true, audio_id: result.insertId, file_name: fileName });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/audio/upload', audioUpload.single('audio'), async (req, res) => {
+  const languageCode = normalizeLanguageCode(req.body.language_code);
+  const restaurantId = Number(req.body.restaurant_id);
+  const duration = req.body.duration;
+
+  if (!restaurantId || !languageCode || !req.file) {
+    return res.status(400).json({ error: 'Thieu restaurant_id, language_code hoac file audio' });
+  }
+
+  if (!supportedAudioLanguages.includes(languageCode)) {
+    return res.status(400).json({ error: 'Ngon ngu audio khong hop le' });
+  }
+
+  try {
+    const [[restaurant]] = await pool.query(
+      'SELECT restaurant_id FROM restaurant WHERE restaurant_id = ?',
+      [restaurantId]
+    );
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Khong tim thay gian hang' });
+    }
+
+    const [[language]] = await pool.query(
+      'SELECT language_id FROM languages WHERE language_code = ?',
+      [languageCode]
+    );
+    if (!language) {
+      return res.status(404).json({ error: 'Khong tim thay ngon ngu' });
+    }
+
+    const [[{ total: activeCount }]] = await pool.query(`
+      SELECT COUNT(*) AS total
+      FROM audio
+      WHERE restaurant_id = ? AND language_id = ? AND is_active = 1
+    `, [restaurantId, language.language_id]);
+
+    if (activeCount >= 3) {
+      return res.status(400).json({ error: 'Moi quan chi duoc toi da 3 file active cho moi ngon ngu' });
+    }
+
+    const languageDir = path.join(offlineAudioRoot, languageCode);
+    if (!fs.existsSync(languageDir)) {
+      fs.mkdirSync(languageDir, { recursive: true });
+    }
+
+    const baseName = path.basename(req.file.originalname, path.extname(req.file.originalname))
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'audio';
+    const storedFileName = `${restaurantId}-${Date.now()}-${baseName}.mp3`;
+    const fullPath = path.join(languageDir, storedFileName);
+    fs.writeFileSync(fullPath, req.file.buffer);
+
+    const [[{ next_version }]] = await pool.query(`
+      SELECT COALESCE(MAX(version), 0) + 1 AS next_version
+      FROM audio
+      WHERE restaurant_id = ? AND language_id = ?
+    `, [restaurantId, language.language_id]);
+
+    const audioUrl = `audio/${languageCode}/${storedFileName}`;
+    const [result] = await pool.query(`
+      INSERT INTO audio (restaurant_id, language_id, audio_url, duration, version, is_active, last_updated)
+      VALUES (?, ?, ?, ?, ?, 1, NOW())
+    `, [
+      restaurantId,
+      language.language_id,
+      audioUrl,
+      Number.isFinite(Number(duration)) ? Number(duration) : null,
+      next_version,
+    ]);
+
+    res.json({ success: true, audio_id: result.insertId, file_name: storedFileName });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/audio/:id', async (req, res) => {
+  try {
+    const [[audio]] = await pool.query('SELECT audio_id, audio_url FROM audio WHERE audio_id = ?', [req.params.id]);
+    if (!audio) {
+      return res.status(404).json({ error: 'Khong tim thay audio' });
+    }
+
+    await pool.query('DELETE FROM audio WHERE audio_id = ?', [req.params.id]);
+    await deletePhysicalAudioIfUnused(audio.audio_url);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/restaurants', upload.single('image'), async (req, res) => {
   try {
     const { name, description, address, phone, lat, lng, open_hour, close_hour, status, rating } = req.body;

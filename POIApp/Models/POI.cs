@@ -11,6 +11,10 @@ public class POI
     [JsonConverter(typeof(StringToIntConverter))]
     public int Id { get; set; }
 
+    [JsonPropertyName("restaurant_id")]
+    [JsonConverter(typeof(StringToIntConverter))]
+    public int RestaurantId { get; set; }
+
     // Tiếng Việt (mặc định / fallback)
     [JsonPropertyName("name")]
     public string Name { get; set; } = string.Empty;

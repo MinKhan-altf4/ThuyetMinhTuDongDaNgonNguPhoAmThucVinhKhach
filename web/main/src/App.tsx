@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import StallOwners from "./pages/StallOwners";
 import Stalls from "./pages/Stalls";
 import Analytics from "./pages/Analytics";
+import OfflineAudio from "./pages/OfflineAudio";
 import Permissions from "./pages/Permissions";
 import SystemSettings from "./pages/SystemSettings";
 import NotFound from "./pages/NotFound";
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/stall-owners/add" element={<ProtectedRoute><AddStallOwner /></ProtectedRoute>} />
           <Route path="/stalls" element={<ProtectedRoute><Stalls /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+          <Route path="/offline-audio" element={<ProtectedRoute><OfflineAudio /></ProtectedRoute>} />
           <Route path="/permissions" element={<ProtectedRoute><Permissions /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SystemSettings /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />

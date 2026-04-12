@@ -171,6 +171,7 @@ interface DeletedUser {
   email: string;
   phone: string;
   restaurant_name: string;
+  restaurant_id?: number;
   deleted_at: string;
   deleted_by: string;
 }
@@ -356,8 +357,18 @@ export default function StallOwners() {
       const res = await fetch(`http://localhost:3000/api/users/restore/${deletedId}`, { method: "POST" });
       if (!res.ok) { const e = await res.json(); alert("Lỗi: " + (e.error || "?")); return; }
       showSuccess("✅ Khôi phục tài khoản thành công");
-      fetchUsers(); fetchDeletedUsers();
+      fetchUsers(); fetchDeletedUsers(); fetchRestaurants();
     } catch { alert("❌ Lỗi khi khôi phục"); }
+  };
+
+  const handlePermanentDelete = async (deletedId: number, userName: string) => {
+    if (!confirm(`Xóa vĩnh viễn tài khoản "${userName}"?\nNếu xóa, toàn bộ dữ liệu liên quan sẽ mất khỏi database.`)) return;
+    try {
+      const res = await fetch(`http://localhost:3000/api/users/permanent/${deletedId}`, { method: "DELETE" });
+      if (!res.ok) { const e = await res.json(); alert("Lỗi: " + (e.error || "?")); return; }
+      showSuccess("✅ Đã xóa vĩnh viễn tài khoản và dữ liệu liên quan");
+      fetchDeletedUsers(); fetchRestaurants();
+    } catch { alert("❌ Lỗi khi xóa vĩnh viễn"); }
   };
 
   // ── POI Handlers ──────────────────────────────────────────────
@@ -612,9 +623,14 @@ export default function StallOwners() {
                         <TableCell>{user.restaurant_name ? <Badge variant="outline">{user.restaurant_name}</Badge> : <Badge variant="secondary">Không có</Badge>}</TableCell>
                         <TableCell className="text-muted-foreground">{formatDate(user.deleted_at)}</TableCell>
                         <TableCell>
-                          <button onClick={() => handleRestore(user.deleted_id, user.name)} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-green-50 hover:text-green-600 transition-colors" title="Khôi phục">
-                            <RotateCcw className="h-4 w-4" />
-                          </button>
+                          <div className="flex gap-1">
+                            <button onClick={() => handleRestore(user.deleted_id, user.name)} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-green-50 hover:text-green-600 transition-colors" title="Khôi phục">
+                              <RotateCcw className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => handlePermanentDelete(user.deleted_id, user.name)} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors" title="Xóa vĩnh viễn">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

@@ -1,9 +1,85 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StatCard } from "@/components/StatCard";
-import { Store, UtensilsCrossed, Eye } from "lucide-react";
-import { Star } from "lucide-react";
+import { Store, UtensilsCrossed, Eye, Star, Map as MapIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { MapContainer, TileLayer, useMap } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L, { type LatLngExpression } from "leaflet";
+import "leaflet.heat";
+
+type HeatPoint = {
+  lat: number | string | null;
+  lng: number | string | null;
+  weight?: number | string | null;
+};
+
+function HeatmapLayer({ points }: { points: HeatPoint[] }) {
+  const map = useMap();
+  const layerRef = useRef<L.HeatLayer | null>(null);
+
+  useEffect(() => {
+    if (!map || !points?.length) {
+      return;
+    }
+
+    const heatData: L.HeatLatLngTuple[] = points
+      .map((point) => {
+        const lat = Number(point.lat);
+        const lng = Number(point.lng);
+        const weight = Number(point.weight ?? 1);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+          return null;
+        }
+
+        return [lat, lng, Number.isFinite(weight) && weight > 0 ? weight : 1];
+      })
+      .filter((point): point is L.HeatLatLngTuple => point !== null);
+
+    if (!heatData.length) {
+      if (layerRef.current && map.hasLayer(layerRef.current)) {
+        map.removeLayer(layerRef.current);
+      }
+      layerRef.current = null;
+      return;
+    }
+
+    if (layerRef.current && map.hasLayer(layerRef.current)) {
+      map.removeLayer(layerRef.current);
+    }
+
+    layerRef.current = L.heatLayer(heatData, {
+      radius: 25,
+      blur: 18,
+      maxZoom: 17,
+      minOpacity: 0.3,
+      gradient: {
+        0.15: "#2563eb",
+        0.35: "#22c55e",
+        0.55: "#facc15",
+        0.78: "#f97316",
+        1: "#dc2626",
+      },
+    }).addTo(map);
+
+    const bounds = L.latLngBounds(heatData.map(([lat, lng]) => [lat, lng]));
+    if (bounds.isValid()) {
+      map.fitBounds(bounds.pad(0.15));
+    }
+
+    map.invalidateSize();
+
+    return () => {
+      if (layerRef.current && map.hasLayer(layerRef.current)) {
+        map.removeLayer(layerRef.current);
+      }
+      layerRef.current = null;
+    };
+  }, [map, points]);
+
+  return null;
+}
 
 interface DashboardData {
   stats: {
@@ -11,8 +87,14 @@ interface DashboardData {
     dishes: number;
     totalVisits: number;
   };
-  topRestaurants: { name: string; rating: number; dish_count: number }[];
+  topRestaurants: {
+    name: string;
+    rating: number;
+    dish_count: number;
+    total_views: number;
+  }[];
   activities: { name: string; created_at: string }[];
+  heatmapData: { name: string; lat: number; lng: number; weight: number }[];
 }
 
 export default function Dashboard() {
@@ -20,7 +102,6 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Kiểm tra đăng nhập
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isAdminLoggedIn");
     if (!isLoggedIn) {
@@ -28,25 +109,24 @@ export default function Dashboard() {
     }
   }, [navigate]);
 
-  // Gọi API
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         const response = await fetch("http://localhost:3000/api/stats");
         const result = await response.json();
-        // Giả sử API trả về { stats: { stores, dishes, totalVisits }, ... }
-        // Nếu API chưa có totalVisits, bạn có thể gán mặc định 0 hoặc tính từ dữ liệu khác
+
         setData({
           stats: {
-            stores: result.stats.stores || 0,
-            dishes: result.stats.dishes || 0,
-            totalVisits: result.stats.totalVisits || 12580, // Ví dụ, thay bằng số thực tế
+            stores: result.stats?.stores || 0,
+            dishes: result.stats?.dishes || 0,
+            totalVisits: result.stats?.totalVisits || 0,
           },
           topRestaurants: result.topRestaurants || [],
           activities: result.activities || [],
+          heatmapData: result.heatmapData || [],
         });
       } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu:", error);
+        console.error("Loi khi lay du lieu dashboard:", error);
       } finally {
         setLoading(false);
       }
@@ -62,103 +142,121 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <AdminLayout title="Đang tải..." onLogout={handleLogout}>
+      <AdminLayout title="Dang tai..." onLogout={handleLogout}>
         <div className="flex h-64 items-center justify-center">
-          <p className="text-muted-foreground">Đang lấy dữ liệu từ hệ thống...</p>
+          <p className="text-muted-foreground">Dang lay du lieu tu he thong...</p>
         </div>
       </AdminLayout>
     );
   }
 
+  const defaultCenter: LatLngExpression = [10.761225, 106.702629];
+
   return (
-    <AdminLayout title="Tổng quan" onLogout={handleLogout}>
+    <AdminLayout title="Tong quan" onLogout={handleLogout}>
       <div className="space-y-6">
-        {/* Hiển thị 3 thẻ thống kê */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
-            title="Gian hàng"
+            title="Gian hang"
             value={data?.stats.stores || 0}
-            change="Khu vực Vĩnh Khánh"
+            change="Tong he thong"
             changeType="positive"
             icon={Store}
             color="emerald"
           />
           <StatCard
-            title="Món ăn"
+            title="Mon an"
             value={data?.stats.dishes || 0}
-            change="Đang kinh doanh"
+            change="Dang kinh doanh"
             changeType="positive"
             icon={UtensilsCrossed}
             color="amber"
           />
           <StatCard
-            title="Tổng lượt truy cập"
+            title="Tong luot truy cap POI"
             value={data?.stats.totalVisits || 0}
-            change="Hôm nay: +245"
+            change="Tu truoc den nay"
             changeType="positive"
             icon={Eye}
             color="blue"
           />
         </div>
 
-        {/* Phần còn lại giữ nguyên */}
+        <div className="rounded-xl border bg-card p-5 shadow-sm animate-fade-in">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
+              <MapIcon className="h-4 w-4 text-primary" />
+              Ban do nhiet: Mat do truy cap gian hang
+            </h3>
+          </div>
+          <div className="h-[400px] w-full overflow-hidden rounded-lg border">
+            {data?.heatmapData && data.heatmapData.length > 0 ? (
+              <MapContainer
+                center={defaultCenter}
+                zoom={16}
+                style={{ height: "100%", width: "100%", zIndex: 0 }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                <HeatmapLayer points={data.heatmapData} />
+              </MapContainer>
+            ) : (
+              <div className="flex h-full items-center justify-center bg-muted/20">
+                <p className="text-sm text-muted-foreground">Chua co du lieu vi tri</p>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Top gian hàng rating cao nhất */}
           <div className="col-span-2 rounded-xl border bg-card p-5 shadow-sm animate-fade-in">
             <h3 className="mb-4 text-sm font-semibold text-card-foreground">
-              Top gian hàng đánh giá cao nhất
+              Top gian hang thu hut nhat (Luot xem)
             </h3>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {(data?.topRestaurants || []).map((r, i) => (
                 <div key={i} className="flex items-center gap-4">
                   <span className="w-6 shrink-0 text-center text-xs font-bold text-muted-foreground">
                     #{i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-card-foreground">
-                      {r.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {r.dish_count} món ăn
+                    <p className="truncate text-sm font-medium text-card-foreground">{r.name}</p>
+                    <p className="flex gap-2 text-xs text-muted-foreground">
+                      <span>{r.dish_count} mon an</span>
+                      <span>�</span>
+                      <span className="text-blue-500">{r.total_views} luot xem</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="h-2 w-24 rounded-full bg-muted overflow-hidden">
+                    <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full bg-amber-400"
                         style={{ width: `${(r.rating / 5) * 100}%` }}
                       />
                     </div>
-                    <div className="flex items-center gap-1 w-10">
+                    <div className="flex w-10 items-center gap-1">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                      <span className="text-xs font-semibold text-amber-500">
-                        {r.rating}
-                      </span>
+                      <span className="text-xs font-semibold text-amber-500">{r.rating}</span>
                     </div>
                   </div>
                 </div>
               ))}
               {(data?.topRestaurants || []).length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-6">
-                  Chưa có dữ liệu
-                </p>
+                <p className="py-6 text-center text-sm text-muted-foreground">Chua co du lieu</p>
               )}
             </div>
           </div>
 
-          {/* Gian hàng mới thêm gần đây */}
           <div className="rounded-xl border bg-card p-5 shadow-sm animate-fade-in">
-            <h3 className="mb-4 text-sm font-semibold text-card-foreground">
-              Gian hàng mới thêm
-            </h3>
+            <h3 className="mb-4 text-sm font-semibold text-card-foreground">Gian hang moi them</h3>
             <div className="space-y-4">
               {(data?.activities || []).map((item, i) => (
                 <div key={i} className="flex items-start gap-3">
                   <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-card-foreground truncate">
-                      {item.name}
-                    </p>
+                    <p className="truncate text-sm font-medium text-card-foreground">{item.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(item.created_at).toLocaleDateString("vi-VN", {
                         day: "2-digit",
@@ -169,11 +267,6 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))}
-              {(data?.activities || []).length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-6">
-                  Chưa có dữ liệu
-                </p>
-              )}
             </div>
           </div>
         </div>
@@ -181,3 +274,4 @@ export default function Dashboard() {
     </AdminLayout>
   );
 }
+

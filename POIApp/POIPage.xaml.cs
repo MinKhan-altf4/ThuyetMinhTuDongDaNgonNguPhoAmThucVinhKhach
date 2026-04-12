@@ -321,11 +321,15 @@ public partial class POIPage : ContentPage
         UpdateDistances(loc.Latitude, loc.Longitude);
     }
 
-    private static string BuildStars(float rating)
-    {
-        var full = (int)Math.Floor(rating);
-        var half = rating - full >= 0.5f;
-        var empty = 5 - full - (half ? 1 : 0);
-        return new string('⭐', full) + (half ? "½" : "") + new string('☆', empty);
-    }
+private static string BuildStars(float rating)
+{
+    Debug.WriteLine($"[BuildStars] Input rating: {rating}");
+    rating = Math.Clamp(rating, 0f, 5f);
+    int full = (int)Math.Floor(rating);
+    bool half = (rating - full) >= 0.5f;
+    int empty = 5 - full - (half ? 1 : 0);
+    Debug.WriteLine($"[BuildStars] full={full}, half={half}, empty={empty}");
+    
+    return new string('⭐', full) + (half ? "½" : "") + new string('☆', empty);
+}
 }

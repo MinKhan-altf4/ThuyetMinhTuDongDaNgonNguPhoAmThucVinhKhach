@@ -15,11 +15,7 @@ const mainItems = [
   { title: "Chủ gian hàng", url: "/stall-owners", icon: Users },
   { title: "Gian hàng", url: "/stalls", icon: Store },
   { title: "Thống kê truy cập", url: "/analytics", icon: BarChart3 },
-];
-
-const systemItems = [
-  { title: "Phân quyền", url: "/permissions", icon: ShieldCheck },
-  { title: "Cài đặt hệ thống", url: "/settings", icon: Settings },
+  { title: "Audio offline", url: "/offline-audio", icon: Package },
 ];
 
 export function AdminSidebar() {
@@ -38,7 +34,7 @@ export function AdminSidebar() {
             </div>
             <div>
               <h2 className="text-sm font-semibold text-sidebar-primary-foreground">Quản trị viên</h2>
-              <p className="text-xs text-sidebar-foreground/60">Hệ thống gian hàng</p>
+              
             </div>
           </div>
         ) : (
@@ -74,32 +70,9 @@ export function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/40 text-[10px] uppercase tracking-widest">
-            {!collapsed && "Hệ thống"}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {systemItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
-                  >
-                    <NavLink to={item.url} end>
-                      <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
-<SidebarFooter className="sidebar-gradient border-t border-sidebar-border p-3">
+
+      <SidebarFooter className="sidebar-gradient border-t border-sidebar-border p-3">
         {!collapsed && (
           <a
             /* Thay đổi URL dưới đây cho đúng với cấu trúc thư mục của bạn trên XAMPP */

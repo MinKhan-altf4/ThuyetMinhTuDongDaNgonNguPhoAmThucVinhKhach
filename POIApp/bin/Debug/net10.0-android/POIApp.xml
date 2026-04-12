@@ -257,6 +257,39 @@
             Thư mục lưu audio download về máy
             </summary>
         </member>
+        <member name="T:POIApp.Services.AudioPathHelper">
+            <summary>
+            Helper class for audio path resolution.
+            Centralizes audio file path logic to avoid duplicate code.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AudioPathHelper.GetAudioPath(System.String,System.Int32)">
+            <summary>
+            Get audio bundle path for given language and POI ID.
+            Pattern: audio/{lang}/poi{id}-{lang}.mp3
+            </summary>
+            <param name="language">Language code: vi, en, zh, kr, jp</param>
+            <param name="poiId">POI ID number</param>
+            <returns>Bundle path: audio/vi/poi1-vi.mp3</returns>
+        </member>
+        <member name="M:POIApp.Services.AudioPathHelper.GetAudioSuffix(System.String)">
+            <summary>
+            Get audio suffix based on language code.
+            All languages use the same suffix as their code.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AudioPathHelper.IsSupportedLanguage(System.String)">
+            <summary>
+            Validate if language code is supported.
+            </summary>
+            <param name="language">Language code to validate</param>
+            <returns>True if supported</returns>
+        </member>
+        <member name="M:POIApp.Services.AudioPathHelper.GetDisplayName(System.String)">
+            <summary>
+            Get display name for language code.
+            </summary>
+        </member>
         <member name="T:POIApp.Services.AudioResourceService">
             <summary>
             Service ánh xạ POI tên → Local audio resource
@@ -286,23 +319,41 @@
         </member>
         <member name="T:POIApp.Services.AudioService">
             <summary>
-            Service audio offline — CHỈ phát file audio có sẵn.
-            KHÔNG dùng TTS, KHÔNG gọi API, KHÔNG generate audio.
-            Path: Resources/Raw/audio/{lang}/poi{id}-{lang}.mp3
+            Service audio hybrid: Bundle + Server
+            1. Cố gắng phát audio từ bundled files (offline)
+            2. Nếu không tìm thấy, download từ server (online)
+            3. Cache file downloaded vào local
             </summary>
         </member>
         <member name="M:POIApp.Services.AudioService.PlayAsync(POIApp.Models.POI,System.String)">
             <summary>
-            Phát audio offline theo ngôn ngữ.
-            vi → audio/vi/poi{id}-vi.mp3
-            en → audio/en/poi{id}-en.mp3
-            Không tồn tại → log lỗi, không crash, không fallback.
+            Phát audio: thử bundled → thử cache local → download từ server
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AudioService.GetCachedFilePath(System.Int32,System.String,System.Int32)">
+            <summary>
+            Tạo cache file path nhất quán: {cacheDir}/{restaurantId}_{languageCode}_{poiId}.mp3
+            Dùng poiId để phân biệt từng POI, tránh trùng khi restaurant có nhiều POI
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AudioService.DownloadAudioFromServerAsync(System.Int32,System.String,System.Int32)">
+            <summary>
+            Download audio từ server theo restaurant_id + language_code
+            Trả về cached file path hoặc null nếu lỗi
             </summary>
         </member>
         <member name="M:POIApp.Services.AudioService.Stop">
             <summary>
-            Dừng audio ngay lập tức. Không chồng tiếng.
+            Dừng audio ngay lập tức
             </summary>
+        </member>
+        <member name="M:POIApp.Services.AudioService.ClearCache">
+            <summary>
+            Clear toàn bộ cache audio đã download
+            </summary>
+        </member>
+        <member name="T:POIApp.Services.AudioService.AudioItem">
+            <summary>Helper class cho deserialization API response</summary>
         </member>
         <member name="T:POIApp.Services.CacheService">
             <summary>
