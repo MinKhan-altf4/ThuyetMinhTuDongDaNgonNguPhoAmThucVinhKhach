@@ -1,10 +1,10 @@
-<api type="debug" assembly-name="POIApp" mvid="d6fdcab54d0047fb94a5ddc5c95862c5">
+<api type="debug" assembly-name="POIApp" mvid="317b1ccfc6704b8eb15f734b599ea72d">
   <java-to-managed>
-    <entry java-name="crc64b0ca87d77b03d481/MainActivity" managed-name="POIApp.MainActivity, POIApp" managed-type-token-id="33554445" />
-    <entry java-name="crc64b0ca87d77b03d481/MainApplication" managed-name="POIApp.MainApplication, POIApp" managed-type-token-id="33554446" />
+    <entry java-name="crc64b0ca87d77b03d481/MainActivity" managed-name="POIApp.MainActivity, POIApp" managed-type-token-id="33554446" />
+    <entry java-name="crc64b0ca87d77b03d481/MainApplication" managed-name="POIApp.MainApplication, POIApp" managed-type-token-id="33554447" />
   </java-to-managed>
   <managed-to-java>
-    <entry java-name="crc64b0ca87d77b03d481/MainActivity" managed-name="POIApp.MainActivity, POIApp" managed-type-token-id="33554445" />
-    <entry java-name="crc64b0ca87d77b03d481/MainApplication" managed-name="POIApp.MainApplication, POIApp" managed-type-token-id="33554446" />
+    <entry java-name="crc64b0ca87d77b03d481/MainActivity" managed-name="POIApp.MainActivity, POIApp" managed-type-token-id="33554446" />
+    <entry java-name="crc64b0ca87d77b03d481/MainApplication" managed-name="POIApp.MainApplication, POIApp" managed-type-token-id="33554447" />
   </managed-to-java>
 </api>

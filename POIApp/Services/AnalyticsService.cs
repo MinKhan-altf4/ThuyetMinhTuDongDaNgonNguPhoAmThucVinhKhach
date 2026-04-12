@@ -29,6 +29,12 @@ public class AnalyticsService
         _cacheService = cacheService;
     }
 
+    // ← THÊM MỚI: Parameterless constructor cho MapPage
+    public AnalyticsService()
+    {
+        _cacheService = null;  // Không cần CacheService cho RecordVisitAsync
+    }
+
     // =====================================================
     // ĐẾM: Mỗi khi user nghe POI
     // =====================================================
@@ -51,8 +57,9 @@ public class AnalyticsService
 
         Debug.WriteLine($"[Analytics] POI {poi.Id} ({poi.Name}): {_listenCounts[poi.Id]} lần nghe");
 
-        // Lưu vào cache
-        await _cacheService.SaveAnalyticsAsync(_listenCounts);
+        // Lưu vào cache (nếu có)
+        if (_cacheService != null)
+            await _cacheService.SaveAnalyticsAsync(_listenCounts);
     }
 
     /// <summary>
@@ -69,7 +76,8 @@ public class AnalyticsService
 
         Debug.WriteLine($"[Analytics] POI {poiId} ({poiName}): {_listenCounts[poiId]} lần nghe");
 
-        await _cacheService.SaveAnalyticsAsync(_listenCounts);
+        if (_cacheService != null)
+            await _cacheService.SaveAnalyticsAsync(_listenCounts);
     }
 
     // =====================================================
@@ -107,6 +115,11 @@ public class AnalyticsService
     /// </summary>
     public async Task LoadFromCacheAsync()
     {
+        if (_cacheService == null)
+        {
+            Debug.WriteLine("[Analytics] CacheService is null, skipping LoadFromCacheAsync");
+            return;
+        }
         _listenCounts = await _cacheService.GetAnalyticsAsync();
         _totalListens = _listenCounts.Values.Sum();
         Debug.WriteLine($"[Analytics] Đã tải {_listenCounts.Count} POI từ cache. Tổng: {_totalListens} lần nghe");
@@ -144,7 +157,75 @@ public class AnalyticsService
     {
         _listenCounts.Clear();
         _totalListens = 0;
-        await _cacheService.SaveAnalyticsAsync(_listenCounts);
+        if (_cacheService != null)
+            await _cacheService.SaveAnalyticsAsync(_listenCounts);
         Debug.WriteLine("[Analytics] Đã reset tất cả thống kê");
+    }
+
+    // =====================================================
+    // GỬI LÊN SERVER (Web Admin)
+    // =====================================================
+    /// <summary>
+    /// Ghi lại lượt truy cập POI lên server (quán gián hàng)
+    /// Được gọi khi user click POI trên map
+    /// 
+    /// ⚠️ IMPORTANT: Cần update SERVER_ADDRESS nếu chạy trên device!
+    /// localhost:3000 chỉ hoạt động trên desktop
+    /// Device cần dùng IP address của desktop, ví dụ: 192.168.1.100:3000
+    /// </summary>
+    public async Task RecordVisitAsync(int customerId, int restaurantId, int listenCount = 0)
+    {
+        try
+        {
+            // ← CONFIGURATION: Change this IP when running on mobile device
+            string serverAddress = AppSettingsHelper.GetCustomerVisitServerUrl();
+            Debug.WriteLine($"[Analytics] Using customer visit server: {serverAddress}");
+
+            string url = $"{serverAddress.TrimEnd('/')}/api/customer-visits";
+            
+            Debug.WriteLine($"[Analytics] POST to: {url}");
+            Debug.WriteLine($"[Analytics] Payload: customer={customerId}, restaurant={restaurantId}, listen={listenCount}");
+
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            var payload = new
+            {
+                customer_id = customerId,
+                restaurant_id = restaurantId,
+                listen_count = listenCount
+            };
+
+            var json = System.Text.Json.JsonSerializer.Serialize(payload);
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+            var response = await client.PostAsync(url, content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var responseBody = await response.Content.ReadAsStringAsync();
+                Debug.WriteLine($"[Analytics] ✓ Success (HTTP {response.StatusCode})");
+                Debug.WriteLine($"[Analytics] Response: {responseBody}");
+            }
+            else
+            {
+                Debug.WriteLine($"[Analytics] ✗ HTTP Error {response.StatusCode}");
+                var errorBody = await response.Content.ReadAsStringAsync();
+                Debug.WriteLine($"[Analytics] Error: {errorBody}");
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Debug.WriteLine($"[Analytics] ✗ Network Error: {ex.Message}");
+            Debug.WriteLine($"[Analytics] ⚠️ Check: Is server running? Is firewall blocking port 3000?");
+            Debug.WriteLine($"[Analytics] ⚠️ Mobile users: Update SERVER_ADDRESS to desktop IP (e.g., 192.168.1.100:3000)");
+        }
+        catch (TaskCanceledException ex)
+        {
+            Debug.WriteLine($"[Analytics] ✗ Timeout Error: {ex.Message}");
+            Debug.WriteLine($"[Analytics] ⚠️ Server took too long to respond (timeout: 15s)");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Analytics] ✗ Unexpected Error ({ex.GetType().Name}): {ex.Message}");
+        }
     }
 }

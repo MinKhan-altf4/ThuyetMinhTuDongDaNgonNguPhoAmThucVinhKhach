@@ -48,6 +48,7 @@ public partial class MapPage : ContentPage
     private readonly APIService _apiService = new();
     private readonly TTSService _ttsService = new();
     private readonly TranslateService _translateService = TranslateService.Instance;
+    private readonly AnalyticsService _analyticsService = new();
 
     public MapPage()
     {
@@ -590,6 +591,74 @@ new L.Control.Recenter().addTo(map);
 
         // ── THÊM MỚI: Load danh sách món ăn (async, không block UI) ──
         _ = LoadDishesAsync(poi.Id);
+
+        // ── THÊM MỚI: Ghi nhận lần truy cập (không block UI) ──
+        // Wrapped in try-catch để tránh làm ảnh hưởng hiển thị POI
+        _ = Task.Run(async () => 
+        {
+            try
+            {
+                await RecordPOIVisitAsync(poi);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Analytics] Unhandled error in RecordPOIVisitAsync: {ex}");
+            }
+        });
+    }
+
+    private async Task RecordPOIVisitAsync(POI poi)
+    {
+        try
+        {
+            // Safety check - verify poi is valid
+            if (poi?.Id <= 0)
+            {
+                Debug.WriteLine("[Analytics] POI có ID không hợp lệ");
+                return;
+            }
+
+            // Lấy customer_id từ SecureStorage
+            var userIdStr = await SecureStorage.GetAsync("user_id");
+            
+            // ← FALLBACK: Nếu không có user_id, dùng device ID hoặc test ID
+            if (string.IsNullOrWhiteSpace(userIdStr))
+            {
+                // Tạo device ID duy nhất (persistent)
+                var deviceId = await SecureStorage.GetAsync("device_id");
+                if (string.IsNullOrWhiteSpace(deviceId))
+                {
+                    deviceId = Guid.NewGuid().ToString().Substring(0, 8);  // 8 chars unique ID
+                    await SecureStorage.SetAsync("device_id", deviceId);
+                    Debug.WriteLine($"[Analytics] Created new device_id: {deviceId}");
+                }
+                
+                // Dùng hash of device ID làm customer_id (số nguyên)
+                var customerId = Math.Abs(deviceId.GetHashCode() % 10000) + 1;
+                Debug.WriteLine($"[Analytics] Using fallback customer_id: {customerId} (from device: {deviceId})");
+                
+                await _analyticsService.RecordVisitAsync(customerId, poi.Id, listenCount: 0);
+                Debug.WriteLine($"[Analytics] ✓ Ghi nhận truy cập: customer={customerId}, restaurant={poi.Id}");
+                return;
+            }
+
+            if (!int.TryParse(userIdStr, out var customerId2) || customerId2 <= 0)
+            {
+                Debug.WriteLine("[Analytics] Invalid customer_id format: " + userIdStr);
+                return;
+            }
+
+            int restaurantId = poi.Id;
+
+            // Ghi nhận truy cập (0 listen vì chưa play audio)
+            await _analyticsService.RecordVisitAsync(customerId2, restaurantId, listenCount: 0);
+            Debug.WriteLine($"[Analytics] ✓ Ghi nhận truy cập: customer={customerId2}, restaurant={restaurantId}");
+        }
+        catch (Exception ex)
+        {
+            // Log nhưng không throw - để không ảnh hưởng POI display
+            Debug.WriteLine($"[Analytics] ✗ Lỗi ghi nhận truy cập: {ex.GetType().Name} - {ex.Message}");
+        }
     }
 
     private void BindPOIDetailText(POI poi)
@@ -655,6 +724,19 @@ if(window._lastSelected!==undefined){
                 await _ttsService.SpeakAsync(translatedText, lang);
                 LblAudioStatus.Text = L.Get("audio_playing_tts_done", lang.ToUpperInvariant());
             }
+
+            // ── THÊM MỚI: Ghi nhận audio listen (increment listen_count) ──
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await RecordAudioListenAsync(_selectedPOI);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Analytics] Unhandled error in RecordAudioListenAsync: {ex}");
+                }
+            });
         }
         catch (Exception ex)
         {
@@ -666,6 +748,51 @@ if(window._lastSelected!==undefined){
             AudioLoading.IsRunning = false;
             AudioLoading.IsVisible = false;
             BtnPlayAudio.IsEnabled = true;
+        }
+    }
+
+    private async Task RecordAudioListenAsync(POI poi)
+    {
+        try
+        {
+            // Safety check
+            if (poi?.Id <= 0)
+            {
+                Debug.WriteLine("[Analytics] POI có ID không hợp lệ");
+                return;
+            }
+
+            // Lấy customer_id
+            var userIdStr = await SecureStorage.GetAsync("user_id");
+            
+            int customerId;
+            if (string.IsNullOrWhiteSpace(userIdStr))
+            {
+                // ← FALLBACK: Dùng device_id nếu không có user_id
+                var deviceId = await SecureStorage.GetAsync("device_id");
+                if (string.IsNullOrWhiteSpace(deviceId))
+                {
+                    deviceId = Guid.NewGuid().ToString().Substring(0, 8);
+                    await SecureStorage.SetAsync("device_id", deviceId);
+                }
+                customerId = Math.Abs(deviceId.GetHashCode() % 10000) + 1;
+            }
+            else if (!int.TryParse(userIdStr, out customerId) || customerId <= 0)
+            {
+                Debug.WriteLine("[Analytics] Invalid customer_id format");
+                return;
+            }
+
+            int restaurantId = poi.Id;
+
+            // Ghi nhận 1 lần nghe audio
+            await _analyticsService.RecordVisitAsync(customerId, restaurantId, listenCount: 1);
+            Debug.WriteLine($"[Analytics] ✓ Ghi nhận audio listen: customer={customerId}, restaurant={restaurantId}");
+        }
+        catch (Exception ex)
+        {
+            // Log nhưng không throw
+            Debug.WriteLine($"[Analytics] ✗ Lỗi ghi nhận audio listen: {ex.GetType().Name} - {ex.Message}");
         }
     }
 

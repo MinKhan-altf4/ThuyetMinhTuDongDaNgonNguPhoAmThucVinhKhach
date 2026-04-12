@@ -243,19 +243,42 @@ app.post('/api/restaurants', upload.single('image'), async (req, res) => {
   }
 });
 
-app.put('/api/restaurants/:id', upload.single('image'), async (req, res) => {
+app.put('/api/restaurants/:id', (req, res, next) => {
+  // Nếu là JSON request (từ Stalls.tsx) thì bỏ qua multer để req.body hoạt động đúng
+  if (req.is('application/json')) return next();
+  upload.single('image')(req, res, next);
+}, async (req, res) => {
   try {
     const { name, description, address, phone, lat, lng, open_hour, close_hour, status, rating } = req.body;
     if (!name || !address) return res.status(400).json({ error: 'Thiếu tên hoặc địa chỉ' });
 
+    // lat/lng: nếu client không gửi (undefined) thì GIỮ NGUYÊN giá trị cũ trong DB
+    // nếu gửi null hoặc "" thì mới xóa
+    const latVal = lat !== undefined ? (lat === '' || lat === null ? null : parseFloat(lat)) : undefined;
+    const lngVal = lng !== undefined ? (lng === '' || lng === null ? null : parseFloat(lng)) : undefined;
+
     await withTransaction(async (conn) => {
-      await conn.query(
-        `UPDATE restaurant SET name=?, description=?, address=?, phone=?, lat=?, lng=?, open_hour=?, close_hour=?, status=?, rating=?
-         WHERE restaurant_id=?`,
-        [name, description || null, address, phone || null, lat || null, lng || null,
-         open_hour || null, close_hour || null, status || 'open', parseFloat(rating) || 0, req.params.id]
-      );
-      
+      if (latVal !== undefined) {
+        // Client gửi lat/lng → update toàn bộ
+        await conn.query(
+          `UPDATE restaurant SET name=?, description=?, address=?, phone=?, lat=?, lng=?,
+           open_hour=?, close_hour=?, status=?, rating=? WHERE restaurant_id=?`,
+          [name, description || null, address, phone || null,
+           latVal, lngVal,
+           open_hour || null, close_hour || null, status || 'open',
+           parseFloat(rating) || 0, req.params.id]
+        );
+      } else {
+        // Client không gửi lat/lng → KHÔNG update lat/lng (giữ nguyên)
+        await conn.query(
+          `UPDATE restaurant SET name=?, description=?, address=?, phone=?,
+           open_hour=?, close_hour=?, status=?, rating=? WHERE restaurant_id=?`,
+          [name, description || null, address, phone || null,
+           open_hour || null, close_hour || null, status || 'open',
+           parseFloat(rating) || 0, req.params.id]
+        );
+      }
+
       if (req.file) {
         await conn.query("DELETE FROM restaurant_image WHERE restaurant_id=?", [req.params.id]);
         const imageUrl = `/uploads/${req.file.filename}`;
@@ -430,6 +453,103 @@ app.get('/api/visit/stats/:restaurant_id', async (req, res) => {
     `, [restaurant_id]);
 
     res.json({ summary, byDay, byLanguage });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Customer Visits / Analytics ──────────────────────────────────
+
+// Ghi lại lượt xem + lượt nghe POI từ MAUI app
+// Payload: { customer_id: int, restaurant_id: int, listen_count: int }
+app.post('/api/customer-visits', async (req, res) => {
+  try {
+    const { customer_id, restaurant_id, listen_count = 0 } = req.body;
+
+    console.log(`[Analytics] POST /api/customer-visits →`, { customer_id, restaurant_id, listen_count });
+
+    if (!customer_id || !restaurant_id) {
+      return res.status(400).json({ error: 'Thiếu customer_id hoặc restaurant_id' });
+    }
+
+    // Dùng ON DUPLICATE KEY UPDATE để upsert 1 lần duy nhất
+    // Cần UNIQUE KEY (customer_id, restaurant_id) trong bảng customer_visited
+    await pool.query(`
+      INSERT INTO customer_visited (customer_id, restaurant_id, visit_count, audio_listen_count)
+      VALUES (?, ?, 1, ?)
+      ON DUPLICATE KEY UPDATE
+        visit_count        = visit_count + 1,
+        audio_listen_count = audio_listen_count + VALUES(audio_listen_count),
+        last_visited       = NOW()
+    `, [customer_id, restaurant_id, listen_count]);
+
+    console.log(`[Analytics] ✓ Saved: customer=${customer_id}, restaurant=${restaurant_id}, listen=${listen_count}`);
+    res.json({ success: true, message: 'Ghi lại lượt truy cập thành công' });
+  } catch (err) {
+    console.error('[Analytics] ✗ POST /api/customer-visits error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Lấy danh sách truy cập của restaurant
+app.get('/api/restaurants/:id/visits', async (req, res) => {
+  try {
+    const [[restaurantCheck]] = await pool.query('SELECT restaurant_id FROM restaurant WHERE restaurant_id = ?', [req.params.id]);
+    if (!restaurantCheck) return res.status(404).json({ error: 'Không tìm thấy restaurant' });
+
+    const [visits] = await pool.query(`
+      SELECT cv.visit_id, cv.customer_id, cv.visit_count, cv.audio_listen_count, cv.last_visited, cv.created_at
+      FROM customer_visited cv
+      WHERE cv.restaurant_id = ?
+      ORDER BY cv.last_visited DESC
+    `, [req.params.id]);
+
+    res.json(visits);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Lấy thống kê tổng hợp — Analytics.tsx gọi endpoint này
+app.get('/api/restaurants/:id/visits/stats', async (req, res) => {
+  try {
+    const restaurantId = req.params.id;
+    console.log(`[Analytics] GET /api/restaurants/${restaurantId}/visits/stats`);
+
+    const [restaurants] = await pool.query(
+      'SELECT restaurant_id FROM restaurant WHERE restaurant_id = ?',
+      [restaurantId]
+    );
+    if (!restaurants || restaurants.length === 0) {
+      return res.status(404).json({ error: 'Không tìm thấy restaurant' });
+    }
+
+    const [rows] = await pool.query(`
+      SELECT
+        COALESCE(COUNT(DISTINCT customer_id), 0) AS total_visitors,
+        COALESCE(SUM(visit_count), 0)            AS total_visits,
+        COALESCE(SUM(audio_listen_count), 0)     AS total_listens,
+        MAX(last_visited)                        AS last_visit_time
+      FROM customer_visited
+      WHERE restaurant_id = ?
+    `, [restaurantId]);
+
+    const stats = rows[0] || { total_visitors: 0, total_visits: 0, total_listens: 0, last_visit_time: null };
+    console.log(`[Analytics] Stats for restaurant ${restaurantId}:`, stats);
+    res.json(stats);
+  } catch (err) {
+    console.error('[Analytics] ✗ GET visits/stats error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Lấy tổng quan tất cả gian hàng (dùng view v_poi_analytics)
+app.get('/api/analytics/overview', async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT * FROM v_poi_analytics ORDER BY total_views DESC
+    `);
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

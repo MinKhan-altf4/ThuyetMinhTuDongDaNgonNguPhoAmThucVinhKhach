@@ -139,6 +139,16 @@
             Reset tất cả thống kê
             </summary>
         </member>
+        <member name="M:POIApp.Services.AnalyticsService.RecordVisitAsync(System.Int32,System.Int32,System.Int32)">
+            <summary>
+            Ghi lại lượt truy cập POI lên server (quán gián hàng)
+            Được gọi khi user click POI trên map
+            
+            ⚠️ IMPORTANT: Cần update SERVER_ADDRESS nếu chạy trên device!
+            localhost:3000 chỉ hoạt động trên desktop
+            Device cần dùng IP address của desktop, ví dụ: 192.168.1.100:3000
+            </summary>
+        </member>
         <member name="T:POIApp.Services.POIDetailResponse">
             <summary>
             Response cho endpoint ?id=X → trả 1 POI object (không phải list)

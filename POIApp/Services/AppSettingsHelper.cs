@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Microsoft.Maui.Devices;
 using Microsoft.Maui.Devices.Sensors;
 
 namespace POIApp.Services;
@@ -122,6 +123,43 @@ public static class AppSettingsHelper
         catch (Exception ex)
         {
             Debug.WriteLine($"[Settings] SetApiBaseUrl error: {ex.Message}");
+        }
+    }
+
+    // ── Customer Visit Analytics Server URL ──
+    private const string KeyCustomerVisitServerUrl = "customer_visit_server_url";
+    private const string DefaultCustomerVisitServerUrl = "http://localhost:3000";
+    private const string DefaultAndroidCustomerVisitServerUrl = "http://10.0.2.2:3000";
+
+    public static string GetCustomerVisitServerUrl()
+    {
+        try
+        {
+            var url = Preferences.Get(KeyCustomerVisitServerUrl, string.Empty);
+            if (!string.IsNullOrWhiteSpace(url))
+                return url.TrimEnd('/');
+
+            return DeviceInfo.Platform == DevicePlatform.Android
+                ? DefaultAndroidCustomerVisitServerUrl
+                : DefaultCustomerVisitServerUrl;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Settings] GetCustomerVisitServerUrl error: {ex.Message}");
+            return DefaultCustomerVisitServerUrl;
+        }
+    }
+
+    public static void SetCustomerVisitServerUrl(string value)
+    {
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                Preferences.Set(KeyCustomerVisitServerUrl, value.TrimEnd('/'));
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[Settings] SetCustomerVisitServerUrl error: {ex.Message}");
         }
     }
 

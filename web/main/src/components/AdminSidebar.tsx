@@ -1,6 +1,6 @@
 import { 
   LayoutDashboard, Users, Store, UtensilsCrossed, ShieldCheck, 
-  Settings, ChevronDown, ExternalLink, Package
+  Settings, ChevronDown, ExternalLink, Package, BarChart3
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -14,7 +14,7 @@ const mainItems = [
   { title: "Tổng quan", url: "/", icon: LayoutDashboard },
   { title: "Chủ gian hàng", url: "/stall-owners", icon: Users },
   { title: "Gian hàng", url: "/stalls", icon: Store },
-  
+  { title: "Thống kê truy cập", url: "/analytics", icon: BarChart3 },
 ];
 
 const systemItems = [

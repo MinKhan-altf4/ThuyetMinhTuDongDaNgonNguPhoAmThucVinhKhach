@@ -175,11 +175,6 @@ interface DeletedUser {
   deleted_by: string;
 }
 
-const EMPTY_RESTAURANT_FORM: RestaurantFormData = {
-  name: "", description: "", address: "", phone: "",
-  lat: "", lng: "", open_hour: "", close_hour: "", rating: "0", status: "open"
-};
-
 const EMPTY_USER_FORM = {
   name: "", email: "", phone: "", password: "",
   restaurant_name: "", restaurant_address: "", restaurant_phone: "",
@@ -198,7 +193,6 @@ export default function StallOwners() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [restaurantSearch, setRestaurantSearch] = useState("");
   const [activeTab, setActiveTab] = useState("active");
 
   // User form
@@ -208,12 +202,7 @@ export default function StallOwners() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Restaurant form
-  const [showRestaurantForm, setShowRestaurantForm] = useState(false);
-  const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
-  const [restaurantFormData, setRestaurantFormData] = useState<RestaurantFormData>(EMPTY_RESTAURANT_FORM);
-  const [restaurantSaving, setRestaurantSaving] = useState(false);
-  const [restaurantError, setRestaurantError] = useState("");
+
 
   // POI
   const [showPoiModal, setShowPoiModal] = useState(false);
@@ -222,10 +211,6 @@ export default function StallOwners() {
   const [selectedPoiId, setSelectedPoiId] = useState<string>("null");
   const [addingPoi, setAddingPoi] = useState(false);
   const [poiError, setPoiError] = useState("");
-
-  // Create restaurant for new user modal
-  const [showCreateRestaurantForUser, setShowCreateRestaurantForUser] = useState(false);
-  const [newUserForRestaurant, setNewUserForRestaurant] = useState<User | null>(null);
 
   // Success modal
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -281,27 +266,12 @@ export default function StallOwners() {
     setError("");
   };
 
-  const resetRestaurantForm = () => {
-    setRestaurantFormData(EMPTY_RESTAURANT_FORM);
-    setEditingRestaurant(null);
-    setShowRestaurantForm(false);
-    setRestaurantError("");
-  };
-
   const closePoiModal = () => {
     setShowPoiModal(false);
     setCurrentUserForPoi(null);
     setUserPois([]);
     setSelectedPoiId("null");
     setPoiError("");
-    fetchUsers();
-  };
-
-  const closeRestaurantForUserModal = () => {
-    setShowCreateRestaurantForUser(false);
-    setNewUserForRestaurant(null);
-    setRestaurantFormData(EMPTY_RESTAURANT_FORM);
-    setRestaurantError("");
     fetchUsers();
   };
 
@@ -390,84 +360,6 @@ export default function StallOwners() {
     } catch { alert("❌ Lỗi khi khôi phục"); }
   };
 
-  // ── Restaurant Handlers ───────────────────────────────────────
-  const handleRestaurantSubmit = async () => {
-    if (!restaurantFormData.name.trim() || !restaurantFormData.address.trim()) {
-      setRestaurantError("Vui lòng nhập tên và địa chỉ gian hàng"); return;
-    }
-    setRestaurantSaving(true);
-    setRestaurantError("");
-    try {
-      const url = editingRestaurant
-        ? `http://localhost:3000/api/restaurants/${editingRestaurant.restaurant_id}`
-        : "http://localhost:3000/api/restaurants";
-      const res = await fetch(url, {
-        method: editingRestaurant ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...restaurantFormData,
-          lat: restaurantFormData.lat || null,
-          lng: restaurantFormData.lng || null,
-          rating: restaurantFormData.rating || "0",
-        })
-      });
-      if (!res.ok) { const e = await res.json(); setRestaurantError(e.error || "Lỗi khi lưu"); return; }
-      showSuccess(`✅ ${editingRestaurant ? "Cập nhật" : "Thêm"} gian hàng thành công!`);
-      resetRestaurantForm();
-      fetchRestaurants();
-    } catch { setRestaurantError("Không thể kết nối server"); }
-    finally { setRestaurantSaving(false); }
-  };
-
-  const handleEditRestaurant = (r: Restaurant) => {
-    setEditingRestaurant(r);
-    setRestaurantFormData({
-      name: r.name || "", description: r.description || "", address: r.address || "",
-      phone: r.phone || "", lat: r.lat?.toString() || "", lng: r.lng?.toString() || "",
-      open_hour: r.open_hour || "", close_hour: r.close_hour || "",
-      rating: r.rating?.toString() || "0", status: r.status || "open"
-    });
-    setShowRestaurantForm(true);
-    setRestaurantError("");
-  };
-
-  const handleDeleteRestaurant = async (id: number, name: string) => {
-    if (!confirm(`Xóa gian hàng "${name}"? Hành động này không thể hoàn tác!`)) return;
-    try {
-      const res = await fetch(`http://localhost:3000/api/restaurants/${id}`, { method: "DELETE" });
-      if (!res.ok) { const e = await res.json(); alert("Lỗi: " + (e.error || "?")); return; }
-      showSuccess("✅ Xóa gian hàng thành công!");
-      fetchRestaurants();
-    } catch { alert("❌ Lỗi khi xóa gian hàng"); }
-  };
-
-  const handleCreateRestaurantForNewUser = async () => {
-    if (!restaurantFormData.name.trim() || !restaurantFormData.address.trim()) {
-      setRestaurantError("Vui lòng nhập tên và địa chỉ"); return;
-    }
-    if (!newUserForRestaurant) { setRestaurantError("Lỗi: Không tìm thấy user"); return; }
-    setRestaurantSaving(true);
-    setRestaurantError("");
-    try {
-      const rRes = await fetch("http://localhost:3000/api/restaurants", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...restaurantFormData, lat: restaurantFormData.lat || null, lng: restaurantFormData.lng || null })
-      });
-      if (!rRes.ok) { const e = await rRes.json(); setRestaurantError(e.error || "?"); return; }
-      const { data } = await rRes.json();
-      await fetch(`http://localhost:3000/api/users/${newUserForRestaurant.user_id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newUserForRestaurant.name, email: newUserForRestaurant.email, phone: newUserForRestaurant.phone, restaurant_id: data.restaurant_id })
-      });
-      showSuccess("✅ Tạo gian hàng và gán thành công!");
-      closeRestaurantForUserModal();
-      fetchUsers(); fetchRestaurants();
-    } catch { setRestaurantError("Không thể kết nối server"); }
-    finally { setRestaurantSaving(false); }
-  };
-
   // ── POI Handlers ──────────────────────────────────────────────
   const handleAddPoi = async () => {
     if (!currentUserForPoi || selectedPoiId === "null") { setPoiError("Vui lòng chọn POI"); return; }
@@ -515,7 +407,6 @@ export default function StallOwners() {
         <div className="flex gap-2 border-b">
           {[
             { key: "active", label: `Quản trị viên (${users.length})` },
-            { key: "restaurants", label: `Gian Hàng (${restaurants.length})` },
             { key: "deleted", label: `Ngưng hoạt động (${deletedUsers.length})` },
           ].map(tab => (
             <button
@@ -691,160 +582,6 @@ export default function StallOwners() {
         )}
 
         {/* ══════════════════════════════════════════
-            TAB: GIAN HÀNG
-        ══════════════════════════════════════════ */}
-        {activeTab === "restaurants" && (
-          <>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="Tìm theo tên..." className="pl-9" value={restaurantSearch} onChange={e => setRestaurantSearch(e.target.value)} />
-              </div>
-              <Button onClick={() => { resetRestaurantForm(); setShowRestaurantForm(true); }}>
-                <Plus className="mr-2 h-4 w-4" /> Thêm gian hàng
-              </Button>
-            </div>
-
-            {/* Form thêm/sửa gian hàng */}
-            {showRestaurantForm && (
-              <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold">{editingRestaurant ? "Chỉnh sửa gian hàng" : "Thêm gian hàng mới"}</h3>
-                  <button onClick={resetRestaurantForm}><X className="h-4 w-4" /></button>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>Tên gian hàng *</Label>
-                    <Input placeholder="Tên gian hàng" value={restaurantFormData.name} onChange={e => setRestaurantFormData({ ...restaurantFormData, name: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Địa chỉ *</Label>
-                    <Input
-                      placeholder="Chọn vị trí trên bản đồ hoặc nhập tay"
-                      value={restaurantFormData.address}
-                      onChange={e => setRestaurantFormData({ ...restaurantFormData, address: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Số điện thoại</Label>
-                    <Input placeholder="Số điện thoại" value={restaurantFormData.phone} onChange={e => setRestaurantFormData({ ...restaurantFormData, phone: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Rating</Label>
-                    <Input type="number" placeholder="0" min="0" max="5" step="0.1" value={restaurantFormData.rating} onChange={e => setRestaurantFormData({ ...restaurantFormData, rating: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Giờ mở cửa</Label>
-                    <Input type="time" value={restaurantFormData.open_hour} onChange={e => setRestaurantFormData({ ...restaurantFormData, open_hour: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Giờ đóng cửa</Label>
-                    <Input type="time" value={restaurantFormData.close_hour} onChange={e => setRestaurantFormData({ ...restaurantFormData, close_hour: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label>Trạng thái</Label>
-                    <Select value={restaurantFormData.status} onValueChange={val => setRestaurantFormData({ ...restaurantFormData, status: val })}>
-                      <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="open">Mở cửa</SelectItem>
-                        <SelectItem value="closed">Đóng cửa</SelectItem>
-                        <SelectItem value="maintenance">Bảo trì</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label>Mô tả</Label>
-                  <textarea
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none"
-                    rows={3}
-                    placeholder="Mô tả gian hàng"
-                    value={restaurantFormData.description}
-                    onChange={e => setRestaurantFormData({ ...restaurantFormData, description: e.target.value })}
-                  />
-                </div>
-
-                {/* Map picker cho gian hàng */}
-                <MapPicker
-                  lat={restaurantFormData.lat}
-                  lng={restaurantFormData.lng}
-                  onPick={(lat, lng, address) => setRestaurantFormData(prev => ({
-                    ...prev,
-                    lat,
-                    lng,
-                    address: address || prev.address
-                  }))}
-                />
-
-                {restaurantError && <p className="text-xs text-destructive">{restaurantError}</p>}
-                <div className="flex gap-2">
-                  <Button onClick={handleRestaurantSubmit} disabled={restaurantSaving}>{restaurantSaving ? "Đang lưu..." : editingRestaurant ? "Cập nhật" : "Lưu"}</Button>
-                  <Button variant="outline" onClick={resetRestaurantForm}>Hủy</Button>
-                </div>
-              </div>
-            )}
-
-            {/* Bảng gian hàng */}
-            {restaurants.length === 0 ? (
-              <div className="rounded-lg border bg-muted/50 p-6 text-center"><p className="text-muted-foreground">Không có gian hàng nào</p></div>
-            ) : (
-              <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Tên gian hàng</TableHead>
-                      <TableHead>Địa chỉ</TableHead>
-                      <TableHead>Điện thoại</TableHead>
-                      <TableHead>Giờ hoạt động</TableHead>
-                      <TableHead>Rating</TableHead>
-                      <TableHead>Trạng thái</TableHead>
-                      <TableHead className="w-24"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {restaurants
-                      .filter(r => r.name.toLowerCase().includes(restaurantSearch.toLowerCase()))
-                      .map(restaurant => (
-                        <TableRow key={restaurant.restaurant_id}>
-                          <TableCell className="text-muted-foreground">#{restaurant.restaurant_id}</TableCell>
-                          <TableCell className="font-medium">{restaurant.name}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1 text-sm max-w-[200px]">
-                              <MapPin className="h-3 w-3 shrink-0" />
-                              <span className="truncate">{restaurant.address}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>{restaurant.phone ? <div className="flex items-center gap-1 text-sm"><Phone className="h-3 w-3" />{restaurant.phone}</div> : "—"}</TableCell>
-                          <TableCell>
-                            {restaurant.open_hour && restaurant.close_hour
-                              ? <div className="flex items-center gap-1 text-sm"><Clock className="h-3 w-3" />{restaurant.open_hour} - {restaurant.close_hour}</div>
-                              : "—"}
-                          </TableCell>
-                          <TableCell><Badge variant="secondary">⭐ {restaurant.rating}</Badge></TableCell>
-                          <TableCell>
-                            <Badge variant={restaurant.status === "open" ? "default" : restaurant.status === "maintenance" ? "secondary" : "destructive"}>
-                              {restaurant.status === "open" ? "Mở cửa" : restaurant.status === "maintenance" ? "Bảo trì" : "Đóng cửa"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <button onClick={() => handleEditRestaurant(restaurant)} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"><Edit2 className="h-4 w-4" /></button>
-                              <button onClick={() => handleDeleteRestaurant(restaurant.restaurant_id, restaurant.name)} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"><Trash2 className="h-4 w-4" /></button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ══════════════════════════════════════════
             TAB: NGƯNG HOẠT ĐỘNG
         ══════════════════════════════════════════ */}
         {activeTab === "deleted" && (
@@ -885,58 +622,6 @@ export default function StallOwners() {
                 </Table>
               </div>
             )}
-          </div>
-        )}
-
-        {/* ══ Modal: Tạo gian hàng cho user mới ══ */}
-        {showCreateRestaurantForUser && newUserForRestaurant && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] shadow-2xl animate-in fade-in zoom-in duration-300 overflow-y-auto">
-              <div className="p-6 border-b sticky top-0 bg-white flex items-center justify-between">
-                <h3 className="text-xl font-bold">🏪 Tạo gian hàng cho: {newUserForRestaurant.name}</h3>
-                <button onClick={closeRestaurantForUserModal}><X className="h-5 w-5" /></button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>Tên gian hàng *</Label>
-                    <Input placeholder="Tên gian hàng" value={restaurantFormData.name} onChange={e => setRestaurantFormData({ ...restaurantFormData, name: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Địa chỉ *</Label>
-                    <Input placeholder="Chọn vị trí trên bản đồ" value={restaurantFormData.address} onChange={e => setRestaurantFormData({ ...restaurantFormData, address: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Số điện thoại</Label>
-                    <Input placeholder="Số điện thoại" value={restaurantFormData.phone} onChange={e => setRestaurantFormData({ ...restaurantFormData, phone: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Giờ mở cửa</Label>
-                    <Input type="time" value={restaurantFormData.open_hour} onChange={e => setRestaurantFormData({ ...restaurantFormData, open_hour: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Giờ đóng cửa</Label>
-                    <Input type="time" value={restaurantFormData.close_hour} onChange={e => setRestaurantFormData({ ...restaurantFormData, close_hour: e.target.value })} />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Mô tả</Label>
-                  <textarea className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none" rows={3} placeholder="Mô tả gian hàng" value={restaurantFormData.description} onChange={e => setRestaurantFormData({ ...restaurantFormData, description: e.target.value })} />
-                </div>
-
-                <MapPicker
-                  lat={restaurantFormData.lat}
-                  lng={restaurantFormData.lng}
-                  onPick={(lat, lng, address) => setRestaurantFormData(prev => ({ ...prev, lat, lng, address: address || prev.address }))}
-                />
-
-                {restaurantError && <p className="text-xs text-destructive">{restaurantError}</p>}
-                <div className="flex gap-2">
-                  <Button onClick={handleCreateRestaurantForNewUser} disabled={restaurantSaving} className="flex-1">{restaurantSaving ? "Đang tạo..." : "✓ Tạo gian hàng"}</Button>
-                  <Button variant="outline" onClick={closeRestaurantForUserModal} className="flex-1">Bỏ qua</Button>
-                </div>
-              </div>
-            </div>
           </div>
         )}
 

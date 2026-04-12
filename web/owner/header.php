@@ -50,7 +50,9 @@
             nav_item('visits.php', 'Lượt ghé thăm',
                 '<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
                 $current === 'visits.php');
-             
+             nav_item('record.php', 'Record offline',
+                '<svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+                $current === 'record.php');
             ?>
             
             <p class="px-3 mt-4 mb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Hệ thống</p>

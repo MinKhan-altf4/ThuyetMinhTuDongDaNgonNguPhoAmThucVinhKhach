@@ -82,6 +82,7 @@ Services/
  APIService.cs
  AppSettingsHelper.cs
  AssetInfo.cs
+ AudioPathHelper.cs
  AudioResourceService.cs
  AudioService.cs
  CacheService.cs
@@ -497,6 +498,7 @@ Services/
  APIService.cs
  AppSettingsHelper.cs
  AssetInfo.cs
+ AudioPathHelper.cs
  AudioResourceService.cs
  AudioService.cs
  CacheService.cs
@@ -813,6 +815,7 @@ Services/
  APIService.cs
  AppSettingsHelper.cs
  AssetInfo.cs
+ AudioPathHelper.cs
  AudioResourceService.cs
  AudioService.cs
  CacheService.cs
@@ -1131,6 +1134,7 @@ Services/
  APIService.cs
  AppSettingsHelper.cs
  AssetInfo.cs
+ AudioPathHelper.cs
  AudioResourceService.cs
  AudioService.cs
  CacheService.cs
