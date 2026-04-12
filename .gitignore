@@ -16,6 +16,7 @@ bld/
 
 # Visual Studio cache/options
 .vs/
+*.slnx.sqlite
 
 # User-specific files
 *.rsuser
@@ -46,3 +47,4 @@ package-lock.json
 CORE_ANALYSIS.md
 SYSTEM_ARCHITECTURE.md
 TTS_MENU_UPGRADE_GUIDE.md
+PRD/PRD_VinhKhanh_AudioGuide_WithDiagrams.docx

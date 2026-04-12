@@ -74,5 +74,8 @@
   "offline_ready": "✅ Offline data ready — POI page will use local data",
   "offline_desc": "Download POI data for offline use",
   "audio_vi": "🇻🇳 Vietnamese",
-  "audio_en": "🇺🇸 English"
+  "audio_en": "🇺🇸 English",
+  "audio_zh": "🇨🇳 Chinese",
+  "audio_kr": "🇰🇷 Korean",
+  "audio_jp": "🇯🇵 Japanese"
 }

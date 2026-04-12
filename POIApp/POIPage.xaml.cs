@@ -14,7 +14,7 @@ public partial class POIPage : ContentPage
     private readonly AudioService _audioService = new();
 
     private bool _pageLoaded = false;
-    private string _audioLang = "vi"; // ngôn ngữ audio: vi hoặc en
+    private string _audioLang = LanguageService.LangVi; // ngôn ngữ audio: vi, en, zh, kr, jp
 
     public POIPage()
     {
@@ -70,7 +70,10 @@ public partial class POIPage : ContentPage
         AudioLangPicker.ItemsSource = new List<string>
         {
             L["audio_vi"],
-            L["audio_en"]
+            L["audio_en"],
+            L["audio_zh"],
+            L["audio_kr"],
+            L["audio_jp"]
         };
         AudioLangPicker.Title = L["select_language"];
         AudioLangPicker.SelectedIndex = 0;
@@ -288,7 +291,15 @@ public partial class POIPage : ContentPage
 
     private void OnAudioLangChanged(object? sender, EventArgs e)
     {
-        _audioLang = AudioLangPicker.SelectedIndex == 0 ? "vi" : "en";
+        _audioLang = AudioLangPicker.SelectedIndex switch
+        {
+            0 => LanguageService.LangVi,
+            1 => LanguageService.LangEn,
+            2 => LanguageService.LangZh,
+            3 => LanguageService.LangKr,
+            4 => LanguageService.LangJp,
+            _ => LanguageService.LangVi
+        };
         Debug.WriteLine($"[POIPage] Audio lang changed: {_audioLang}");
     }
 

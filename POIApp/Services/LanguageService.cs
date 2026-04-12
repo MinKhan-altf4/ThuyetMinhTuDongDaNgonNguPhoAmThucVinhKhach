@@ -13,13 +13,26 @@ namespace POIApp.Services;
 /// </summary>
 public sealed class LanguageService : INotifyPropertyChanged
 {
+    // App language constants
     public const string LangVi = "vi";
     public const string LangEn = "en";
+    public const string LangZh = "zh";
+    public const string LangKr = "kr";
+    public const string LangJp = "jp";
+
+    // Supported audio languages
+    public static readonly string[] SupportedAudioLanguages =
+    [
+        LangVi, LangEn, LangZh, LangKr, LangJp
+    ];
 
     public static readonly IReadOnlyList<LanguageOption> SupportedLanguages =
     [
         new LanguageOption(LangVi, "Tiếng Việt", "🇻🇳"),
         new LanguageOption(LangEn, "English", "🇺🇸"),
+        new LanguageOption(LangZh, "中文", "🇨🇳"),
+        new LanguageOption(LangKr, "한국어", "🇰🇷"),
+        new LanguageOption(LangJp, "日本語", "🇯🇵"),
     ];
 
     private static LanguageService? _instance;
