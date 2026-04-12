@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý POI - Thêm POI cho User</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #555; }
+        select, input, button { padding: 10px; width: 100%; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        button { background: #4CAF50; color: white; cursor: pointer; border: none; font-weight: bold; transition: background 0.3s; }
+        button:hover { background: #45a049; }
+        .info-box { background: #e7f3fe; border-left: 4px solid #2196F3; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 15px; border-radius: 4px; margin-bottom: 20px; display: none; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; border-radius: 4px; margin-bottom: 20px; display: none; }
+        .user-pois { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; margin-top: 30px; }
+        .poi-card { background: #f9f9f9; border: 1px solid #ddd; padding: 15px; border-radius: 6px; position: relative; }
+        .poi-card h3 { color: #333; margin-bottom: 8px; }
+        .poi-card p { color: #666; font-size: 13px; margin-bottom: 5px; }
+        .poi-card .status { padding: 5px 10px; border-radius: 3px; font-size: 12px; font-weight: bold; display: inline-block; }
+        .status.open { background: #d4edda; color: #155724; }
+        .poi-card .btn-remove { background: #dc3545; width: 100%; margin-top: 10px; font-size: 12px; padding: 8px; }
+        .poi-card .btn-remove:hover { background: #c82333; }
+        .loading { display: none; text-align: center; margin: 20px 0; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .user-status { display: inline-block; padding: 5px 10px; border-radius: 3px; font-weight: bold; font-size: 12px; }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-locked { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍽️ Quản lý POI - Thêm POI cho User</h1>
+
+        <div class="info-box">
+            <strong>ℹ️ Hướng dẫn:</strong> Chọn user từ dropdown, rồi chọn POI muốn thêm. Khi user bị khóa, POI sẽ ẩn khỏi app.
+        </div>
+
+        <div class="success" id="successMsg"></div>
+        <div class="error" id="errorMsg"></div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Bên trái: Form thêm POI -->
+            <div>
+                <h2 style="margin-bottom: 20px;">Thêm POI cho User</h2>
+                
+                <div class="form-group">
+                    <label for="userSelect">👤 Chọn User:</label>
+                    <select id="userSelect" required>
+                        <option value="">-- Chọn user --</option>
+                    </select>
+                </div>
+
+                <div id="userInfo" style="background: #f0f0f0; padding: 15px; border-radius: 4px; margin-bottom: 20px; display: none;">
+                    <p><strong>Tên:</strong> <span id="userName"></span></p>
+                    <p><strong>Email:</strong> <span id="userEmail"></span></p>
+                    <p><strong>Trạng thái:</strong> <span id="userStatus"></span></p>
+                </div>
+
+                <div class="form-group">
+                    <label for="restaurantSelect">🏪 Chọn POI:</label>
+                    <select id="restaurantSelect" required>
+                        <option value="">-- Chọn POI --</option>
+                    </select>
+                </div>
+
+                <button onclick="addPoiToUser()">✅ Thêm POI</button>
+                <button onclick="toggleUserStatus()" style="background: #ff9800; margin-top: 10px;">🔒 Khóa/Mở khóa User</button>
+            </div>
+
+            <!-- Bên phải: Danh sách POI user -->
+            <div>
+                <h2 style="margin-bottom: 20px;">POI của User</h2>
+                <div class="loading" id="loadingPois">
+                    <div class="spinner"></div>
+                    <p>Đang tải dữ liệu...</p>
+                </div>
+                <div id="userPoisContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost/ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach/POIApi/owner_api.php';
+
+        // Load danh sách users
+        async function loadUsers() {
+            try {
+                // Hiện tại chúng ta sử dụng cơ sở dữ liệu để load
+                // Trong thực tế có thể cần tạo endpoint để lấy danh sách users
+                const response = await fetch('http://localhost/ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach/web/owner/api/get_users.php');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('userSelect');
+                    data.data.forEach(user => {
+                        const option = document.createElement('option');
+                        option.value = user.user_id;
+                        option.textContent = `${user.name} (${user.email})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading users:', error);
+                showError('Lỗi khi tải danh sách users');
+            }
+        }
+
+        // Load danh sách POI có sẵn
+        async function loadRestaurants() {
+            try {
+                const response = await fetch(`${API_URL}?action=available_restaurants`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const select = document.getElementById('restaurantSelect');
+                    data.data.forEach(restaurant => {
+                        const option = document.createElement('option');
+                        option.value = restaurant.restaurant_id;
+                        option.textContent = `${restaurant.name} (⭐ ${restaurant.rating})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading restaurants:', error);
+                showError('Lỗi khi tải danh sách POI');
+            }
+        }
+
+        // Khi chọn user, hiển thị POI của user
+        document.getElementById('userSelect').addEventListener('change', async function() {
+            const userId = this.value;
+            if (!userId) {
+                document.getElementById('userInfo').style.display = 'none';
+                document.getElementById('userPoisContainer').innerHTML = '';
+                return;
+            }
+
+            // Hiển thị loading
+            document.getElementById('loadingPois').style.display = 'block';
+
+            try {
+                // Lấy thông tin user (có thể tạo endpoint riêng hoặc lấy từ get_users.php)
+                const response = await fetch(`${API_URL}?action=user_pois&user_id=${userId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const user = data.data.user;
+                    document.getElementById('userName').textContent = user.name;
+                    document.getElementById('userEmail').textContent = user.email;
+                    document.getElementById('userStatus').innerHTML = user.is_active ? 
+                        '<span class="user-status status-active">✅ Active</span>' : 
+                        '<span class="user-status status-locked">🔒 Locked</span>';
+                    document.getElementById('userInfo').style.display = 'block';
+
+                    displayUserPois(data.data.pois, userId);
+                }
+            } catch (error) {
+                console.error('Error loading user POIs:', error);
+                showError('Lỗi khi tải POI của user');
+            } finally {
+                document.getElementById('loadingPois').style.display = 'none';
+            }
+        });
+
+        // Hiển thị danh sách POI của user
+        function displayUserPois(pois, userId) {
+            const container = document.getElementById('userPoisContainer');
+            
+            if (pois.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center;">User chưa có POI nào</p>';
+                return;
+            }
+
+            container.innerHTML = pois.map(poi => `
+                <div class="poi-card">
+                    <h3>${poi.name}</h3>
+                    <p><strong>Địa chỉ:</strong> ${poi.address}</p>
+                    <p><strong>Đánh giá:</strong> ⭐ ${poi.rating}</p>
+                    <p><strong>Thêm lúc:</strong> ${new Date(poi.added_at).toLocaleDateString('vi-VN')}</p>
+                    <span class="status ${poi.status}">${poi.status}</span>
+                    <button class="btn-remove" onclick="removePoiFromUser(${userId}, ${poi.restaurant_id})">🗑️ Xóa POI</button>
+                </div>
+            `).join('');
+        }
+
+        // Thêm POI cho user
+        async function addPoiToUser() {
+            const userId = document.getElementById('userSelect').value;
+            const restaurantId = document.getElementById('restaurantSelect').value;
+
+            if (!userId || !restaurantId) {
+                showError('Vui lòng chọn cả user và POI');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}?action=add_poi_to_user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        restaurant_id: parseInt(restaurantId),
+                        admin_email: 'admin@system.local'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('✅ Thêm POI thành công!');
+                    // Reload POI list
+                    document.getElementById('userSelect').dispatchEvent(new Event('change'));
+                } else {
+                    showError('❌ ' + (data.error || 'Lỗi thêm POI'));
+                }
+            } catch (error) {
+                console.error('Error adding POI:', error);
+                showError('Lỗi khi thêm POI');
+            }
+        }
+
+        // Xóa POI khỏi user
+        async function removePoiFromUser(userId, restaurantId) {
+            if (!confirm('Bạn chắc chắn muốn xóa POI này khỏi user?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}?action=remove_poi_from_user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        restaurant_id: restaurantId
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess('✅ Xóa POI thành công!');
+                    // Reload POI list
+                    document.getElementById('userSelect').dispatchEvent(new Event('change'));
+                } else {
+                    showError('❌ ' + (data.error || 'Lỗi xóa POI'));
+                }
+            } catch (error) {
+                console.error('Error removing POI:', error);
+                showError('Lỗi khi xóa POI');
+            }
+        }
+
+        // Khóa/mở khóa user
+        async function toggleUserStatus() {
+            const userId = document.getElementById('userSelect').value;
+            if (!userId) {
+                showError('Vui lòng chọn user');
+                return;
+            }
+
+            const userStatus = document.getElementById('userStatus').textContent;
+            const isCurrentlyActive = userStatus.includes('Active');
+            const newStatus = isCurrentlyActive ? 0 : 1;
+            const action = isCurrentlyActive ? 'khóa' : 'mở khóa';
+
+            if (!confirm(`Bạn chắc chắn muốn ${action} user này?`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}?action=toggle_user_status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        is_active: newStatus
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    showSuccess(`✅ ${action.charAt(0).toUpperCase() + action.slice(1)} user thành công!`);
+                    // Reload thông tin user
+                    document.getElementById('userSelect').dispatchEvent(new Event('change'));
+                } else {
+                    showError('❌ ' + (data.error || `Lỗi ${action} user`));
+                }
+            } catch (error) {
+                console.error('Error toggling user status:', error);
+                showError(`Lỗi khi ${action} user`);
+            }
+        }
+
+        function showSuccess(msg) {
+            const el = document.getElementById('successMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 3000);
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 3000);
+        }
+
+        // Load dữ liệu khi trang load
+        window.addEventListener('load', () => {
+            loadUsers();
+            loadRestaurants();
+        });
+    </script>
+</body>
+</html>

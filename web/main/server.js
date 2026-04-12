@@ -196,6 +196,90 @@ app.get('/api/restaurants', async (req, res) => {
   }
 });
 
+// ── Restaurant CRUD (admin) ─────────────────────────────────────
+app.post('/api/restaurants', upload.single('image'), async (req, res) => {
+  try {
+    const { name, description, address, phone, lat, lng, open_hour, close_hour, status, rating } = req.body;
+    if (!name || !address) return res.status(400).json({ error: 'Thiếu tên hoặc địa chỉ' });
+
+    const result = await withTransaction(async (conn) => {
+      const [rRes] = await conn.query(
+        `INSERT INTO restaurant (name, description, address, phone, lat, lng, open_hour, close_hour, status, rating)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [name, description || null, address, phone || null, lat || null, lng || null,
+         open_hour || null, close_hour || null, status || 'open', parseFloat(rating) || 0]
+      );
+      
+      if (req.file) {
+        const imageUrl = `/uploads/${req.file.filename}`;
+        await conn.query(
+          "INSERT INTO restaurant_image (restaurant_id, image_url, is_primary) VALUES (?, ?, 1)",
+          [rRes.insertId, imageUrl]
+        );
+      }
+      
+      return { restaurant_id: rRes.insertId };
+    });
+
+    res.json({ success: true, data: result, message: 'Thêm gian hàng thành công!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/restaurants/:id', upload.single('image'), async (req, res) => {
+  try {
+    const { name, description, address, phone, lat, lng, open_hour, close_hour, status, rating } = req.body;
+    if (!name || !address) return res.status(400).json({ error: 'Thiếu tên hoặc địa chỉ' });
+
+    await withTransaction(async (conn) => {
+      await conn.query(
+        `UPDATE restaurant SET name=?, description=?, address=?, phone=?, lat=?, lng=?, open_hour=?, close_hour=?, status=?, rating=?
+         WHERE restaurant_id=?`,
+        [name, description || null, address, phone || null, lat || null, lng || null,
+         open_hour || null, close_hour || null, status || 'open', parseFloat(rating) || 0, req.params.id]
+      );
+      
+      if (req.file) {
+        await conn.query("DELETE FROM restaurant_image WHERE restaurant_id=?", [req.params.id]);
+        const imageUrl = `/uploads/${req.file.filename}`;
+        await conn.query(
+          "INSERT INTO restaurant_image (restaurant_id, image_url, is_primary) VALUES (?, ?, 1)",
+          [req.params.id, imageUrl]
+        );
+      }
+    });
+
+    res.json({ success: true, message: 'Cập nhật gian hàng thành công!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/restaurants/:id', async (req, res) => {
+  try {
+    const [[restaurant]] = await pool.query("SELECT * FROM restaurant WHERE restaurant_id=?", [req.params.id]);
+    if (!restaurant) return res.status(404).json({ error: 'Không tìm thấy gian hàng' });
+
+    // Check if restaurant is linked to users
+    const [[userLinked]] = await pool.query(
+      "SELECT COUNT(*) as count FROM users WHERE restaurant_id=?", [req.params.id]
+    );
+    if (userLinked.count > 0) {
+      return res.status(400).json({ error: 'Không thể xóa gian hàng đang được quản lý bởi chủ gian hàng' });
+    }
+
+    await withTransaction(async (conn) => {
+      await conn.query("DELETE FROM restaurant_image WHERE restaurant_id=?", [req.params.id]);
+      await conn.query("DELETE FROM restaurant WHERE restaurant_id=?", [req.params.id]);
+    });
+
+    res.json({ success: true, message: 'Xóa gian hàng thành công!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Owner CRUD (có ảnh) ─────────────────────────────────────────
 const ownerUpload = upload.fields([{ name: 'restaurant_image', maxCount: 1 }, { name: 'avatar', maxCount: 1 }]);
 

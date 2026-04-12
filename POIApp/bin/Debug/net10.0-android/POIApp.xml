@@ -12,6 +12,69 @@
             - Trigger TTS khi gần POI
             </summary>
         </member>
+        <member name="M:POIApp.MapPage.OnAppLanguageChanged(System.Object,System.EventArgs)">
+            <summary>
+            Subscribe vào LanguageService.LanguageChanged — tự động trigger khi user đổi ngôn ngữ.
+            Đảm bảo Map screen + modal update NGAY lập tức khi đổi ngôn ngữ.
+            </summary>
+        </member>
+        <member name="M:POIApp.MapPage.ApplyLocalizedStrings">
+            <summary>
+            Cập nhật TẤT CẢ text UI từ LanguageService.
+            Gọi khi: init, language change, OnAppearing.
+            </summary>
+        </member>
+        <member name="M:POIApp.MapPage.ShowDetail(POIApp.Models.POI)">
+            <summary>
+            Hiện modal POI detail. Mỗi lần mở → load lại text từ LanguageService (không reuse view cũ).
+            THÊM MỚI: Load danh sách món ăn async.
+            </summary>
+        </member>
+        <member name="M:POIApp.MapPage.LoadDishesAsync(System.Int32)">
+            <summary>
+            Load danh sách món ăn từ API.
+            THÊM MỚI: Async load dishes khi người dùng mở modal POI.
+            </summary>
+        </member>
+        <member name="M:POIApp.MapPage.BindMenuUI(System.Collections.Generic.List{POIApp.Models.Dish})">
+            <summary>
+            Render danh sách món ăn vào UI.
+            THÊM MỚI: Hiển thị name + price cho từng món.
+            </summary>
+        </member>
+        <member name="M:POIApp.MapPage.OnPlayMenuClicked(System.Object,System.EventArgs)">
+            <summary>
+            Phát TTS menu (danh sách tất cả món ăn).
+            THÊM MỚI: Gọi TTSService.SpeakMenuAsync() với danh sách dishes.
+            </summary>
+        </member>
+        <member name="M:POIApp.MapPage.OnStopMenuClicked(System.Object,System.EventArgs)">
+            <summary>
+            Dừng phát TTS menu.
+            THÊM MỚI: Gọi TTSService.StopMenu().
+            </summary>
+        </member>
+        <member name="M:POIApp.MapPage.BuildMenuText(System.Collections.Generic.List{POIApp.Models.Dish})">
+            <summary>
+            Xây dựng chuỗi text để đọc menu món ăn.
+            THÊM MỚI: Format: "Menu của quán bao gồm: Món {name}, giá {price} đồng."
+            </summary>
+        </member>
+        <member name="T:POIApp.Models.Dish">
+            <summary>
+            Món ăn (Dish) - mô tả chi tiết từ menu nhà hàng.
+            </summary>
+        </member>
+        <member name="P:POIApp.Models.Dish.FormattedPrice">
+            <summary>
+            Format giá theo chuẩn Việt.
+            </summary>
+        </member>
+        <member name="T:POIApp.Models.DishResponse">
+            <summary>
+            Response DTO cho API lấy danh sách món ăn.
+            </summary>
+        </member>
         <member name="M:POIApp.Models.POI.GetLocalizedText(System.String,System.String,System.Func{POIApp.Models.POI,System.String})">
             <summary>
             Lấy text theo ngôn ngữ ưu tiên, fallback về tiếng Việt, cuối cùng là default.
@@ -21,6 +84,12 @@
         <member name="T:POIApp.Models.TranslationSet">
             <summary>
             Bộ name + description cho 1 ngôn ngữ, map từ JSON: translations["vi"] = { name, description }
+            </summary>
+        </member>
+        <member name="M:POIApp.POIPage.OnLanguageChanged(System.Object,System.EventArgs)">
+            <summary>
+            Subscribe vào LanguageService.LanguageChanged — tự động trigger khi user đổi ngôn ngữ.
+            Đảm bảo TẤT CẢ text (kể cả picker items) update NGAY lập tức khi đổi ngôn ngữ.
             </summary>
         </member>
         <member name="T:POIApp.Services.AnalyticsService">
@@ -469,6 +538,30 @@
         <member name="M:POIApp.Services.TTSService.Stop">
             <summary>
             Dừng phát giọng nói.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TTSService.SpeakMenuAsync(System.Collections.Generic.List{POIApp.Models.Dish},System.String)">
+            <summary>
+            Phát thuyết minh menu món ăn — TTS RIÊNG KHÔNG ĐỤNG TTS DESCRIPTION NHẬP HÀNG.
+            Format: "Món {name}. Mô tả: {description}. Giá: {price} đồng."
+            THÊM MỚI: Sử dụng _menuCts riêng biệt để độc lập với TTS description.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TTSService.SpeakMenuItemAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Phát từng item trong menu (helper để SpeakMenuAsync).
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.TTSService.StopMenu">
+            <summary>
+            Dừng phát menu (TTS MENU).
+            THÊM MỚI: Riêng biệt với Stop() để không ảnh hưởng TTS description.
+            </summary>
+        </member>
+        <member name="M:POIApp.SettingsPage.PopulatePickers">
+            <summary>
+            Populate picker ItemsSource programmatically — KHÔNG hardcode trong XAML.
+            Gọi 1 lần trong OnAppearing để items luôn sync với ngôn ngữ hiện tại.
             </summary>
         </member>
         <member name="T:POIApp.Resource">

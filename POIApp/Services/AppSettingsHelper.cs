@@ -94,7 +94,9 @@ public static class AppSettingsHelper
 
     // ── API Base URL ──
     private const string KeyApiBaseUrl = "api_base_url";
-    private const string DefaultApiBaseUrl = "http://10.0.2.2:8080/ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach/POIApi/api.php";
+    // Emulator: 10.0.2.2 = máy thật, port 80 là HTTP mặc định
+    // Device: Thay 10.0.2.2 bằng IP thực của máy tính (chạy ipconfig để lấy)
+    private const string DefaultApiBaseUrl = "http://10.0.2.2/ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach/POIApi/api.php";
 
     public static string GetApiBaseUrl()
     {

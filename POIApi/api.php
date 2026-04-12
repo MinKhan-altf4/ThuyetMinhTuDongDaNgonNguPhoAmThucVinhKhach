@@ -31,6 +31,16 @@ $user     = 'root';
 $password = '';
 $database = 'food_app';   // ← Đổi từ poi_demo sang food_app
 
+// Set CORS headers
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+header('Content-Type: application/json; charset=utf-8');
+
+// Set timeout
+set_time_limit(30);
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+
 $conn = null;
 try {
     $conn = new mysqli($host, $user, $password, $database);
@@ -38,6 +48,8 @@ try {
         throw new Exception("Kết nối database thất bại: " . $conn->connect_error);
     }
     $conn->set_charset("utf8mb4");
+    // Tối ưu kết nối
+    $conn->query("SET SESSION sql_mode='STRICT_TRANS_TABLES'");
 } catch (Exception $e) {
     sendJson(false, null, $e->getMessage());
     exit;
@@ -77,7 +89,8 @@ switch ($action) {
 // ENDPOINT: /api.php (legacy, backward compatible)
 // =====================================================
 function getLegacyPOIs($conn) {
-    $sql = "SELECT
+    // Chỉ lấy POI của user có is_active = 1
+    $sql = "SELECT DISTINCT
                 r.restaurant_id  AS id,
                 r.name,
                 r.description,
@@ -90,10 +103,14 @@ function getLegacyPOIs($conn) {
                 r.phone,
                 COALESCE(a_vi.audio_url, a_en.audio_url) AS audio_url
             FROM restaurant r
+            LEFT JOIN user_restaurants ur ON ur.restaurant_id = r.restaurant_id
+            LEFT JOIN users u ON u.user_id = ur.user_id AND u.is_active = 1
             LEFT JOIN audio a_vi  ON a_vi.restaurant_id = r.restaurant_id  AND a_vi.language_id = 1 AND a_vi.is_active = 1
             LEFT JOIN audio a_en ON a_en.restaurant_id = r.restaurant_id AND a_en.language_id = 2 AND a_en.is_active = 1
-            WHERE 1=1
-            ORDER BY r.restaurant_id";
+            WHERE r.status = 'open'
+               AND (ur.id IS NOT NULL AND u.is_active = 1 OR ur.id IS NULL)
+            ORDER BY r.restaurant_id
+            LIMIT 100";
 
     $result = $conn->query($sql);
     if (!$result) {
@@ -118,7 +135,7 @@ function getLegacyPOIs($conn) {
         ];
     }
 
-    sendJson(true, $pois, null, "Danh sách POI (legacy)");
+    sendJson(true, $pois, null, "Danh sách POI (legacy, chỉ active user)");
 }
 
 // =====================================================
@@ -127,7 +144,9 @@ function getLegacyPOIs($conn) {
 function getRestaurants($conn) {
     $langId = (int)($_GET['lang_id'] ?? 1);
 
-    $sql = "SELECT
+    // Tối ưu: Lấy restaurants từ user_restaurants (chỉ hiện POI của user active)
+    // JOIN với users để kiểm tra is_active
+    $sql = "SELECT DISTINCT
                 r.restaurant_id   AS id,
                 r.name,
                 r.description,
@@ -138,8 +157,20 @@ function getRestaurants($conn) {
                 r.close_hour,
                 r.rating,
                 r.phone,
-                (SELECT image_url FROM restaurant_image WHERE restaurant_id = r.restaurant_id AND is_primary = 1 LIMIT 1) AS image_url
+                u.name as owner_name,
+                (SELECT image_url FROM restaurant_image WHERE restaurant_id = r.restaurant_id AND is_primary = 1 LIMIT 1) AS image_url,
+                GROUP_CONCAT(
+                    CONCAT(l.language_code, ':', a.audio_url, '|', COALESCE(a.duration, 0), '|', COALESCE(a.version, 0))
+                    SEPARATOR '||'
+                ) AS audio_data
             FROM restaurant r
+            LEFT JOIN user_restaurants ur ON ur.restaurant_id = r.restaurant_id
+            LEFT JOIN users u ON u.user_id = ur.user_id AND u.is_active = 1
+            LEFT JOIN audio a ON a.restaurant_id = r.restaurant_id AND a.is_active = 1
+            LEFT JOIN languages l ON l.language_id = a.language_id
+            WHERE r.status = 'open' 
+               AND (ur.id IS NOT NULL AND u.is_active = 1 OR ur.id IS NULL)
+            GROUP BY r.restaurant_id
             ORDER BY r.rating DESC, r.name";
 
     $result = $conn->query($sql);
@@ -151,9 +182,26 @@ function getRestaurants($conn) {
     $restaurants = [];
     while ($row = $result->fetch_assoc()) {
         $id = (int)$row['id'];
-
-        // Lấy audio cho tất cả ngôn ngữ
-        $audio = getAudioForRestaurant($conn, $id);
+        
+        // Parse audio data từ GROUP_CONCAT
+        $audio = [];
+        if (!empty($row['audio_data'])) {
+            $audioItems = explode('||', $row['audio_data']);
+            foreach ($audioItems as $item) {
+                $parts = explode(':', $item, 2);
+                if (count($parts) === 2) {
+                    $langCode = $parts[0];
+                    $audioInfo = explode('|', $parts[1]);
+                    if (count($audioInfo) === 3) {
+                        $audio[$langCode] = [
+                            'url' => $audioInfo[0],
+                            'duration' => (int)$audioInfo[1],
+                            'version' => (int)$audioInfo[2],
+                        ];
+                    }
+                }
+            }
+        }
 
         $restaurants[] = [
             'id'          => $id,
@@ -166,12 +214,13 @@ function getRestaurants($conn) {
             'close_hour'  => $row['close_hour'],
             'rating'      => (float)$row['rating'],
             'phone'       => $row['phone'],
+            'owner_name'  => $row['owner_name'],
             'image_url'   => $row['image_url'],
             'audio'       => $audio,
         ];
     }
 
-    sendJson(true, $restaurants, null, "Danh sách restaurant đa ngôn ngữ");
+    sendJson(true, $restaurants, null, "Danh sách restaurant đa ngôn ngữ (chỉ user active)");
 }
 
 // =====================================================
@@ -205,12 +254,19 @@ function searchRestaurants($conn) {
             WHERE r.name LIKE ?
                OR r.description LIKE ?
                OR r.address LIKE ?
-            ORDER BY r.rating DESC
+            ORDER BY r.rating DESC, r.name
             LIMIT ?";
 
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        sendJson(false, null, "Lỗi prepare: " . $conn->error);
+        return;
+    }
     $stmt->bind_param("sssi", $like, $like, $like, $limit);
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        sendJson(false, null, "Lỗi execute: " . $stmt->error);
+        return;
+    }
     $result = $stmt->get_result();
 
     $suggestions = [];
@@ -223,7 +279,7 @@ function searchRestaurants($conn) {
         $suggestions[] = [
             'id'          => (int)$row['id'],
             'name'        => $row['name'],
-            'description' => mb_substr($row['description'], 0, 80) . '…',
+            'description' => mb_strlen($row['description']) > 80 ? mb_substr($row['description'], 0, 80) . '…' : $row['description'],
             'latitude'    => (float)$row['lat'],
             'longitude'   => (float)$row['lng'],
             'address'     => $row['address'],
@@ -234,7 +290,7 @@ function searchRestaurants($conn) {
     }
 
     // Sắp xếp theo khoảng cách nếu có
-    if ($lat !== null && $lng !== null) {
+    if ($lat !== null && $lng !== null && count($suggestions) > 0) {
         usort($suggestions, fn($a, $b) => ($a['distance'] ?? 99999) <=> ($b['distance'] ?? 99999));
     }
 
@@ -263,8 +319,16 @@ function getAudio($conn) {
             LIMIT 1";
 
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        sendJson(false, null, "Lỗi prepare: " . $conn->error);
+        return;
+    }
+    
     $stmt->bind_param("ii", $id, $langId);
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        sendJson(false, null, "Lỗi execute: " . $stmt->error);
+        return;
+    }
     $result = $stmt->get_result();
 
     if ($row = $result->fetch_assoc()) {
@@ -300,8 +364,16 @@ function getDishes($conn) {
             ORDER BY dish_id";
 
     $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        sendJson(false, null, "Lỗi prepare: " . $conn->error);
+        return;
+    }
+    
     $stmt->bind_param("i", $id);
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        sendJson(false, null, "Lỗi execute: " . $stmt->error);
+        return;
+    }
     $result = $stmt->get_result();
 
     $dishes = [];
@@ -372,6 +444,7 @@ function haversineDistance($lat1, $lon1, $lat2, $lon2) {
 // =====================================================
 function sendJson($success, $data = null, $error = null, $message = null) {
     header('Content-Type: application/json; charset=utf-8');
+    header('Access-Control-Allow-Origin: *');
     $out = ['success' => $success];
     if ($data   !== null) $out['data']    = $data;
     if ($error  !== null) $out['error']   = $error;

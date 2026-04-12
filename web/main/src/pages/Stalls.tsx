@@ -1,11 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MapPin, Star, Phone, Clock, UtensilsCrossed } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, MapPin, Star, Phone, Clock, UtensilsCrossed, Plus, Edit2, Trash2, X } from "lucide-react";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
-// Định nghĩa Interface khớp với database food_app
+// --- Fix Leaflet icon ---
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
+// --- Interfaces ---
 interface Restaurant {
   restaurant_id: number;
   name: string;
@@ -15,27 +29,68 @@ interface Restaurant {
   open_hour: string;
   close_hour: string;
   rating: number;
+  lat?: number;
+  lng?: number;
   dish_count: number;
-  image_url: string;
   owner_name: string | null;
-  owner_locked: boolean; // true nếu chủ đang bị khóa (có trong deleted_users)
-  status: string; // 'open', 'closed', 'maintenance'
+  owner_locked: boolean;
+  status: string;
 }
 
-// Trạng thái gian hàng theo status gốc
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  open: { label: "Đang mở cửa", variant: "default" },
-  closed: { label: "Đóng cửa", variant: "destructive" },
-  maintenance: { label: "Bảo trì", variant: "secondary" },
+interface RestaurantFormData {
+  name: string;
+  description: string;
+  address: string;
+  phone: string;
+  lat: string;
+  lng: string;
+  open_hour: string;
+  close_hour: string;
+  rating: string;
+  status: string;
+}
+
+const EMPTY_FORM: RestaurantFormData = {
+  name: "", description: "", address: "", phone: "",
+  lat: "", lng: "", open_hour: "", close_hour: "", rating: "0", status: "open"
 };
 
-// Hàm xác định trạng thái hiển thị cuối cùng của gian hàng
-// Ưu tiên: chủ bị khóa → "Ngưng hoạt động" (bất kể status gốc)
-function resolveStatus(stall: Restaurant): { label: string; variant: "default" | "secondary" | "destructive" | "outline" } {
-  if (stall.owner_locked) {
-    return { label: "Ngưng hoạt động", variant: "outline" };
-  }
-  return statusConfig[stall.status] ?? { label: "Không xác định", variant: "outline" };
+// --- Map Components ---
+function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+  useMapEvents({ click(e) { onMapClick(e.latlng.lat, e.latlng.lng); } });
+  return null;
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<string> {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=vi`);
+    const data = await res.json();
+    return data.display_name || "";
+  } catch { return ""; }
+}
+
+function MapPicker({ lat, lng, onPick }: { lat: string, lng: string, onPick: (lat: string, lng: string, addr: string) => void }) {
+  const [loading, setLoading] = useState(false);
+  const center: [number, number] = lat && lng ? [parseFloat(lat), parseFloat(lng)] : [10.7769, 106.7009];
+
+  return (
+    <div className="space-y-2">
+      <Label>Vị trí bản đồ</Label>
+      <div className="rounded-lg overflow-hidden border h-64">
+        <MapContainer center={center} zoom={15} style={{ height: "100%" }}>
+          <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          <MapClickHandler onMapClick={async (la, ln) => {
+            setLoading(true);
+            const addr = await reverseGeocode(la, ln);
+            onPick(la.toFixed(6), ln.toFixed(6), addr);
+            setLoading(false);
+          }} />
+          {lat && lng && <Marker position={[parseFloat(lat), parseFloat(lng)]} />}
+        </MapContainer>
+      </div>
+      <p className="text-xs text-muted-foreground">{loading ? "Đang lấy địa chỉ..." : "Click bản đồ để chọn tọa độ"}</p>
+    </div>
+  );
 }
 
 export default function Stalls() {
@@ -43,111 +98,129 @@ export default function Stalls() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
-  const handleLogout = () => {
-    localStorage.removeItem("isAdminLoggedIn");
-    navigate("/login");
+  const fetchRestaurants = async () => {
+    try {
+      const res = await fetch("http://localhost:3000/api/restaurants");
+      const data = await res.json();
+      setRestaurants(data);
+    } finally { setLoading(false); }
   };
 
-  // Lấy dữ liệu từ server.js
-  // Yêu cầu API trả về thêm field owner_locked (boolean):
-  //   SELECT r.*, u.name AS owner_name,
-  //          CASE WHEN d.user_id IS NOT NULL THEN true ELSE false END AS owner_locked
-  //   FROM restaurants r
-  //   LEFT JOIN users u ON u.restaurant_id = r.restaurant_id
-  //   LEFT JOIN deleted_users d ON d.user_id = u.user_id  ← hoặc join theo restaurant_id nếu lưu vậy
-  useEffect(() => {
-    const fetchRestaurants = async () => {
-      try {
-        const res = await fetch("http://localhost:3000/api/restaurants");
-        const data = await res.json();
-        setRestaurants(data);
-      } catch (error) {
-        console.error("Lỗi khi lấy danh sách nhà hàng:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchRestaurants();
-  }, []);
+  useEffect(() => { fetchRestaurants(); }, []);
 
-  // Logic tìm kiếm
-  const filtered = restaurants.filter(r =>
-    r.name.toLowerCase().includes(search.toLowerCase()) ||
-    (r.owner_name && r.owner_name.toLowerCase().includes(search.toLowerCase()))
-  );
+  const handleSubmit = async () => {
+    const method = editingId ? "PUT" : "POST";
+    const url = editingId ? `http://localhost:3000/api/restaurants/${editingId}` : "http://localhost:3000/api/restaurants";
+    
+    await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData)
+    });
+    setShowForm(false);
+    fetchRestaurants();
+  };
+
+  const handleEdit = (r: Restaurant) => {
+    setEditingId(r.restaurant_id);
+    setFormData({
+      name: r.name, description: r.description || "", address: r.address,
+      phone: r.phone || "", lat: r.lat?.toString() || "", lng: r.lng?.toString() || "",
+      open_hour: r.open_hour || "", close_hour: r.close_hour || "",
+      rating: r.rating.toString(), status: r.status
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (confirm("Xóa gian hàng này?")) {
+      await fetch(`http://localhost:3000/api/restaurants/${id}`, { method: "DELETE" });
+      fetchRestaurants();
+    }
+  };
+
+  const filtered = restaurants.filter(r => r.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <AdminLayout title="Gian hàng" onLogout={handleLogout}>
-      <div className="flex flex-col gap-4 animate-fade-in">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Tìm gian hàng..."
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+    <AdminLayout title="Quản lý Gian hàng" onLogout={() => navigate("/login")}>
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <div className="relative w-72">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Tìm gian hàng..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          </div>
+          <Button onClick={() => { setEditingId(null); setFormData(EMPTY_FORM); setShowForm(true); }}>
+            <Plus className="mr-2 h-4 w-4" /> Thêm mới
+          </Button>
         </div>
 
-        {loading ? (
-          <div className="flex h-64 items-center justify-center">Đang tải dữ liệu...</div>
-        ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((stall) => {
-              const displayStatus = resolveStatus(stall);
-              return (
-                <div key={stall.restaurant_id} className="rounded-xl border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-card-foreground">{stall.name}</h3>
-                      <p className="text-sm text-muted-foreground italic">
-                        Chủ: {stall.owner_name || "Chưa xác định"}
-                        {stall.owner_locked && (
-                          <span className="ml-1 text-destructive">(đã khóa)</span>
-                        )}
-                      </p>
-                    </div>
-                    <Badge variant={displayStatus.variant}>
-                      {displayStatus.label}
-                    </Badge>
-                  </div>
+        {showForm && (
+          <div className="border rounded-xl p-6 bg-card shadow-sm space-y-4 animate-in fade-in">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold">{editingId ? "Sửa gian hàng" : "Tạo gian hàng mới"}</h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowForm(false)}><X /></Button>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tên gian hàng</Label>
+                <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Địa chỉ</Label>
+                <Input value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} />
+              </div>
+              <div className="space-y-2">
+                <Label>Trạng thái</Label>
+                <Select value={formData.status} onValueChange={v => setFormData({...formData, status: v})}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">Mở cửa</SelectItem>
+                    <SelectItem value="closed">Đóng cửa</SelectItem>
+                    <SelectItem value="maintenance">Bảo trì</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Số điện thoại</Label>
+                <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+              </div>
+            </div>
+            <MapPicker lat={formData.lat} lng={formData.lng} onPick={(la, ln, ad) => setFormData({...formData, lat: la, lng: ln, address: ad})} />
+            <div className="flex gap-2">
+              <Button onClick={handleSubmit}>Lưu thay đổi</Button>
+              <Button variant="outline" onClick={() => setShowForm(false)}>Hủy</Button>
+            </div>
+          </div>
+        )}
 
-                  <div className="mt-4 space-y-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-3.5 w-3.5 text-primary" />
-                      <span className="truncate">{stall.address}</span>
-                    </div>
-
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1">
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        <span className="font-medium text-foreground">{stall.rating || "0"}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <UtensilsCrossed className="h-3 w-3" />
-                        <span>{stall.dish_count || 0} món ăn</span>
-                      </div>
-                    </div>
-
-                    {(stall.open_hour && stall.close_hour) && (
-                      <div className="flex items-center gap-2 pt-1 border-t mt-2">
-                        <Clock className="h-3 w-3" />
-                        <span>{stall.open_hour} - {stall.close_hour}</span>
-                      </div>
-                    )}
-                  </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map(stall => (
+            <div key={stall.restaurant_id} className="border rounded-xl p-5 bg-card hover:shadow-md transition-shadow">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h4 className="font-bold text-lg">{stall.name}</h4>
+                  <p className="text-sm text-muted-foreground">Chủ: {stall.owner_name || "Trống"}</p>
                 </div>
-              );
-            })}
-          </div>
-        )}
-
-        {filtered.length === 0 && !loading && (
-          <div className="flex h-64 items-center justify-center rounded-xl border bg-card">
-            <p className="text-muted-foreground">Không tìm thấy gian hàng nào</p>
-          </div>
-        )}
+                <Badge variant={stall.status === 'open' ? 'default' : 'destructive'}>{stall.status}</Badge>
+              </div>
+              <div className="space-y-2 text-sm text-muted-foreground mb-4">
+                <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5" /><span className="truncate">{stall.address}</span></div>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{stall.rating}</div>
+                  <div className="flex items-center gap-1"><UtensilsCrossed className="h-3 w-3" />{stall.dish_count} món</div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 border-t pt-4">
+                <Button size="sm" variant="outline" onClick={() => handleEdit(stall)}><Edit2 className="h-4 w-4 mr-1" /> Sửa</Button>
+                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleDelete(stall.restaurant_id)}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </AdminLayout>
   );
