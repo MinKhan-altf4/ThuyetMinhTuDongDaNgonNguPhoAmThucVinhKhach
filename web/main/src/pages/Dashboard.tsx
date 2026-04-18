@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StatCard } from "@/components/StatCard";
-import { Store, UtensilsCrossed, Eye, Star, Map as MapIcon } from "lucide-react";
+import { Store, UtensilsCrossed, Eye, Star, Map as MapIcon, Smartphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -19,61 +19,40 @@ function HeatmapLayer({ points }: { points: HeatPoint[] }) {
   const layerRef = useRef<L.HeatLayer | null>(null);
 
   useEffect(() => {
-    if (!map || !points?.length) {
-      return;
-    }
+    if (!map || !points?.length) return;
 
     const heatData: L.HeatLatLngTuple[] = points
       .map((point) => {
         const lat = Number(point.lat);
         const lng = Number(point.lng);
         const weight = Number(point.weight ?? 1);
-
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-          return null;
-        }
-
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
         return [lat, lng, Number.isFinite(weight) && weight > 0 ? weight : 1];
       })
       .filter((point): point is L.HeatLatLngTuple => point !== null);
 
     if (!heatData.length) {
-      if (layerRef.current && map.hasLayer(layerRef.current)) {
-        map.removeLayer(layerRef.current);
-      }
+      if (layerRef.current && map.hasLayer(layerRef.current)) map.removeLayer(layerRef.current);
       layerRef.current = null;
       return;
     }
 
-    if (layerRef.current && map.hasLayer(layerRef.current)) {
-      map.removeLayer(layerRef.current);
-    }
+    if (layerRef.current && map.hasLayer(layerRef.current)) map.removeLayer(layerRef.current);
 
     layerRef.current = L.heatLayer(heatData, {
       radius: 25,
       blur: 18,
       maxZoom: 17,
       minOpacity: 0.3,
-      gradient: {
-        0.15: "#2563eb",
-        0.35: "#22c55e",
-        0.55: "#facc15",
-        0.78: "#f97316",
-        1: "#dc2626",
-      },
+      gradient: { 0.15: "#2563eb", 0.35: "#22c55e", 0.55: "#facc15", 0.78: "#f97316", 1: "#dc2626" },
     }).addTo(map);
 
     const bounds = L.latLngBounds(heatData.map(([lat, lng]) => [lat, lng]));
-    if (bounds.isValid()) {
-      map.fitBounds(bounds.pad(0.15));
-    }
-
+    if (bounds.isValid()) map.fitBounds(bounds.pad(0.15));
     map.invalidateSize();
 
     return () => {
-      if (layerRef.current && map.hasLayer(layerRef.current)) {
-        map.removeLayer(layerRef.current);
-      }
+      if (layerRef.current && map.hasLayer(layerRef.current)) map.removeLayer(layerRef.current);
       layerRef.current = null;
     };
   }, [map, points]);
@@ -97,42 +76,58 @@ interface DashboardData {
   heatmapData: { name: string; lat: number; lng: number; weight: number }[];
 }
 
+interface AppOpenStats {
+  total_opens: number;
+  unique_devices: number;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [appOpenStats, setAppOpenStats] = useState<AppOpenStats>({ total_opens: 0, unique_devices: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const isLoggedIn = localStorage.getItem("isAdminLoggedIn");
-    if (!isLoggedIn) {
-      navigate("/login");
-    }
+    if (!isLoggedIn) navigate("/login");
   }, [navigate]);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    const fetchAll = async () => {
       try {
-        const response = await fetch("http://localhost:3000/api/stats");
-        const result = await response.json();
+        // Gọi song song để nhanh hơn
+        const [statsRes, appOpenRes] = await Promise.all([
+          fetch("http://localhost:3000/api/stats"),
+          fetch("http://localhost:3000/api/app-opens/stats"),
+        ]);
 
+        const result = await statsRes.json();
         setData({
           stats: {
-            stores: result.stats?.stores || 0,
-            dishes: result.stats?.dishes || 0,
+            stores:      result.stats?.stores      || 0,
+            dishes:      result.stats?.dishes      || 0,
             totalVisits: result.stats?.totalVisits || 0,
           },
           topRestaurants: result.topRestaurants || [],
-          activities: result.activities || [],
-          heatmapData: result.heatmapData || [],
+          activities:     result.activities     || [],
+          heatmapData:    result.heatmapData    || [],
         });
+
+        if (appOpenRes.ok) {
+          const appData = await appOpenRes.json();
+          setAppOpenStats({
+            total_opens:    appData.total_opens    || 0,
+            unique_devices: appData.unique_devices || 0,
+          });
+        }
       } catch (error) {
-        console.error("Loi khi lay du lieu dashboard:", error);
+        console.error("Lỗi khi lấy dữ liệu dashboard:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDashboardData();
+    fetchAll();
   }, []);
 
   const handleLogout = () => {
@@ -142,9 +137,9 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <AdminLayout title="Dang tai..." onLogout={handleLogout}>
+      <AdminLayout title="Đang tải..." onLogout={handleLogout}>
         <div className="flex h-64 items-center justify-center">
-          <p className="text-muted-foreground">Dang lay du lieu tu he thong...</p>
+          <p className="text-muted-foreground">Đang lấy dữ liệu từ hệ thống...</p>
         </div>
       </AdminLayout>
     );
@@ -153,40 +148,51 @@ export default function Dashboard() {
   const defaultCenter: LatLngExpression = [10.761225, 106.702629];
 
   return (
-    <AdminLayout title="Tong quan" onLogout={handleLogout}>
+    <AdminLayout title="Tổng quan" onLogout={handleLogout}>
       <div className="space-y-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+
+        {/* Stat Cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Gian hang"
+            title="Gian hàng"
             value={data?.stats.stores || 0}
-            change="Tong he thong"
+            change="Tổng hệ thống"
             changeType="positive"
             icon={Store}
             color="emerald"
           />
           <StatCard
-            title="Mon an"
+            title="Món ăn"
             value={data?.stats.dishes || 0}
-            change="Dang kinh doanh"
+            change="Đang kinh doanh"
             changeType="positive"
             icon={UtensilsCrossed}
             color="amber"
           />
           <StatCard
-            title="Tong luot truy cap POI"
+            title="Tổng lượt truy cập POI"
             value={data?.stats.totalVisits || 0}
-            change="Tu truoc den nay"
+            change="Từ trước đến nay"
             changeType="positive"
             icon={Eye}
             color="blue"
           />
+          <StatCard
+            title="Lượt mở app"
+            value={appOpenStats.total_opens}
+            change={`${appOpenStats.unique_devices} thiết bị khác nhau`}
+            changeType="positive"
+            icon={Smartphone}
+            color="emerald"
+          />
         </div>
 
+        {/* Heatmap */}
         <div className="rounded-xl border bg-card p-5 shadow-sm animate-fade-in">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-card-foreground">
               <MapIcon className="h-4 w-4 text-primary" />
-              Ban do nhiet: Mat do truy cap gian hang
+              Bản đồ nhiệt: Mật độ truy cập gian hàng
             </h3>
           </div>
           <div className="h-[400px] w-full overflow-hidden rounded-lg border">
@@ -204,16 +210,17 @@ export default function Dashboard() {
               </MapContainer>
             ) : (
               <div className="flex h-full items-center justify-center bg-muted/20">
-                <p className="text-sm text-muted-foreground">Chua co du lieu vi tri</p>
+                <p className="text-sm text-muted-foreground">Chưa có dữ liệu vị trí</p>
               </div>
             )}
           </div>
         </div>
 
+        {/* Top + Activity */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="col-span-2 rounded-xl border bg-card p-5 shadow-sm animate-fade-in">
             <h3 className="mb-4 text-sm font-semibold text-card-foreground">
-              Top gian hang thu hut nhat (Luot xem)
+              Top gian hàng thu hút nhất (Lượt xem)
             </h3>
             <div className="space-y-4">
               {(data?.topRestaurants || []).map((r, i) => (
@@ -224,17 +231,14 @@ export default function Dashboard() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-card-foreground">{r.name}</p>
                     <p className="flex gap-2 text-xs text-muted-foreground">
-                      <span>{r.dish_count} mon an</span>
-                      <span>�</span>
-                      <span className="text-blue-500">{r.total_views} luot xem</span>
+                      <span>{r.dish_count} món ăn</span>
+                      <span>·</span>
+                      <span className="text-blue-500">{r.total_views} lượt xem</span>
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-amber-400"
-                        style={{ width: `${(r.rating / 5) * 100}%` }}
-                      />
+                      <div className="h-full rounded-full bg-amber-400" style={{ width: `${(r.rating / 5) * 100}%` }} />
                     </div>
                     <div className="flex w-10 items-center gap-1">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
@@ -244,13 +248,13 @@ export default function Dashboard() {
                 </div>
               ))}
               {(data?.topRestaurants || []).length === 0 && (
-                <p className="py-6 text-center text-sm text-muted-foreground">Chua co du lieu</p>
+                <p className="py-6 text-center text-sm text-muted-foreground">Chưa có dữ liệu</p>
               )}
             </div>
           </div>
 
           <div className="rounded-xl border bg-card p-5 shadow-sm animate-fade-in">
-            <h3 className="mb-4 text-sm font-semibold text-card-foreground">Gian hang moi them</h3>
+            <h3 className="mb-4 text-sm font-semibold text-card-foreground">Gian hàng mới thêm</h3>
             <div className="space-y-4">
               {(data?.activities || []).map((item, i) => (
                 <div key={i} className="flex items-start gap-3">
@@ -259,9 +263,7 @@ export default function Dashboard() {
                     <p className="truncate text-sm font-medium text-card-foreground">{item.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {new Date(item.created_at).toLocaleDateString("vi-VN", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        year: "numeric",
+                        day: "2-digit", month: "2-digit", year: "numeric",
                       })}
                     </p>
                   </div>
@@ -270,8 +272,8 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
       </div>
     </AdminLayout>
   );
 }
-

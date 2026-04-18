@@ -312,8 +312,7 @@ app.post('/api/users/restore/:id', async (req, res) => {
   }
 });
 
-// ── Restaurants ─────────────────────────────────────────────────
-// Trả về owner_locked = true nếu chủ đang bị khóa (có trong users_deleted)
+// Xóa vĩnh viễn user và toàn bộ dữ liệu liên quan
 app.delete('/api/users/permanent/:id', async (req, res) => {
   try {
     await withTransaction(async (conn) => {
@@ -337,6 +336,7 @@ app.delete('/api/users/permanent/:id', async (req, res) => {
   }
 });
 
+// ── Restaurants ─────────────────────────────────────────────────
 app.get('/api/restaurants', async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -354,7 +354,108 @@ app.get('/api/restaurants', async (req, res) => {
   }
 });
 
-// ── Restaurant CRUD (admin) ─────────────────────────────────────
+app.post('/api/restaurants', upload.single('image'), async (req, res) => {
+  try {
+    const { name, description, address, phone, lat, lng, open_hour, close_hour, status, rating } = req.body;
+    if (!name || !address) return res.status(400).json({ error: 'Thiếu tên hoặc địa chỉ' });
+
+    const result = await withTransaction(async (conn) => {
+      const [rRes] = await conn.query(
+        `INSERT INTO restaurant (name, description, address, phone, lat, lng, open_hour, close_hour, status, rating)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [name, description || null, address, phone || null, lat || null, lng || null,
+         open_hour || null, close_hour || null, status || 'open', parseFloat(rating) || 0]
+      );
+      
+      if (req.file) {
+        const imageUrl = `/uploads/${req.file.filename}`;
+        await conn.query(
+          "INSERT INTO restaurant_image (restaurant_id, image_url, is_primary) VALUES (?, ?, 1)",
+          [rRes.insertId, imageUrl]
+        );
+      }
+      
+      return { restaurant_id: rRes.insertId };
+    });
+
+    res.json({ success: true, data: result, message: 'Thêm gian hàng thành công!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/restaurants/:id', (req, res, next) => {
+  // Nếu là JSON request (từ Stalls.tsx) thì bỏ qua multer để req.body hoạt động đúng
+  if (req.is('application/json')) return next();
+  upload.single('image')(req, res, next);
+}, async (req, res) => {
+  try {
+    const { name, description, address, phone, lat, lng, open_hour, close_hour, status, rating } = req.body;
+    if (!name || !address) return res.status(400).json({ error: 'Thiếu tên hoặc địa chỉ' });
+
+    const latVal = lat !== undefined ? (lat === '' || lat === null ? null : parseFloat(lat)) : undefined;
+    const lngVal = lng !== undefined ? (lng === '' || lng === null ? null : parseFloat(lng)) : undefined;
+
+    await withTransaction(async (conn) => {
+      if (latVal !== undefined) {
+        await conn.query(
+          `UPDATE restaurant SET name=?, description=?, address=?, phone=?, lat=?, lng=?,
+           open_hour=?, close_hour=?, status=?, rating=? WHERE restaurant_id=?`,
+          [name, description || null, address, phone || null,
+           latVal, lngVal,
+           open_hour || null, close_hour || null, status || 'open',
+           parseFloat(rating) || 0, req.params.id]
+        );
+      } else {
+        await conn.query(
+          `UPDATE restaurant SET name=?, description=?, address=?, phone=?,
+           open_hour=?, close_hour=?, status=?, rating=? WHERE restaurant_id=?`,
+          [name, description || null, address, phone || null,
+           open_hour || null, close_hour || null, status || 'open',
+           parseFloat(rating) || 0, req.params.id]
+        );
+      }
+
+      if (req.file) {
+        await conn.query("DELETE FROM restaurant_image WHERE restaurant_id=?", [req.params.id]);
+        const imageUrl = `/uploads/${req.file.filename}`;
+        await conn.query(
+          "INSERT INTO restaurant_image (restaurant_id, image_url, is_primary) VALUES (?, ?, 1)",
+          [req.params.id, imageUrl]
+        );
+      }
+    });
+
+    res.json({ success: true, message: 'Cập nhật gian hàng thành công!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/restaurants/:id', async (req, res) => {
+  try {
+    const [[restaurant]] = await pool.query("SELECT * FROM restaurant WHERE restaurant_id=?", [req.params.id]);
+    if (!restaurant) return res.status(404).json({ error: 'Không tìm thấy gian hàng' });
+
+    const [[userLinked]] = await pool.query(
+      "SELECT COUNT(*) as count FROM users WHERE restaurant_id=?", [req.params.id]
+    );
+    if (userLinked.count > 0) {
+      return res.status(400).json({ error: 'Không thể xóa gian hàng đang được quản lý bởi chủ gian hàng' });
+    }
+
+    await withTransaction(async (conn) => {
+      await conn.query("DELETE FROM restaurant_image WHERE restaurant_id=?", [req.params.id]);
+      await conn.query("DELETE FROM restaurant WHERE restaurant_id=?", [req.params.id]);
+    });
+
+    res.json({ success: true, message: 'Xóa gian hàng thành công!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Audio ───────────────────────────────────────────────────────
 app.get('/api/audio/catalog', async (req, res) => {
   try {
     const [restaurants] = await pool.query(`
@@ -419,14 +520,13 @@ app.get('/api/audio', async (req, res) => {
     `, params);
 
     const audios = rows.map((audio) => {
-      // audio_url dạng "audio/vi/poi_1.mp3" → chỉ lấy tên file cuối
       const fileName = path.basename(String(audio.audio_url || '').replace(/\\/g, '/'));
       const physicalPath = getOfflineAudioPath(audio.language_code, fileName);
       const fileExists = fs.existsSync(physicalPath);
       console.log(`[Audio] id=${audio.audio_id} url="${audio.audio_url}" file="${fileName}" exists=${fileExists} path="${physicalPath}"`);
       return {
         ...audio,
-        audio_url: audio.audio_url, // giữ nguyên full path cho client parse
+        audio_url: audio.audio_url,
         file_name: fileName,
         file_exists: fileExists,
         preview_url: fileExists ? toOfflineAudioUrl(audio.language_code, fileName) : null,
@@ -600,112 +700,6 @@ app.delete('/api/audio/:id', async (req, res) => {
   }
 });
 
-app.post('/api/restaurants', upload.single('image'), async (req, res) => {
-  try {
-    const { name, description, address, phone, lat, lng, open_hour, close_hour, status, rating } = req.body;
-    if (!name || !address) return res.status(400).json({ error: 'Thiếu tên hoặc địa chỉ' });
-
-    const result = await withTransaction(async (conn) => {
-      const [rRes] = await conn.query(
-        `INSERT INTO restaurant (name, description, address, phone, lat, lng, open_hour, close_hour, status, rating)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [name, description || null, address, phone || null, lat || null, lng || null,
-         open_hour || null, close_hour || null, status || 'open', parseFloat(rating) || 0]
-      );
-      
-      if (req.file) {
-        const imageUrl = `/uploads/${req.file.filename}`;
-        await conn.query(
-          "INSERT INTO restaurant_image (restaurant_id, image_url, is_primary) VALUES (?, ?, 1)",
-          [rRes.insertId, imageUrl]
-        );
-      }
-      
-      return { restaurant_id: rRes.insertId };
-    });
-
-    res.json({ success: true, data: result, message: 'Thêm gian hàng thành công!' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.put('/api/restaurants/:id', (req, res, next) => {
-  // Nếu là JSON request (từ Stalls.tsx) thì bỏ qua multer để req.body hoạt động đúng
-  if (req.is('application/json')) return next();
-  upload.single('image')(req, res, next);
-}, async (req, res) => {
-  try {
-    const { name, description, address, phone, lat, lng, open_hour, close_hour, status, rating } = req.body;
-    if (!name || !address) return res.status(400).json({ error: 'Thiếu tên hoặc địa chỉ' });
-
-    // lat/lng: nếu client không gửi (undefined) thì GIỮ NGUYÊN giá trị cũ trong DB
-    // nếu gửi null hoặc "" thì mới xóa
-    const latVal = lat !== undefined ? (lat === '' || lat === null ? null : parseFloat(lat)) : undefined;
-    const lngVal = lng !== undefined ? (lng === '' || lng === null ? null : parseFloat(lng)) : undefined;
-
-    await withTransaction(async (conn) => {
-      if (latVal !== undefined) {
-        // Client gửi lat/lng → update toàn bộ
-        await conn.query(
-          `UPDATE restaurant SET name=?, description=?, address=?, phone=?, lat=?, lng=?,
-           open_hour=?, close_hour=?, status=?, rating=? WHERE restaurant_id=?`,
-          [name, description || null, address, phone || null,
-           latVal, lngVal,
-           open_hour || null, close_hour || null, status || 'open',
-           parseFloat(rating) || 0, req.params.id]
-        );
-      } else {
-        // Client không gửi lat/lng → KHÔNG update lat/lng (giữ nguyên)
-        await conn.query(
-          `UPDATE restaurant SET name=?, description=?, address=?, phone=?,
-           open_hour=?, close_hour=?, status=?, rating=? WHERE restaurant_id=?`,
-          [name, description || null, address, phone || null,
-           open_hour || null, close_hour || null, status || 'open',
-           parseFloat(rating) || 0, req.params.id]
-        );
-      }
-
-      if (req.file) {
-        await conn.query("DELETE FROM restaurant_image WHERE restaurant_id=?", [req.params.id]);
-        const imageUrl = `/uploads/${req.file.filename}`;
-        await conn.query(
-          "INSERT INTO restaurant_image (restaurant_id, image_url, is_primary) VALUES (?, ?, 1)",
-          [req.params.id, imageUrl]
-        );
-      }
-    });
-
-    res.json({ success: true, message: 'Cập nhật gian hàng thành công!' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.delete('/api/restaurants/:id', async (req, res) => {
-  try {
-    const [[restaurant]] = await pool.query("SELECT * FROM restaurant WHERE restaurant_id=?", [req.params.id]);
-    if (!restaurant) return res.status(404).json({ error: 'Không tìm thấy gian hàng' });
-
-    // Check if restaurant is linked to users
-    const [[userLinked]] = await pool.query(
-      "SELECT COUNT(*) as count FROM users WHERE restaurant_id=?", [req.params.id]
-    );
-    if (userLinked.count > 0) {
-      return res.status(400).json({ error: 'Không thể xóa gian hàng đang được quản lý bởi chủ gian hàng' });
-    }
-
-    await withTransaction(async (conn) => {
-      await conn.query("DELETE FROM restaurant_image WHERE restaurant_id=?", [req.params.id]);
-      await conn.query("DELETE FROM restaurant WHERE restaurant_id=?", [req.params.id]);
-    });
-
-    res.json({ success: true, message: 'Xóa gian hàng thành công!' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ── Owner CRUD (có ảnh) ─────────────────────────────────────────
 const ownerUpload = upload.fields([{ name: 'restaurant_image', maxCount: 1 }, { name: 'avatar', maxCount: 1 }]);
 
@@ -846,9 +840,6 @@ app.get('/api/visit/stats/:restaurant_id', async (req, res) => {
 });
 
 // ── Customer Visits / Analytics ──────────────────────────────────
-
-// Ghi lại lượt xem + lượt nghe POI từ MAUI app
-// Payload: { customer_id: int, restaurant_id: int, listen_count: int }
 app.post('/api/customer-visits', async (req, res) => {
   try {
     const { customer_id, restaurant_id, listen_count = 0 } = req.body;
@@ -859,8 +850,6 @@ app.post('/api/customer-visits', async (req, res) => {
       return res.status(400).json({ error: 'Thiếu customer_id hoặc restaurant_id' });
     }
 
-    // Dùng ON DUPLICATE KEY UPDATE để upsert 1 lần duy nhất
-    // Cần UNIQUE KEY (customer_id, restaurant_id) trong bảng customer_visited
     await pool.query(`
       INSERT INTO customer_visited (customer_id, restaurant_id, visit_count, audio_listen_count)
       VALUES (?, ?, 1, ?)
@@ -878,7 +867,6 @@ app.post('/api/customer-visits', async (req, res) => {
   }
 });
 
-// Lấy danh sách truy cập của restaurant
 app.get('/api/restaurants/:id/visits', async (req, res) => {
   try {
     const [[restaurantCheck]] = await pool.query('SELECT restaurant_id FROM restaurant WHERE restaurant_id = ?', [req.params.id]);
@@ -897,7 +885,6 @@ app.get('/api/restaurants/:id/visits', async (req, res) => {
   }
 });
 
-// Lấy thống kê tổng hợp — Analytics.tsx gọi endpoint này
 app.get('/api/restaurants/:id/visits/stats', async (req, res) => {
   try {
     const restaurantId = req.params.id;
@@ -930,7 +917,6 @@ app.get('/api/restaurants/:id/visits/stats', async (req, res) => {
   }
 });
 
-// Lấy tổng quan tất cả gian hàng (dùng view v_poi_analytics)
 app.get('/api/analytics/overview', async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -938,6 +924,103 @@ app.get('/api/analytics/overview', async (req, res) => {
     `);
     res.json(rows);
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Xóa lịch sử ─────────────────────────────────────────────────
+app.delete('/api/restaurants/:id/visits', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [[restaurant]] = await pool.query(
+      'SELECT restaurant_id FROM restaurant WHERE restaurant_id = ?', [id]
+    );
+    if (!restaurant) return res.status(404).json({ error: 'Không tìm thấy gian hàng' });
+
+    const [result] = await pool.query(
+      'DELETE FROM customer_visited WHERE restaurant_id = ?', [id]
+    );
+    console.log(`[Analytics] Đã xóa ${result.affectedRows} bản ghi truy cập của restaurant ${id}`);
+    res.json({ success: true, deleted: result.affectedRows });
+  } catch (err) {
+    console.error('[Analytics] ✗ DELETE visits error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/app-opens', async (req, res) => {
+  try {
+    const [result] = await pool.query('DELETE FROM app_opens');
+    console.log(`[AppOpen] Đã xóa ${result.affectedRows} bản ghi mở app`);
+    res.json({ success: true, deleted: result.affectedRows });
+  } catch (err) {
+    console.error('[AppOpen] ✗ DELETE app-opens error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Ghi nhận lượt mở app (POST /api/app-opens) ──────────────────
+app.post('/api/app-opens', async (req, res) => {
+  try {
+    const { device_id, device_type, app_version, language_code } = req.body;
+    if (!device_id) {
+      return res.status(400).json({ error: 'Thiếu device_id' });
+    }
+
+    await pool.query(
+      `INSERT INTO app_opens (device_id, device_type, app_version, language_code, opened_at)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [device_id, device_type || null, app_version || null, language_code || null]
+    );
+
+    console.log(`[AppOpen] Ghi nhận mở app: device=${device_id}`);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[AppOpen] Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+// ── Thống kê mở App (Phục vụ Dashboard và Analytics) ─────────────
+app.get('/api/app-opens/stats', async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT
+        COUNT(*) AS total_opens,
+        COUNT(DISTINCT device_id) AS unique_devices,
+        MAX(opened_at) AS last_open,
+        SUM(CASE WHEN device_type LIKE '%Android%' THEN 1 ELSE 0 END) AS android_count,
+        SUM(CASE WHEN device_type LIKE '%iOS%' OR device_type LIKE '%iPhone%' OR device_type LIKE '%iPad%' THEN 1 ELSE 0 END) AS ios_count,
+        SUM(CASE WHEN device_type LIKE '%Windows%' THEN 1 ELSE 0 END) AS windows_count
+      FROM app_opens
+    `);
+
+    const stats = rows[0];
+    res.json({
+      total_opens: stats.total_opens || 0,
+      unique_devices: stats.unique_devices || 0,
+      last_open: stats.last_open || null,
+      android_count: Number(stats.android_count || 0),
+      ios_count: Number(stats.ios_count || 0),
+      windows_count: Number(stats.windows_count || 0),
+    });
+  } catch (err) {
+    console.error('[AppOpen] GET stats error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Xóa TOÀN BỘ lượt truy cập POI (Tất cả gian hàng) ─────────────
+app.delete('/api/visits/all', async (req, res) => {
+  try {
+    // Xóa bảng chi tiết (nếu có)
+    await pool.query('DELETE FROM customer_visits'); 
+    // Xóa bảng tổng hợp
+    const [result] = await pool.query('DELETE FROM customer_visited'); 
+    
+    console.log(`[Analytics] Đã xóa toàn bộ ${result.affectedRows} bản ghi truy cập POI toàn hệ thống`);
+    res.json({ success: true, deleted: result.affectedRows });
+  } catch (err) {
+    console.error('[Analytics] ✗ DELETE all visits error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

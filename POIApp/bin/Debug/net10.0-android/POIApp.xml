@@ -4,6 +4,12 @@
         <name>POIApp</name>
     </assembly>
     <members>
+        <member name="M:POIApp.App.GetOrCreateDeviceId">
+            <summary>
+            Tạo và lưu một Device ID cố định (UUID) bằng Preferences.
+            Cùng thiết bị mở nhiều lần → cùng ID, khác lần mở.
+            </summary>
+        </member>
         <member name="T:POIApp.MainPage">
             <summary>
             MainPage - Tích hợp GPS Tracking thời gian thực
@@ -94,59 +100,33 @@
         </member>
         <member name="T:POIApp.Services.AnalyticsService">
             <summary>
-            Service Analytics - Đếm số lần nghe POI
-            Cực đơn giản, dùng Dictionary + Cache file
+            Theo dõi analytics: số lần nghe POI, lượt truy cập quán, lượt mở app.
             </summary>
+        </member>
+        <member name="M:POIApp.Services.AnalyticsService.#ctor(POIApp.Services.CacheService)">
+            <summary>Dùng khi cần lưu cache (khởi tạo qua DI).</summary>
+        </member>
+        <member name="M:POIApp.Services.AnalyticsService.#ctor">
+            <summary>Dùng khi không cần cache (MapPage, App.xaml.cs).</summary>
         </member>
         <member name="M:POIApp.Services.AnalyticsService.RecordListenAsync(POIApp.Models.POI)">
-            <summary>
-            Ghi nhận user đã nghe POI này
-            </summary>
-            <param name="poi">POI vừa nghe</param>
+            <summary>Ghi nhận một lần nghe POI.</summary>
         </member>
         <member name="M:POIApp.Services.AnalyticsService.RecordListenAsync(System.Int32,System.String)">
-            <summary>
-            Ghi nhận user đã nghe POI (overload đơn giản)
-            </summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.GetListenCount(System.Int32)">
-            <summary>
-            Lấy số lần nghe của 1 POI
-            </summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.GetTotalListens">
-            <summary>
-            Lấy tổng số lần nghe
-            </summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.GetAllStats">
-            <summary>
-            Lấy tất cả số liệu
-            </summary>
+            <summary>Ghi nhận một lần nghe POI (overload dùng id + tên).</summary>
         </member>
         <member name="M:POIApp.Services.AnalyticsService.LoadFromCacheAsync">
-            <summary>
-            Tải dữ liệu analytics từ cache (gọi khi app khởi động)
-            </summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.GetStatsSummary">
-            <summary>
-            Tạo text thống kê để hiển thị
-            </summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.ResetAsync">
-            <summary>
-            Reset tất cả thống kê
-            </summary>
+            <summary>Tải dữ liệu analytics từ cache khi app khởi động.</summary>
         </member>
         <member name="M:POIApp.Services.AnalyticsService.RecordVisitAsync(System.Int32,System.Int32,System.Int32)">
             <summary>
-            Ghi lại lượt truy cập POI lên server (quán gián hàng)
-            Được gọi khi user click POI trên map
-            
-            ⚠️ IMPORTANT: Cần update SERVER_ADDRESS nếu chạy trên device!
-            localhost:3000 chỉ hoạt động trên desktop
-            Device cần dùng IP address của desktop, ví dụ: 192.168.1.100:3000
+            Ghi lượt xem + nghe POI khi user tap quán trên map.
+            ⚠️ Chạy trên thiết bị thật: cập nhật IP trong AppSettingsHelper thay vì localhost.
+            </summary>
+        </member>
+        <member name="M:POIApp.Services.AnalyticsService.RecordAppOpenAsync(System.String,System.String,System.String,System.String)">
+            <summary>
+            Ghi lượt mở app — gọi 1 lần duy nhất từ App.xaml.cs khi khởi động.
             </summary>
         </member>
         <member name="T:POIApp.Services.POIDetailResponse">

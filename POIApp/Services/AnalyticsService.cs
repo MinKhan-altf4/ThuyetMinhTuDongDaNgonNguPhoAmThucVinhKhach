@@ -1,231 +1,121 @@
 using System.Diagnostics;
+using System.Text;
+using System.Text.Json;
 using POIApp.Models;
 
 namespace POIApp.Services;
 
 /// <summary>
-/// Service Analytics - Đếm số lần nghe POI
-/// Cực đơn giản, dùng Dictionary + Cache file
+/// Theo dõi analytics: số lần nghe POI, lượt truy cập quán, lượt mở app.
 /// </summary>
 public class AnalyticsService
 {
-    // =====================================================
-    // BIẾN
-    // =====================================================
-    // Dictionary lưu số lần nghe: Key = POI ID, Value = số lần
+    // ── Trạng thái ──────────────────────────────────────────────────
     private Dictionary<int, int> _listenCounts = new();
-
-    // Service cache để lưu/đọc
-    private readonly CacheService _cacheService;
-
-    // Tổng số lần nghe
     private int _totalListens = 0;
+    private readonly CacheService? _cache;
 
-    // =====================================================
-    // CONSTRUCTOR
-    // =====================================================
-    public AnalyticsService(CacheService cacheService)
-    {
-        _cacheService = cacheService;
-    }
+    // ── Constructor ─────────────────────────────────────────────────
+    /// <summary>Dùng khi cần lưu cache (khởi tạo qua DI).</summary>
+    public AnalyticsService(CacheService cacheService) => _cache = cacheService;
 
-    // ← THÊM MỚI: Parameterless constructor cho MapPage
-    public AnalyticsService()
-    {
-        _cacheService = null;  // Không cần CacheService cho RecordVisitAsync
-    }
+    /// <summary>Dùng khi không cần cache (MapPage, App.xaml.cs).</summary>
+    public AnalyticsService() => _cache = null;
 
-    // =====================================================
-    // ĐẾM: Mỗi khi user nghe POI
-    // =====================================================
-    /// <summary>
-    /// Ghi nhận user đã nghe POI này
-    /// </summary>
-    /// <param name="poi">POI vừa nghe</param>
+    // ── Nghe POI ────────────────────────────────────────────────────
+    /// <summary>Ghi nhận một lần nghe POI.</summary>
     public async Task RecordListenAsync(POI poi)
     {
-        if (poi == null)
-            return;
-
-        // Tăng số lần
-        if (!_listenCounts.ContainsKey(poi.Id))
-        {
-            _listenCounts[poi.Id] = 0;
-        }
-        _listenCounts[poi.Id]++;
-        _totalListens++;
-
-        Debug.WriteLine($"[Analytics] POI {poi.Id} ({poi.Name}): {_listenCounts[poi.Id]} lần nghe");
-
-        // Lưu vào cache (nếu có)
-        if (_cacheService != null)
-            await _cacheService.SaveAnalyticsAsync(_listenCounts);
+        if (poi is null) return;
+        await RecordListenAsync(poi.Id, poi.Name);
     }
 
-    /// <summary>
-    /// Ghi nhận user đã nghe POI (overload đơn giản)
-    /// </summary>
+    /// <summary>Ghi nhận một lần nghe POI (overload dùng id + tên).</summary>
     public async Task RecordListenAsync(int poiId, string poiName)
     {
-        if (!_listenCounts.ContainsKey(poiId))
-        {
-            _listenCounts[poiId] = 0;
-        }
-        _listenCounts[poiId]++;
+        _listenCounts.TryGetValue(poiId, out int current);
+        _listenCounts[poiId] = current + 1;
         _totalListens++;
 
         Debug.WriteLine($"[Analytics] POI {poiId} ({poiName}): {_listenCounts[poiId]} lần nghe");
 
-        if (_cacheService != null)
-            await _cacheService.SaveAnalyticsAsync(_listenCounts);
+        if (_cache is not null)
+            await _cache.SaveAnalyticsAsync(_listenCounts);
     }
 
-    // =====================================================
-    // LẤY SỐ LẦN NGHE
-    // =====================================================
-    /// <summary>
-    /// Lấy số lần nghe của 1 POI
-    /// </summary>
-    public int GetListenCount(int poiId)
-    {
-        return _listenCounts.ContainsKey(poiId) ? _listenCounts[poiId] : 0;
-    }
+    // ── Đọc thống kê local ──────────────────────────────────────────
+    public int GetListenCount(int poiId)           => _listenCounts.GetValueOrDefault(poiId);
+    public int GetTotalListens()                   => _totalListens;
+    public Dictionary<int, int> GetAllStats()      => new(_listenCounts);
 
-    /// <summary>
-    /// Lấy tổng số lần nghe
-    /// </summary>
-    public int GetTotalListens()
-    {
-        return _totalListens;
-    }
-
-    /// <summary>
-    /// Lấy tất cả số liệu
-    /// </summary>
-    public Dictionary<int, int> GetAllStats()
-    {
-        return new Dictionary<int, int>(_listenCounts);
-    }
-
-    // =====================================================
-    // TẢI TỪ CACHE
-    // =====================================================
-    /// <summary>
-    /// Tải dữ liệu analytics từ cache (gọi khi app khởi động)
-    /// </summary>
-    public async Task LoadFromCacheAsync()
-    {
-        if (_cacheService == null)
-        {
-            Debug.WriteLine("[Analytics] CacheService is null, skipping LoadFromCacheAsync");
-            return;
-        }
-        _listenCounts = await _cacheService.GetAnalyticsAsync();
-        _totalListens = _listenCounts.Values.Sum();
-        Debug.WriteLine($"[Analytics] Đã tải {_listenCounts.Count} POI từ cache. Tổng: {_totalListens} lần nghe");
-    }
-
-    // =====================================================
-    // TRẢ VỀ TEXT THỐNG KÊ (cho hiển thị)
-    // =====================================================
-    /// <summary>
-    /// Tạo text thống kê để hiển thị
-    /// </summary>
     public string GetStatsSummary()
     {
-        if (_listenCounts.Count == 0)
-            return "Chưa có dữ liệu";
-
-        var lines = new List<string>
-        {
-            $"Tổng lần nghe: {_totalListens}",
-            "---",
-        };
-
-        foreach (var kvp in _listenCounts.OrderByDescending(x => x.Value))
-        {
-            lines.Add($"POI #{kvp.Key}: {kvp.Value} lần");
-        }
-
+        if (_listenCounts.Count == 0) return "Chưa có dữ liệu";
+        var lines = new List<string> { $"Tổng lần nghe: {_totalListens}", "---" };
+        lines.AddRange(_listenCounts.OrderByDescending(x => x.Value).Select(x => $"POI #{x.Key}: {x.Value} lần"));
         return string.Join("\n", lines);
     }
 
-    /// <summary>
-    /// Reset tất cả thống kê
-    /// </summary>
+    // ── Cache ───────────────────────────────────────────────────────
+    /// <summary>Tải dữ liệu analytics từ cache khi app khởi động.</summary>
+    public async Task LoadFromCacheAsync()
+    {
+        if (_cache is null) { Debug.WriteLine("[Analytics] Bỏ qua LoadFromCache (không có CacheService)"); return; }
+        _listenCounts = await _cache.GetAnalyticsAsync();
+        _totalListens = _listenCounts.Values.Sum();
+        Debug.WriteLine($"[Analytics] Đã tải {_listenCounts.Count} POI từ cache — tổng {_totalListens} lần nghe");
+    }
+
     public async Task ResetAsync()
     {
         _listenCounts.Clear();
         _totalListens = 0;
-        if (_cacheService != null)
-            await _cacheService.SaveAnalyticsAsync(_listenCounts);
+        if (_cache is not null) await _cache.SaveAnalyticsAsync(_listenCounts);
         Debug.WriteLine("[Analytics] Đã reset tất cả thống kê");
     }
 
-    // =====================================================
-    // GỬI LÊN SERVER (Web Admin)
-    // =====================================================
+    // ── Gửi lên server ──────────────────────────────────────────────
     /// <summary>
-    /// Ghi lại lượt truy cập POI lên server (quán gián hàng)
-    /// Được gọi khi user click POI trên map
-    /// 
-    /// ⚠️ IMPORTANT: Cần update SERVER_ADDRESS nếu chạy trên device!
-    /// localhost:3000 chỉ hoạt động trên desktop
-    /// Device cần dùng IP address của desktop, ví dụ: 192.168.1.100:3000
+    /// Ghi lượt xem + nghe POI khi user tap quán trên map.
+    /// ⚠️ Chạy trên thiết bị thật: cập nhật IP trong AppSettingsHelper thay vì localhost.
     /// </summary>
     public async Task RecordVisitAsync(int customerId, int restaurantId, int listenCount = 0)
     {
+        var payload = new { customer_id = customerId, restaurant_id = restaurantId, listen_count = listenCount };
+        await PostAsync("/api/customer-visits", payload);
+    }
+
+    /// <summary>
+    /// Ghi lượt mở app — gọi 1 lần duy nhất từ App.xaml.cs khi khởi động.
+    /// </summary>
+    public async Task RecordAppOpenAsync(string deviceId, string deviceType, string appVersion, string languageCode)
+    {
+        var payload = new { device_id = deviceId, device_type = deviceType, app_version = appVersion, language_code = languageCode };
+        await PostAsync("/api/app-opens", payload);
+    }
+
+    // ── Nội bộ ──────────────────────────────────────────────────────
+    private static async Task PostAsync(string path, object payload)
+    {
         try
         {
-            // ← CONFIGURATION: Change this IP when running on mobile device
-            string serverAddress = AppSettingsHelper.GetCustomerVisitServerUrl();
-            Debug.WriteLine($"[Analytics] Using customer visit server: {serverAddress}");
+            string baseUrl = AppSettingsHelper.GetCustomerVisitServerUrl().TrimEnd('/');
+            string url     = baseUrl + path;
+            string json    = JsonSerializer.Serialize(payload);
 
-            string url = $"{serverAddress.TrimEnd('/')}/api/customer-visits";
-            
-            Debug.WriteLine($"[Analytics] POST to: {url}");
-            Debug.WriteLine($"[Analytics] Payload: customer={customerId}, restaurant={restaurantId}, listen={listenCount}");
+            Debug.WriteLine($"[Analytics] POST {url} — {json}");
 
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-            var payload = new
-            {
-                customer_id = customerId,
-                restaurant_id = restaurantId,
-                listen_count = listenCount
-            };
-
-            var json = System.Text.Json.JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
-
-            var response = await client.PostAsync(url, content);
+            using var client  = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+            using var content = new StringContent(json, Encoding.UTF8, "application/json");
+            var response      = await client.PostAsync(url, content);
 
             if (response.IsSuccessStatusCode)
-            {
-                var responseBody = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[Analytics] ✓ Success (HTTP {response.StatusCode})");
-                Debug.WriteLine($"[Analytics] Response: {responseBody}");
-            }
+                Debug.WriteLine($"[Analytics] ✓ {path} (HTTP {(int)response.StatusCode})");
             else
-            {
-                Debug.WriteLine($"[Analytics] ✗ HTTP Error {response.StatusCode}");
-                var errorBody = await response.Content.ReadAsStringAsync();
-                Debug.WriteLine($"[Analytics] Error: {errorBody}");
-            }
+                Debug.WriteLine($"[Analytics] ✗ {path} — HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         }
-        catch (HttpRequestException ex)
-        {
-            Debug.WriteLine($"[Analytics] ✗ Network Error: {ex.Message}");
-            Debug.WriteLine($"[Analytics] ⚠️ Check: Is server running? Is firewall blocking port 3000?");
-            Debug.WriteLine($"[Analytics] ⚠️ Mobile users: Update SERVER_ADDRESS to desktop IP (e.g., 192.168.1.100:3000)");
-        }
-        catch (TaskCanceledException ex)
-        {
-            Debug.WriteLine($"[Analytics] ✗ Timeout Error: {ex.Message}");
-            Debug.WriteLine($"[Analytics] ⚠️ Server took too long to respond (timeout: 15s)");
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Analytics] ✗ Unexpected Error ({ex.GetType().Name}): {ex.Message}");
-        }
+        catch (HttpRequestException ex) { Debug.WriteLine($"[Analytics] ✗ Network error ({path}): {ex.Message}"); }
+        catch (TaskCanceledException ex) { Debug.WriteLine($"[Analytics] ✗ Timeout ({path}): {ex.Message}"); }
+        catch (Exception ex)             { Debug.WriteLine($"[Analytics] ✗ {ex.GetType().Name} ({path}): {ex.Message}"); }
     }
 }
