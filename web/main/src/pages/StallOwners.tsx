@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { apiUrl } from "@/lib/api";
 
 // ── Fix Leaflet icon bị mất khi dùng với Vite/Webpack ──────────
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -220,20 +221,20 @@ export default function StallOwners() {
   // ── Fetch ─────────────────────────────────────────────────────
   const fetchUsers = async () => {
     try {
-      const data = await fetch("http://localhost:3000/api/users").then(r => r.json());
+      const data = await fetch(apiUrl("/api/users")).then(r => r.json());
       setUsers(data);
     } catch { console.error("Lỗi lấy users"); }
     finally { setLoading(false); }
   };
   const fetchDeletedUsers = async () => {
     try {
-      const data = await fetch("http://localhost:3000/api/users/deleted").then(r => r.json());
+      const data = await fetch(apiUrl("/api/users/deleted")).then(r => r.json());
       setDeletedUsers(data);
     } catch { console.error("Lỗi lấy deleted users"); }
   };
   const fetchRestaurants = async () => {
     try {
-      const data = await fetch("http://localhost:3000/api/restaurants").then(r => r.json());
+      const data = await fetch(apiUrl("/api/restaurants")).then(r => r.json());
       setRestaurants(data);
     } catch { console.error("Lỗi lấy restaurants"); }
   };
@@ -289,7 +290,7 @@ export default function StallOwners() {
       let restaurantId: number | null = null;
 
       if (!editingUser) {
-        const rRes = await fetch("http://localhost:3000/api/restaurants", {
+        const rRes = await fetch(apiUrl("/api/restaurants"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -311,7 +312,7 @@ export default function StallOwners() {
       }
 
       const uRes = await fetch(
-        editingUser ? `http://localhost:3000/api/users/${editingUser.user_id}` : "http://localhost:3000/api/users",
+        editingUser ? apiUrl(`/api/users/${editingUser.user_id}`) : apiUrl("/api/users"),
         {
           method: editingUser ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
@@ -344,7 +345,7 @@ export default function StallOwners() {
   const handleDelete = async (id: number, name: string) => {
     if (!confirm(`Khóa tài khoản "${name}" và gian hàng của họ?`)) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/users/${id}`, { method: "DELETE" });
+      const res = await fetch(apiUrl(`/api/users/${id}`), { method: "DELETE" });
       if (!res.ok) { const e = await res.json(); alert("Lỗi: " + (e.error || "?")); return; }
       showSuccess("✅ Đã khóa tài khoản và gian hàng thành công");
       fetchUsers(); fetchDeletedUsers(); fetchRestaurants();
@@ -354,7 +355,7 @@ export default function StallOwners() {
   const handleRestore = async (deletedId: number, userName: string) => {
     if (!confirm(`Khôi phục tài khoản "${userName}"?`)) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/users/restore/${deletedId}`, { method: "POST" });
+      const res = await fetch(apiUrl(`/api/users/restore/${deletedId}`), { method: "POST" });
       if (!res.ok) { const e = await res.json(); alert("Lỗi: " + (e.error || "?")); return; }
       showSuccess("✅ Khôi phục tài khoản thành công");
       fetchUsers(); fetchDeletedUsers(); fetchRestaurants();
@@ -364,7 +365,7 @@ export default function StallOwners() {
   const handlePermanentDelete = async (deletedId: number, userName: string) => {
     if (!confirm(`Xóa vĩnh viễn tài khoản "${userName}"?\nNếu xóa, toàn bộ dữ liệu liên quan sẽ mất khỏi database.`)) return;
     try {
-      const res = await fetch(`http://localhost:3000/api/users/permanent/${deletedId}`, { method: "DELETE" });
+      const res = await fetch(apiUrl(`/api/users/permanent/${deletedId}`), { method: "DELETE" });
       if (!res.ok) { const e = await res.json(); alert("Lỗi: " + (e.error || "?")); return; }
       showSuccess("✅ Đã xóa vĩnh viễn tài khoản và dữ liệu liên quan");
       fetchDeletedUsers(); fetchRestaurants();

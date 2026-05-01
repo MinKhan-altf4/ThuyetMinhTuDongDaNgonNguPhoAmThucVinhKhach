@@ -10,6 +10,7 @@ import { Search, MapPin, Star, Clock, UtensilsCrossed, Edit2, X } from "lucide-r
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { apiUrl } from "@/lib/api";
 
 // ── Fix Leaflet icon ────────────────────────────────────────────
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -177,7 +178,7 @@ export default function Stalls() {
     setSaving(true);
     setError("");
     try {
-      const res = await fetch(`http://localhost:3000/api/restaurants/${editingRestaurant.restaurant_id}`, {
+      const res = await fetch(apiUrl(`/api/restaurants/${editingRestaurant.restaurant_id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -223,7 +224,7 @@ export default function Stalls() {
   useEffect(() => {
     const fetchRestaurants = async () => {
       try {
-        const res = await fetch("http://localhost:3000/api/restaurants");
+        const res = await fetch(apiUrl("/api/restaurants"));
         const data = await res.json();
         setRestaurants(data);
       } catch (error) {

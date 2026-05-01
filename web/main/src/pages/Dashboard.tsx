@@ -7,6 +7,7 @@ import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L, { type LatLngExpression } from "leaflet";
 import "leaflet.heat";
+import { apiUrl } from "@/lib/api";
 
 type HeatPoint = {
   lat: number | string | null;
@@ -97,8 +98,8 @@ export default function Dashboard() {
       try {
         // Gọi song song để nhanh hơn
         const [statsRes, appOpenRes] = await Promise.all([
-          fetch("http://localhost:3000/api/stats"),
-          fetch("http://localhost:3000/api/app-opens/stats"),
+          fetch(apiUrl("/api/stats")),
+          fetch(apiUrl("/api/app-opens/stats")),
         ]);
 
         const result = await statsRes.json();

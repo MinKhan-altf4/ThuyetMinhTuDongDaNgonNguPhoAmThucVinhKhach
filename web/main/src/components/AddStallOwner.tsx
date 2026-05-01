@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload, X, MapPin, Clock, Phone, Mail, User, Store } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { apiUrl } from "@/lib/api";
 
 export default function AddStallOwner() {
   const navigate = useNavigate();
@@ -125,7 +126,7 @@ export default function AddStallOwner() {
     }
     
     try {
-      const res = await fetch("http://localhost:3000/api/owner/register", {
+      const res = await fetch(apiUrl("/api/owner/register"), {
         method: "POST",
         body: formData
       });

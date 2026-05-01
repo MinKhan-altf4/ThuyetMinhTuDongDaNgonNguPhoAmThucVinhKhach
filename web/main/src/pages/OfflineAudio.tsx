@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Search, Trash2, AudioLines, RefreshCcw, Upload } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { API_BASE_URL, apiUrl } from "@/lib/api";
 
 // ── Types ────────────────────────────────────────────────────────
 type RestaurantOption = { restaurant_id: number; name: string };
@@ -36,11 +37,9 @@ type CatalogResponse = {
   offlineAudioRoot: string;
 };
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://food-app-api-production-65f0.up.railway.app";
+const API_BASE = API_BASE_URL;
 
 // Rồi dùng:
-fetch(`${API_BASE}/api/stats`)
-fetch(`${API_BASE}/api/app-opens/stats`)
 
 // ── Component ────────────────────────────────────────────────────
 export default function OfflineAudio() {
@@ -65,8 +64,8 @@ export default function OfflineAudio() {
     showRefresh ? setRefreshing(true) : setLoading(true);
     try {
       const [catalogRes, audioRes] = await Promise.all([
-        fetch(`${API_BASE}/api/audio/catalog`),
-        fetch(`${API_BASE}/api/audio`),
+        fetch(apiUrl("/api/audio/catalog")),
+        fetch(apiUrl("/api/audio")),
       ]);
       const [catalogData, audioData] = await Promise.all([catalogRes.json(), audioRes.json()]);
       setCatalog(catalogData);
@@ -117,14 +116,14 @@ export default function OfflineAudio() {
         payload.append("language_code", form.languageCode);
         payload.append("duration", form.duration);
         payload.append("audio", uploadFile);
-        response = await fetch(`${API_BASE}/api/audio/upload`, { method: "POST", body: payload });
+        response = await fetch(apiUrl("/api/audio/upload"), { method: "POST", body: payload });
       } else {
         if (!form.fileName) {
           alert("Vui lòng chọn file có sẵn hoặc tải file mới lên.");
           setSubmitting(false);
           return;
         }
-        response = await fetch(`${API_BASE}/api/audio`, {
+        response = await fetch(apiUrl("/api/audio"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -155,7 +154,7 @@ export default function OfflineAudio() {
     if (!confirm(`Xóa audio "${audio.file_name}" của "${audio.restaurant_name}" khỏi database?`))
       return;
     try {
-      const res    = await fetch(`${API_BASE}/api/audio/${audio.audio_id}`, { method: "DELETE" });
+      const res    = await fetch(apiUrl(`/api/audio/${audio.audio_id}`), { method: "DELETE" });
       const result = await res.json();
       if (!res.ok) { alert(result.error || "Không thể xóa audio"); return; }
       await fetchData(true);

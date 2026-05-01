@@ -8,6 +8,7 @@ import {
   Search, Users, Eye, Volume2, Clock,
   Smartphone, MonitorSmartphone, Trash2, AlertTriangle
 } from "lucide-react";
+import { apiUrl } from "@/lib/api";
 
 // ── Types ────────────────────────────────────────────────────────
 interface VisitStats {
@@ -32,11 +33,8 @@ interface Restaurant {
 }
 
 // ── Helper ───────────────────────────────────────────────────────
-const API = import.meta.env.VITE_API_URL || "https://food-app-api-production-65f0.up.railway.app";
 
 // Rồi dùng:
-fetch(`${API}/api/stats`)
-fetch(`${API}/api/app-opens/stats`)
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -74,8 +72,8 @@ export default function Analytics() {
       try {
         setError("");
         const [restaurantList, appData] = await Promise.all([
-          fetchJson<Restaurant[]>(`${API}/api/restaurants`),
-          fetchJson<AppOpenStats>(`${API}/api/app-opens/stats`).catch(() => null),
+          fetchJson<Restaurant[]>(apiUrl("/api/restaurants")),
+          fetchJson<AppOpenStats>(apiUrl("/api/app-opens/stats")).catch(() => null),
         ]);
         setRestaurants(restaurantList);
         if (restaurantList.length > 0) setSelected(restaurantList[0]);
@@ -98,7 +96,7 @@ export default function Analytics() {
         setStatsLoading(true);
         setError("");
         const data = await fetchJson<any>(
-          `${API}/api/restaurants/${selected.restaurant_id}/visits/stats`
+          apiUrl(`/api/restaurants/${selected.restaurant_id}/visits/stats`)
         );
         setStats({
           total_visitors:  data?.total_visitors  ?? 0,
@@ -123,7 +121,7 @@ export default function Analytics() {
     try {
       setClearingVisits(true);
       const res = await fetch(
-        `${API}/api/restaurants/${selected.restaurant_id}/visits`,
+        apiUrl(`/api/restaurants/${selected.restaurant_id}/visits`),
         { method: "DELETE" }
       );
       if (!res.ok) throw new Error((await res.json()).error || "Lỗi xóa");
@@ -141,7 +139,7 @@ export default function Analytics() {
       return;
     try {
       setClearingApp(true);
-      const res = await fetch(`${API}/api/app-opens`, { method: "DELETE" });
+      const res = await fetch(apiUrl("/api/app-opens"), { method: "DELETE" });
       if (!res.ok) throw new Error((await res.json()).error || "Lỗi xóa");
       setAppStats({
         total_opens: 0, unique_devices: 0, last_open: null,
@@ -164,8 +162,8 @@ export default function Analytics() {
       setError("");
 
       const [resApp, resVisits] = await Promise.all([
-        fetch(`${API}/api/app-opens`, { method: "DELETE" }),
-        fetch(`${API}/api/visits/all`, { method: "DELETE" })
+        fetch(apiUrl("/api/app-opens"), { method: "DELETE" }),
+        fetch(apiUrl("/api/visits/all"), { method: "DELETE" })
       ]);
 
       if (!resApp.ok || !resVisits.ok) {
