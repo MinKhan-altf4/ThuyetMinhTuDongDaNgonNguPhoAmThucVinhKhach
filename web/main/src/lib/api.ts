@@ -1,7 +1,7 @@
 const rawApiBaseUrl =
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_API_URL ||
-  "http://localhost:3000";
+  (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
 
 function normalizeApiBaseUrl(url: string) {
   const trimmed = url.trim();

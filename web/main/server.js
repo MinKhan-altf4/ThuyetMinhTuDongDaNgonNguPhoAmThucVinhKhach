@@ -37,6 +37,8 @@ const pool = mysql.createPool({
 
 // ── Upload ──────────────────────────────────────────────────────
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const frontendDistDir = path.join(__dirname, 'dist');
+const frontendIndexPath = path.join(frontendDistDir, 'index.html');
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 const offlineAudioRootCandidates = [
@@ -84,6 +86,9 @@ const audioUpload = multer({
 app.use('/uploads', express.static(uploadDir));
 // Luôn mount /offline-audio - thư mục đã được tạo tự động ở trên
 app.use('/offline-audio', express.static(offlineAudioRoot));
+if (fs.existsSync(frontendDistDir)) {
+  app.use(express.static(frontendDistDir));
+}
 
 app.get('/api/health', async (_req, res) => {
   try {
@@ -1068,6 +1073,14 @@ app.delete('/api/visits/all', async (req, res) => {
 });
 
 // ── Start ────────────────────────────────────────────────────────
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/')) return next();
+  if (!fs.existsSync(frontendIndexPath)) {
+    return res.status(503).send('Frontend build not found. Run "npm run build" before starting the server.');
+  }
+  return res.sendFile(frontendIndexPath);
+});
+
 const port = Number(process.env.PORT) || 3000;
 
 app.listen(port, async () => {
