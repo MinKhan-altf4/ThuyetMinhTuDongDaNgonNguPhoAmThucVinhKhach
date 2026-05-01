@@ -1073,7 +1073,7 @@ app.delete('/api/visits/all', async (req, res) => {
 });
 
 // ── Start ────────────────────────────────────────────────────────
-app.get('*', (req, res, next) => {
+app.use((req, res, next) => {
   if (req.path.startsWith('/api/')) return next();
   if (!fs.existsSync(frontendIndexPath)) {
     return res.status(503).send('Frontend build not found. Run "npm run build" before starting the server.');
