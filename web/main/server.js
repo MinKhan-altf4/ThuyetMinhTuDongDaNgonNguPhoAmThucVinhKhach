@@ -9,13 +9,22 @@ import { fileURLToPath } from 'url';
 import { UAParser } from 'ua-parser-js';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:8080',
+    /\.up\.railway\.app$/, // cho phép tất cả subdomain Railway
+  ]
+}));
 app.use(express.json());
 
 // ── Database ────────────────────────────────────────────────────
 const pool = mysql.createPool({
-  host: 'localhost', user: 'root', password: '',
-  database: 'food_app', port: 3306,
+  host:     process.env.DB_HOST,
+  user:     process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port:     Number(process.env.DB_PORT) || 3306,
 });
 
 // ── Upload ──────────────────────────────────────────────────────
@@ -1026,4 +1035,4 @@ app.delete('/api/visits/all', async (req, res) => {
 });
 
 // ── Start ────────────────────────────────────────────────────────
-app.listen(3000, () => console.log('Backend đang chạy tại http://localhost:3000'));
+app.listen(process.env.PORT || 3000, () => console.log('Backend đang chạy tại http://localhost:3000'));

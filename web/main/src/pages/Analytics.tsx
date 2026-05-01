@@ -32,7 +32,11 @@ interface Restaurant {
 }
 
 // ── Helper ───────────────────────────────────────────────────────
-const API = "http://localhost:3000";
+const API = import.meta.env.VITE_API_URL || "https://food-app-api-production-65f0.up.railway.app";
+
+// Rồi dùng:
+fetch(`${API}/api/stats`)
+fetch(`${API}/api/app-opens/stats`)
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
