@@ -48,7 +48,7 @@ public partial class MapPage : ContentPage
     private readonly APIService _apiService = new();
     private readonly TTSService _ttsService = new();
     private readonly TranslateService _translateService = TranslateService.Instance;
-    private readonly AnalyticsService _analyticsService = new();
+    // Đã loại bỏ AnalyticsService vì không còn gửi analytics lên server NodeJS/localhost.
 
     public MapPage()
     {
@@ -637,8 +637,7 @@ new L.Control.Recenter().addTo(map);
                 var customerId = Math.Abs(deviceId.GetHashCode() % 10000) + 1;
                 Debug.WriteLine($"[Analytics] Using fallback customer_id: {customerId} (from device: {deviceId})");
                 
-                await _analyticsService.RecordVisitAsync(customerId, poi.Id, listenCount: 0);
-                Debug.WriteLine($"[Analytics] ✓ Ghi nhận truy cập: customer={customerId}, restaurant={poi.Id}");
+                // Đã loại bỏ analytics: không gửi truy cập lên server NodeJS/localhost.
                 return;
             }
 
@@ -651,8 +650,7 @@ new L.Control.Recenter().addTo(map);
             int restaurantId = poi.Id;
 
             // Ghi nhận truy cập (0 listen vì chưa play audio)
-            await _analyticsService.RecordVisitAsync(customerId2, restaurantId, listenCount: 0);
-            Debug.WriteLine($"[Analytics] ✓ Ghi nhận truy cập: customer={customerId2}, restaurant={restaurantId}");
+            // Đã loại bỏ analytics: không gửi truy cập lên server NodeJS/localhost.
         }
         catch (Exception ex)
         {
@@ -786,8 +784,7 @@ if(window._lastSelected!==undefined){
             int restaurantId = poi.Id;
 
             // Ghi nhận 1 lần nghe audio
-            await _analyticsService.RecordVisitAsync(customerId, restaurantId, listenCount: 1);
-            Debug.WriteLine($"[Analytics] ✓ Ghi nhận audio listen: customer={customerId}, restaurant={restaurantId}");
+            // Đã loại bỏ analytics: không gửi truy cập lên server NodeJS/localhost.
         }
         catch (Exception ex)
         {

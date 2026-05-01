@@ -13,22 +13,29 @@ public class APIService
 {
     private readonly HttpClient _httpClient;
 
-    // API base URL - now configurable via AppSettingsHelper
-    // Emulator: 10.0.2.2 → máy thật: IP thực (chạy ipconfig để lấy)
-    private string BASE_URL => AppSettingsHelper.GetApiBaseUrl();
+    // API base URL - chỉ dùng API online, không còn localhost/10.0.2.2
+    private string BASE_URL => "https://food-app-api-production-65f0.up.railway.app";
 
     public APIService()
+{
+    var handler = new HttpClientHandler
     {
-        var handler = new HttpClientHandler
-        {
-            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
-        };
+        ServerCertificateCustomValidationCallback = (_, _, _, _) => true
+    };
 
-        _httpClient = new HttpClient(handler)
-        {
-            Timeout = TimeSpan.FromSeconds(15)
-        };
-    }
+    _httpClient = new HttpClient(handler)
+    {
+        Timeout = TimeSpan.FromSeconds(15)
+    };
+
+    // Thêm User-Agent để InfinityFree không chặn request (403 Forbidden)
+    _httpClient.DefaultRequestHeaders.Add(
+        "User-Agent",
+        "Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+    );
+    _httpClient.DefaultRequestHeaders.Add("Accept", "application/json, text/plain, */*");
+    _httpClient.DefaultRequestHeaders.Add("Accept-Language", "vi-VN,vi;q=0.9,en;q=0.8");
+}
 
     // ──────────────────────────────────────────────
     // Lấy tất cả POI
@@ -38,25 +45,15 @@ public class APIService
         try
         {
             Debug.WriteLine($"[API] ▶ GET {BASE_URL}");
-
             var response = await _httpClient.GetAsync(BASE_URL);
-
-            // ── BƯỚC 1: Log HTTP status ──
-            Debug.WriteLine($"[API] HTTP {(int)response.StatusCode} {response.StatusCode}");
-
+            Debug.WriteLine($"[API] Status: {(int)response.StatusCode} {response.StatusCode}");
+            var rawJson = await response.Content.ReadAsStringAsync();
+            Debug.WriteLine($"[API] Raw response: {rawJson.Substring(0, Math.Min(500, rawJson.Length))}");
             if (!response.IsSuccessStatusCode)
             {
-                Debug.WriteLine($"[API] ❌ HTTP error → KHÔNG dùng hardcode.");
+                Debug.WriteLine($"[API] ❌ HTTP error: {response.StatusCode}");
                 return new List<POI>();
             }
-
-            // ── BƯỚC 2: Log raw JSON response (QUAN TRỌNG NHẤT) ──
-            var rawJson = await response.Content.ReadAsStringAsync();
-            Debug.WriteLine($"[API] Raw JSON ({rawJson.Length} bytes):");
-            // In tối đa 500 ký tự đầu tiên để dễ đọc
-            Debug.WriteLine($"[API]   {rawJson.Substring(0, Math.Min(500, rawJson.Length))}");
-
-            // ── BƯỚC 3: Parse JSON — case-insensitive để khớp với API trả "success" (lowercase) ──
             POIResponse? result;
             try
             {
@@ -253,54 +250,46 @@ public class APIService
             {
                 url += $"&lat={userLat.Value}&lng={userLon.Value}";
             }
-
             Debug.WriteLine($"[API] ▶ SearchAsync: {url}");
-
             var response = await _httpClient.GetAsync(url);
-
+            Debug.WriteLine($"[API] Status: {(int)response.StatusCode} {response.StatusCode}");
+            var rawJson = await response.Content.ReadAsStringAsync();
+            Debug.WriteLine($"[API] Raw response: {rawJson.Substring(0, Math.Min(500, rawJson.Length))}");
             if (!response.IsSuccessStatusCode)
             {
-                Debug.WriteLine($"[API] ❌ Search HTTP {(int)response.StatusCode}");
+                Debug.WriteLine($"[API] ❌ HTTP error: {response.StatusCode}");
                 return new List<POI>();
             }
-
-            var rawJson = await response.Content.ReadAsStringAsync();
-            Debug.WriteLine($"[API] Search raw ({rawJson.Length} bytes): {rawJson.Substring(0, Math.Min(200, rawJson.Length))}");
-
-            // ── B1: Deserialize (case-insensitive vì API trả "success" lowercase) ──
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, Converters = { new Models.StringToIntConverter(), new Models.StringToFloatConverter() } };
-            var result = JsonSerializer.Deserialize<SearchResponse>(rawJson, options);
-
-            // ── B2: Log từng giá trị để debug ──
-            Debug.WriteLine($"[API] Search deserialize: result is {(result == null ? "NULL" : "OK")}");
-            if (result != null)
+            POIResponse? result = null;
+            try
             {
-                Debug.WriteLine($"[API] Search deserialize: Success={result.Success}, Data={result.Data?.Count.ToString() ?? "NULL"}");
-
-                if (!result.Success)
+                var options = new JsonSerializerOptions
                 {
-                    Debug.WriteLine($"[API] ❌ Search: API trả success=false → error={result.Error ?? "null"}");
-                    return new List<POI>();
-                }
-
-                if (result.Data == null || result.Data.Count == 0)
-                {
-                    Debug.WriteLine($"[API] ⚠️  Search '{query}': 0 kết quả (API success=true nhưng data rỗng)");
-                    return new List<POI>();
-                }
-
-                Debug.WriteLine($"[API] ✅ Search '{query}': {result.Data.Count} kết quả");
-                foreach (var p in result.Data)
-                    Debug.WriteLine($"[API]   → #{p.Id}: \"{p.Name}\"");
-                return result.Data;
+                    PropertyNameCaseInsensitive = true,
+                    Converters = {
+                        new Models.StringToIntConverter(),
+                        new Models.StringToFloatConverter(),
+                    }
+                };
+                result = JsonSerializer.Deserialize<POIResponse>(rawJson, options);
             }
-
-            Debug.WriteLine($"[API] ❌ Search: result == null sau deserialize");
-            return new List<POI>();
+            catch (JsonException ex)
+            {
+                Debug.WriteLine($"[API] ❌ JSON Parse Error: {ex.Message}");
+                Debug.WriteLine($"[API]   Raw: {rawJson.Substring(0, Math.Min(200, rawJson.Length))}");
+                return new List<POI>();
+            }
+            if (result == null || !result.Success)
+            {
+                Debug.WriteLine($"[API] ❌ API success=false hoặc result null");
+                return new List<POI>();
+            }
+            Debug.WriteLine($"[API] Success={result.Success}, Data count={result.Data.Count}");
+            return result.Data ?? new List<POI>();
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[API] ❌ Lỗi search: {ex.Message}");
+            Debug.WriteLine($"[API] Lỗi search: {ex.Message}");
             return new List<POI>();
         }
     }
@@ -386,13 +375,34 @@ public class APIService
         try
         {
             var url = $"{BASE_URL}?action=audio&restaurant_id={restaurantId}&lang={languageCode}";
+            Debug.WriteLine($"[API] ▶ GetAudio: {url}");
             var response = await _httpClient.GetAsync(url);
-
+            Debug.WriteLine($"[API] Status: {(int)response.StatusCode} {response.StatusCode}");
+            var rawJson = await response.Content.ReadAsStringAsync();
+            Debug.WriteLine($"[API] Raw response: {rawJson.Substring(0, Math.Min(500, rawJson.Length))}");
             if (!response.IsSuccessStatusCode)
+            {
+                Debug.WriteLine($"[API] ❌ HTTP error: {response.StatusCode}");
                 return null;
-
-            var result = await response.Content.ReadFromJsonAsync<AudioResponse>();
-            return result?.Success == true ? result.Data : null;
+            }
+            AudioResponse? result = null;
+            try
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                result = JsonSerializer.Deserialize<AudioResponse>(rawJson, options);
+            }
+            catch (JsonException ex)
+            {
+                Debug.WriteLine($"[API] ❌ JSON Parse Error: {ex.Message}");
+                Debug.WriteLine($"[API]   Raw: {rawJson.Substring(0, Math.Min(200, rawJson.Length))}");
+                return null;
+            }
+            if (result == null || !result.Success)
+            {
+                Debug.WriteLine($"[API] ❌ API success=false hoặc result null");
+                return null;
+            }
+            return result.Data;
         }
         catch (Exception ex)
         {
@@ -409,13 +419,34 @@ public class APIService
         try
         {
             var url = $"{BASE_URL}?action=dishes&restaurant_id={restaurantId}";
+            Debug.WriteLine($"[API] ▶ GetDishes: {url}");
             var response = await _httpClient.GetAsync(url);
-
+            Debug.WriteLine($"[API] Status: {(int)response.StatusCode} {response.StatusCode}");
+            var rawJson = await response.Content.ReadAsStringAsync();
+            Debug.WriteLine($"[API] Raw response: {rawJson.Substring(0, Math.Min(500, rawJson.Length))}");
             if (!response.IsSuccessStatusCode)
+            {
+                Debug.WriteLine($"[API] ❌ HTTP error: {response.StatusCode}");
                 return new List<Models.Dish>();
-
-            var result = await response.Content.ReadFromJsonAsync<DishResponse>();
-            return result?.Data ?? new List<Models.Dish>();
+            }
+            DishResponse? result = null;
+            try
+            {
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                result = JsonSerializer.Deserialize<DishResponse>(rawJson, options);
+            }
+            catch (JsonException ex)
+            {
+                Debug.WriteLine($"[API] ❌ JSON Parse Error: {ex.Message}");
+                Debug.WriteLine($"[API]   Raw: {rawJson.Substring(0, Math.Min(200, rawJson.Length))}");
+                return new List<Models.Dish>();
+            }
+            if (result == null || !result.Success)
+            {
+                Debug.WriteLine($"[API] ❌ API success=false hoặc result null");
+                return new List<Models.Dish>();
+            }
+            return result.Data ?? new List<Models.Dish>();
         }
         catch (Exception ex)
         {

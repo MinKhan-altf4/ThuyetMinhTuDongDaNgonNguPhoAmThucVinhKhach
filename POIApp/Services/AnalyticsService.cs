@@ -79,43 +79,8 @@ public class AnalyticsService
     /// Ghi lượt xem + nghe POI khi user tap quán trên map.
     /// ⚠️ Chạy trên thiết bị thật: cập nhật IP trong AppSettingsHelper thay vì localhost.
     /// </summary>
-    public async Task RecordVisitAsync(int customerId, int restaurantId, int listenCount = 0)
-    {
-        var payload = new { customer_id = customerId, restaurant_id = restaurantId, listen_count = listenCount };
-        await PostAsync("/api/customer-visits", payload);
-    }
-
-    /// <summary>
-    /// Ghi lượt mở app — gọi 1 lần duy nhất từ App.xaml.cs khi khởi động.
-    /// </summary>
-    public async Task RecordAppOpenAsync(string deviceId, string deviceType, string appVersion, string languageCode)
-    {
-        var payload = new { device_id = deviceId, device_type = deviceType, app_version = appVersion, language_code = languageCode };
-        await PostAsync("/api/app-opens", payload);
-    }
+    // Đã loại bỏ các hàm gửi analytics lên server NodeJS (RecordVisitAsync, RecordAppOpenAsync) vì server online không hỗ trợ.
 
     // ── Nội bộ ──────────────────────────────────────────────────────
-    private static async Task PostAsync(string path, object payload)
-    {
-        try
-        {
-            string baseUrl = AppSettingsHelper.GetCustomerVisitServerUrl().TrimEnd('/');
-            string url     = baseUrl + path;
-            string json    = JsonSerializer.Serialize(payload);
-
-            Debug.WriteLine($"[Analytics] POST {url} — {json}");
-
-            using var client  = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
-            using var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response      = await client.PostAsync(url, content);
-
-            if (response.IsSuccessStatusCode)
-                Debug.WriteLine($"[Analytics] ✓ {path} (HTTP {(int)response.StatusCode})");
-            else
-                Debug.WriteLine($"[Analytics] ✗ {path} — HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
-        }
-        catch (HttpRequestException ex) { Debug.WriteLine($"[Analytics] ✗ Network error ({path}): {ex.Message}"); }
-        catch (TaskCanceledException ex) { Debug.WriteLine($"[Analytics] ✗ Timeout ({path}): {ex.Message}"); }
-        catch (Exception ex)             { Debug.WriteLine($"[Analytics] ✗ {ex.GetType().Name} ({path}): {ex.Message}"); }
-    }
+    // Đã loại bỏ hoàn toàn PostAsync vì không còn gửi analytics lên server NodeJS/localhost.
 }

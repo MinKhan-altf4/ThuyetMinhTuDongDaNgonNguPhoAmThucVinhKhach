@@ -95,9 +95,8 @@ public static class AppSettingsHelper
 
     // ── API Base URL ──
     private const string KeyApiBaseUrl = "api_base_url";
-    // Emulator: 10.0.2.2 = máy thật, port 80 là HTTP mặc định
-    // Device: Thay 10.0.2.2 bằng IP thực của máy tính (chạy ipconfig để lấy)
-    private const string DefaultApiBaseUrl = "http://10.0.2.2/ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach/POIApi/api.php";
+    // Đã chuyển sang server online, luôn dùng HTTPS
+    private const string DefaultApiBaseUrl = "https://food-app-api-production-65f0.up.railway.app";
 
     public static string GetApiBaseUrl()
     {
@@ -127,41 +126,7 @@ public static class AppSettingsHelper
     }
 
     // ── Customer Visit Analytics Server URL ──
-    private const string KeyCustomerVisitServerUrl = "customer_visit_server_url";
-    private const string DefaultCustomerVisitServerUrl = "http://localhost:3000";
-    private const string DefaultAndroidCustomerVisitServerUrl = "http://10.0.2.2:3000";
-
-    public static string GetCustomerVisitServerUrl()
-    {
-        try
-        {
-            var url = Preferences.Get(KeyCustomerVisitServerUrl, string.Empty);
-            if (!string.IsNullOrWhiteSpace(url))
-                return url.TrimEnd('/');
-
-            return DeviceInfo.Platform == DevicePlatform.Android
-                ? DefaultAndroidCustomerVisitServerUrl
-                : DefaultCustomerVisitServerUrl;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Settings] GetCustomerVisitServerUrl error: {ex.Message}");
-            return DefaultCustomerVisitServerUrl;
-        }
-    }
-
-    public static void SetCustomerVisitServerUrl(string value)
-    {
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(value))
-                Preferences.Set(KeyCustomerVisitServerUrl, value.TrimEnd('/'));
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"[Settings] SetCustomerVisitServerUrl error: {ex.Message}");
-        }
-    }
+    // Đã loại bỏ analytics server (NodeJS/localhost/10.0.2.2:3000) vì không còn sử dụng trên server online.
 
     // ── Offline Mode ──
     private const string KeyOfflineDataAvailable = "offline_data_available";

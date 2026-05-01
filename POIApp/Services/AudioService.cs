@@ -93,7 +93,7 @@ public sealed class AudioService
     {
         try
         {
-            string baseUrl = AppSettingsHelper.GetCustomerVisitServerUrl();
+            string baseUrl = AppSettingsHelper.GetApiBaseUrl();
             Debug.WriteLine($"[Audio] 🌐 Server: {baseUrl}");
 
             // Query API lấy audio active của restaurant + ngôn ngữ

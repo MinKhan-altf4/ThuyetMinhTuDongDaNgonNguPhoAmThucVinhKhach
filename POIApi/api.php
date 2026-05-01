@@ -26,10 +26,11 @@
 // =====================================================
 // CẤU HÌNH KẾT NỐI
 // =====================================================
-$host     = 'localhost';
+$host     = 'switchyard.proxy.rlwy.net';
+$port     = 50891;
 $user     = 'root';
-$password = '';
-$database = 'food_app';   // ← Đổi từ poi_demo sang food_app
+$password = 'ZAYAgpUFnumRoVDwXnaUMIwRlwpjefuy';
+$database = 'railway';
 
 // Set CORS headers
 header('Access-Control-Allow-Origin: *');
@@ -43,7 +44,7 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 $conn = null;
 try {
-    $conn = new mysqli($host, $user, $password, $database);
+    $conn = new mysqli($host, $user, $password, $database, $port);
     if ($conn->connect_error) {
         throw new Exception("Kết nối database thất bại: " . $conn->connect_error);
     }
