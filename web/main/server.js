@@ -19,12 +19,20 @@ app.use(cors({
 app.use(express.json());
 
 // ── Database ────────────────────────────────────────────────────
+const dbConfig = {
+  host: process.env.DB_HOST || process.env.MYSQLHOST,
+  user: process.env.DB_USER || process.env.MYSQLUSER,
+  password: process.env.DB_PASSWORD || process.env.MYSQLPASSWORD,
+  database: process.env.DB_NAME || process.env.MYSQLDATABASE,
+  port: Number(process.env.DB_PORT || process.env.MYSQLPORT) || 3306,
+};
+
 const pool = mysql.createPool({
-  host:     process.env.DB_HOST,
-  user:     process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  port:     Number(process.env.DB_PORT) || 3306,
+  host: dbConfig.host,
+  user: dbConfig.user,
+  password: dbConfig.password,
+  database: dbConfig.database,
+  port: dbConfig.port,
 });
 
 // ── Upload ──────────────────────────────────────────────────────
@@ -76,6 +84,31 @@ const audioUpload = multer({
 app.use('/uploads', express.static(uploadDir));
 // Luôn mount /offline-audio - thư mục đã được tạo tự động ở trên
 app.use('/offline-audio', express.static(offlineAudioRoot));
+
+app.get('/api/health', async (_req, res) => {
+  try {
+    const conn = await pool.getConnection();
+    await conn.ping();
+    conn.release();
+
+    res.json({
+      ok: true,
+      database: 'connected',
+      port: Number(process.env.PORT) || 3000,
+      dbHost: dbConfig.host || null,
+      dbName: dbConfig.database || null,
+    });
+  } catch (err) {
+    res.status(500).json({
+      ok: false,
+      database: 'disconnected',
+      error: err.message,
+      port: Number(process.env.PORT) || 3000,
+      dbHost: dbConfig.host || null,
+      dbName: dbConfig.database || null,
+    });
+  }
+});
 
 // ── Helper ──────────────────────────────────────────────────────
 // Transaction helper: tự động commit/rollback/release
@@ -1035,4 +1068,18 @@ app.delete('/api/visits/all', async (req, res) => {
 });
 
 // ── Start ────────────────────────────────────────────────────────
-app.listen(process.env.PORT || 3000, () => console.log('Backend đang chạy tại http://localhost:3000'));
+const port = Number(process.env.PORT) || 3000;
+
+app.listen(port, async () => {
+  console.log(`[Server] Backend listening on port ${port}`);
+  console.log(`[Server] DB host=${dbConfig.host || 'missing'} db=${dbConfig.database || 'missing'} user=${dbConfig.user || 'missing'} port=${dbConfig.port}`);
+
+  try {
+    const conn = await pool.getConnection();
+    await conn.ping();
+    conn.release();
+    console.log('[Server] Database connected successfully');
+  } catch (err) {
+    console.error('[Server] Database connection failed:', err.message);
+  }
+});
