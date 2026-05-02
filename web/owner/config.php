@@ -1,8 +1,8 @@
 <?php
-define('DB_HOST', getenv('DB_HOST') ?: 'mysql.railway.internal');
-define('DB_NAME', getenv('DB_NAME') ?: 'railway');
-define('DB_USER', getenv('DB_USER') ?: 'root');
-define('DB_PASS', getenv('DB_PASS') ?: 'ZAYAgpUFnumRoVDwXnaUMIwRlwpjefuy');
+define('DB_HOST', getenv('DB_HOST'));
+define('DB_NAME', getenv('DB_NAME'));
+define('DB_USER', getenv('DB_USER'));
+define('DB_PASS', getenv('DB_PASS'));
 define('DB_CHAR', 'utf8mb4');
 
 try {
