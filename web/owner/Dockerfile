@@ -7,3 +7,5 @@ RUN install-php-extensions \
 WORKDIR /app/public
 
 COPY . .
+
+ENV SERVER_NAME=":80"
