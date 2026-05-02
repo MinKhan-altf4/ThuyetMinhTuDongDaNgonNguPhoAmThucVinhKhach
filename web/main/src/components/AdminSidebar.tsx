@@ -76,7 +76,7 @@ export function AdminSidebar() {
         {!collapsed && (
           <a
             /* Thay đổi URL dưới đây cho đúng với cấu trúc thư mục của bạn trên XAMPP */
-            href="http://localhost/ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach/web/owner/login.php" 
+            href="https://adorable-determination-production-d7c3.up.railway.app/" 
             target="_blank" 
             rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-md px-3 py-2 text-xs text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
