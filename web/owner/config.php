@@ -1,11 +1,8 @@
 <?php
-// config.php
-// Chỉnh thông tin kết nối cho phù hợp với máy của bạn
-
-define('DB_HOST', '127.0.0.1');
-define('DB_NAME', 'food_app');
-define('DB_USER', 'root');
-define('DB_PASS', '');         // XAMPP mặc định không có mật khẩu
+define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
+define('DB_NAME', getenv('DB_NAME') ?: 'food_app');
+define('DB_USER', getenv('DB_USER') ?: 'root');
+define('DB_PASS', getenv('DB_PASS') ?: '');
 define('DB_CHAR', 'utf8mb4');
 
 try {
@@ -20,7 +17,6 @@ try {
         ]
     );
 } catch (PDOException $e) {
-    // Hiển thị lỗi kết nối rõ ràng thay vì "Undefined variable $pdo"
     die('<div style="font-family:sans-serif;padding:2rem;color:#c00">
             <strong>Lỗi kết nối cơ sở dữ liệu:</strong><br>
             ' . htmlspecialchars($e->getMessage()) . '
