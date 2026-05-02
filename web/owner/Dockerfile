@@ -1,9 +1,11 @@
-FROM dunglas/frankenphp
+FROM php:8.2-apache
 
-RUN install-php-extensions \
-    pdo \
-    pdo_mysql
+RUN docker-php-ext-install pdo pdo_mysql
 
-COPY . /app/public
+COPY . /var/www/html/
 
-CMD ["sh", "-c", "SERVER_NAME=:$PORT frankenphp run"]
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
+
+EXPOSE 80
+
+CMD ["apache2-foreground"]
