@@ -4,8 +4,6 @@ RUN install-php-extensions \
     pdo \
     pdo_mysql
 
-WORKDIR /app/public
+COPY . /app/public
 
-COPY . .
-
-ENV SERVER_NAME=":80"
+CMD ["sh", "-c", "SERVER_NAME=:$PORT frankenphp run"]
