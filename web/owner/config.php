@@ -1,8 +1,8 @@
 <?php
-define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
-define('DB_NAME', getenv('DB_NAME') ?: 'food_app');
+define('DB_HOST', getenv('DB_HOST') ?: 'mysql.railway.internal');
+define('DB_NAME', getenv('DB_NAME') ?: 'railway');
 define('DB_USER', getenv('DB_USER') ?: 'root');
-define('DB_PASS', getenv('DB_PASS') ?: '');
+define('DB_PASS', getenv('DB_PASS') ?: 'ZAYAgpUFnumRoVDwXnaUMIwRlwpjefuy');
 define('DB_CHAR', 'utf8mb4');
 
 try {
