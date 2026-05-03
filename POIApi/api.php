@@ -26,6 +26,9 @@
 // =====================================================
 // CẤU HÌNH KẾT NỐI
 // =====================================================
+ob_start(); // Bắt tất cả output thừa
+ini_set('display_errors', 0); // Tắt hiển thị lỗi PHP ra output
+error_reporting(0);
 $host     = 'switchyard.proxy.rlwy.net';
 $port     = 50891;
 $user     = 'root';
@@ -672,6 +675,7 @@ function haversineDistance($lat1, $lon1, $lat2, $lon2) {
 // HELPER: Trả JSON
 // =====================================================
 function sendJson($success, $data = null, $error = null, $message = null) {
+    ob_end_clean(); // ← thêm dòng này
     header('Content-Type: application/json; charset=utf-8');
     header('Access-Control-Allow-Origin: *');
     $out = ['success' => $success];
@@ -682,6 +686,7 @@ function sendJson($success, $data = null, $error = null, $message = null) {
 }
 
 function sendRawJson($data, $statusCode = 200) {
+    ob_end_clean(); // ← thêm dòng này
     http_response_code($statusCode);
     header('Content-Type: application/json; charset=utf-8');
     header('Access-Control-Allow-Origin: *');
