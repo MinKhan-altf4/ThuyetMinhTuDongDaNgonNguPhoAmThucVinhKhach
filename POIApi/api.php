@@ -38,6 +38,11 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json; charset=utf-8');
 
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
 // Set timeout
 set_time_limit(30);
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
@@ -61,6 +66,17 @@ try {
 // =====================================================
 $action = $_GET['action'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+$path = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH) ?: '';
+
+if (strpos($path, '/api/app-opens') !== false) {
+    handleAppOpens($conn, $method, $path);
+    exit;
+}
+
+if (strpos($path, '/api/online-sessions') !== false) {
+    handleOnlineSessions($conn, $method, $path);
+    exit;
+}
 
 if ($method !== 'GET') {
     sendJson(false, null, "Method not allowed");
@@ -397,6 +413,218 @@ function getDishes($conn) {
 // =====================================================
 // HELPER: Audio đa ngôn ngữ cho 1 restaurant
 // =====================================================
+function handleAppOpens($conn, $method, $path) {
+    ensureAppOpensTable($conn);
+
+    if ($method === 'POST' && preg_match('#/api/app-opens/?$#', $path)) {
+        $body = readJsonBody();
+        $deviceId = trim($body['device_id'] ?? '');
+        if ($deviceId === '') {
+            sendRawJson(['error' => 'Thieu device_id'], 400);
+            return;
+        }
+
+        $stmt = $conn->prepare(
+            "INSERT INTO app_opens (device_id, device_type, app_version, language_code, opened_at)
+             VALUES (?, ?, ?, ?, NOW())"
+        );
+        $deviceType = $body['device_type'] ?? null;
+        $appVersion = $body['app_version'] ?? null;
+        $languageCode = $body['language_code'] ?? null;
+        $stmt->bind_param("ssss", $deviceId, $deviceType, $appVersion, $languageCode);
+        $stmt->execute();
+        $stmt->close();
+
+        sendRawJson(['success' => true]);
+        return;
+    }
+
+    if ($method === 'GET' && preg_match('#/api/app-opens/stats/?$#', $path)) {
+        $result = $conn->query("
+            SELECT
+              COUNT(*) AS total_opens,
+              COUNT(DISTINCT device_id) AS unique_devices,
+              MAX(opened_at) AS last_open,
+              SUM(CASE WHEN device_type LIKE '%Android%' THEN 1 ELSE 0 END) AS android_count,
+              SUM(CASE WHEN device_type LIKE '%iOS%' OR device_type LIKE '%iPhone%' OR device_type LIKE '%iPad%' THEN 1 ELSE 0 END) AS ios_count,
+              SUM(CASE WHEN device_type LIKE '%Windows%' THEN 1 ELSE 0 END) AS windows_count
+            FROM app_opens
+        ");
+        $row = $result->fetch_assoc() ?: [];
+        sendRawJson([
+            'total_opens' => (int)($row['total_opens'] ?? 0),
+            'unique_devices' => (int)($row['unique_devices'] ?? 0),
+            'last_open' => $row['last_open'] ?? null,
+            'android_count' => (int)($row['android_count'] ?? 0),
+            'ios_count' => (int)($row['ios_count'] ?? 0),
+            'windows_count' => (int)($row['windows_count'] ?? 0),
+        ]);
+        return;
+    }
+
+    if ($method === 'DELETE' && preg_match('#/api/app-opens/?$#', $path)) {
+        $conn->query("DELETE FROM app_opens");
+        sendRawJson(['success' => true]);
+        return;
+    }
+
+    sendRawJson(['error' => 'Not found'], 404);
+}
+
+function handleOnlineSessions($conn, $method, $path) {
+    ensureOnlineSessionTable($conn);
+
+    if ($method === 'POST' && preg_match('#/api/online-sessions/start/?$#', $path)) {
+        $body = readJsonBody();
+        $sessionId = trim($body['session_id'] ?? '');
+        $deviceId = trim($body['device_id'] ?? '');
+        if ($sessionId === '' || $deviceId === '') {
+            sendRawJson(['error' => 'Thieu session_id hoac device_id'], 400);
+            return;
+        }
+
+        $stmt = $conn->prepare(
+            "INSERT INTO app_online_sessions
+                (session_id, device_id, device_type, app_version, language_code, started_at, last_seen, ended_at, is_active)
+             VALUES (?, ?, ?, ?, ?, NOW(), NOW(), NULL, 1)
+             ON DUPLICATE KEY UPDATE
+                device_id = VALUES(device_id),
+                device_type = VALUES(device_type),
+                app_version = VALUES(app_version),
+                language_code = VALUES(language_code),
+                last_seen = NOW(),
+                ended_at = NULL,
+                is_active = 1"
+        );
+        $deviceType = $body['device_type'] ?? null;
+        $appVersion = $body['app_version'] ?? null;
+        $languageCode = $body['language_code'] ?? null;
+        $stmt->bind_param("sssss", $sessionId, $deviceId, $deviceType, $appVersion, $languageCode);
+        $stmt->execute();
+        $stmt->close();
+
+        sendRawJson(['success' => true]);
+        return;
+    }
+
+    if ($method === 'POST' && preg_match('#/api/online-sessions/heartbeat/?$#', $path)) {
+        updateOnlineSessionHeartbeat($conn, readJsonBody());
+        sendRawJson(['success' => true]);
+        return;
+    }
+
+    if ($method === 'POST' && preg_match('#/api/online-sessions/end/?$#', $path)) {
+        $body = readJsonBody();
+        $sessionId = trim($body['session_id'] ?? '');
+        $deviceId = trim($body['device_id'] ?? '');
+        if ($sessionId === '' || $deviceId === '') {
+            sendRawJson(['error' => 'Thieu session_id hoac device_id'], 400);
+            return;
+        }
+
+        $stmt = $conn->prepare(
+            "UPDATE app_online_sessions
+             SET is_active = 0, ended_at = NOW(), last_seen = NOW()
+             WHERE session_id = ? AND device_id = ?"
+        );
+        $stmt->bind_param("ss", $sessionId, $deviceId);
+        $stmt->execute();
+        $stmt->close();
+
+        sendRawJson(['success' => true]);
+        return;
+    }
+
+    if ($method === 'GET' && preg_match('#/api/online-sessions/stats/?$#', $path)) {
+        expireStaleOnlineSessions($conn);
+        $result = $conn->query("
+            SELECT
+              COUNT(*) AS online_count,
+              COUNT(DISTINCT device_id) AS unique_online_devices,
+              MAX(last_seen) AS last_seen,
+              SUM(CASE WHEN device_type LIKE '%Android%' THEN 1 ELSE 0 END) AS android_online,
+              SUM(CASE WHEN device_type LIKE '%iOS%' OR device_type LIKE '%iPhone%' OR device_type LIKE '%iPad%' THEN 1 ELSE 0 END) AS ios_online,
+              SUM(CASE WHEN device_type LIKE '%Windows%' THEN 1 ELSE 0 END) AS windows_online
+            FROM app_online_sessions
+            WHERE is_active = 1
+              AND last_seen >= DATE_SUB(NOW(), INTERVAL 90 SECOND)
+        ");
+        $row = $result->fetch_assoc() ?: [];
+        sendRawJson([
+            'online_count' => (int)($row['online_count'] ?? 0),
+            'unique_online_devices' => (int)($row['unique_online_devices'] ?? 0),
+            'last_seen' => $row['last_seen'] ?? null,
+            'android_online' => (int)($row['android_online'] ?? 0),
+            'ios_online' => (int)($row['ios_online'] ?? 0),
+            'windows_online' => (int)($row['windows_online'] ?? 0),
+            'stale_after_seconds' => 90,
+        ]);
+        return;
+    }
+
+    sendRawJson(['error' => 'Not found'], 404);
+}
+
+function updateOnlineSessionHeartbeat($conn, $body) {
+    $sessionId = trim($body['session_id'] ?? '');
+    $deviceId = trim($body['device_id'] ?? '');
+    if ($sessionId === '' || $deviceId === '') {
+        sendRawJson(['error' => 'Thieu session_id hoac device_id'], 400);
+        exit;
+    }
+
+    $stmt = $conn->prepare(
+        "UPDATE app_online_sessions
+         SET last_seen = NOW(), is_active = 1, ended_at = NULL
+         WHERE session_id = ? AND device_id = ?"
+    );
+    $stmt->bind_param("ss", $sessionId, $deviceId);
+    $stmt->execute();
+    $stmt->close();
+}
+
+function ensureAppOpensTable($conn) {
+    $conn->query("
+        CREATE TABLE IF NOT EXISTS app_opens (
+          open_id INT AUTO_INCREMENT PRIMARY KEY,
+          device_id VARCHAR(128) NOT NULL,
+          device_type VARCHAR(255) NULL,
+          app_version VARCHAR(50) NULL,
+          language_code VARCHAR(20) NULL,
+          opened_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          INDEX idx_app_opens_device (device_id),
+          INDEX idx_app_opens_opened_at (opened_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+}
+
+function ensureOnlineSessionTable($conn) {
+    $conn->query("
+        CREATE TABLE IF NOT EXISTS app_online_sessions (
+          session_id VARCHAR(64) NOT NULL PRIMARY KEY,
+          device_id VARCHAR(128) NOT NULL,
+          device_type VARCHAR(255) NULL,
+          app_version VARCHAR(50) NULL,
+          language_code VARCHAR(20) NULL,
+          started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          ended_at DATETIME NULL,
+          is_active TINYINT(1) NOT NULL DEFAULT 1,
+          INDEX idx_online_active_last_seen (is_active, last_seen),
+          INDEX idx_online_device (device_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+}
+
+function expireStaleOnlineSessions($conn) {
+    $conn->query("
+        UPDATE app_online_sessions
+        SET is_active = 0, ended_at = COALESCE(ended_at, last_seen)
+        WHERE is_active = 1
+          AND last_seen < DATE_SUB(NOW(), INTERVAL 90 SECOND)
+    ");
+}
+
 function getAudioForRestaurant($conn, $restaurantId) {
     $sql = "SELECT
                 l.language_code,
@@ -451,6 +679,23 @@ function sendJson($success, $data = null, $error = null, $message = null) {
     if ($error  !== null) $out['error']   = $error;
     if ($message !== null) $out['message'] = $message;
     echo json_encode($out, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+}
+
+function sendRawJson($data, $statusCode = 200) {
+    http_response_code($statusCode);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Access-Control-Allow-Origin: *');
+    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+}
+
+function readJsonBody() {
+    $raw = file_get_contents('php://input');
+    if ($raw === false || trim($raw) === '') {
+        return [];
+    }
+
+    $decoded = json_decode($raw, true);
+    return is_array($decoded) ? $decoded : [];
 }
 
 // =====================================================
