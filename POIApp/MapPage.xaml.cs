@@ -48,6 +48,8 @@ public partial class MapPage : ContentPage
     private readonly APIService _apiService = new();
     private readonly TTSService _ttsService = new();
     private readonly TranslateService _translateService = TranslateService.Instance;
+    private readonly AudioService _audioService = new();
+private bool _hasAutoPlayed = false;
     // Đã loại bỏ AnalyticsService vì không còn gửi analytics lên server NodeJS/localhost.
 
     public MapPage()
@@ -251,19 +253,67 @@ public partial class MapPage : ContentPage
             BindPOIDetailText(_selectedPOI);
     }
 
-    private void OnLocationChanged(object? sender, Location loc)
-    {
-        _userLat = loc.Latitude;
-        _userLon = loc.Longitude;
-        UpdatePOIDistances();
+   private void OnLocationChanged(object? sender, Location loc)
+{
+    _userLat = loc.Latitude;
+    _userLon = loc.Longitude;
+    UpdatePOIDistances();
 
-        MainThread.BeginInvokeOnMainThread(() =>
-        {
-            UpdateChips();
-            UpdateStatus();
-            UpdateUserMarker();
-        });
+    MainThread.BeginInvokeOnMainThread(() =>
+    {
+        UpdateChips();
+        UpdateStatus();
+        UpdateUserMarker();
+    });
+
+    Debug.WriteLine($"[Map] 📍 OnLocationChanged fired — _hasAutoPlayed={_hasAutoPlayed}, _pois.Count={_pois.Count}");
+
+    // Auto play 1 lần duy nhất khi vừa mở app
+    if (!_hasAutoPlayed && _pois.Count > 0)
+    {
+        _hasAutoPlayed = true;
+        Debug.WriteLine($"[Map] 🎵 Trigger AutoPlay!");
+        _ = AutoPlayNearestAsync();
     }
+}
+
+private async Task AutoPlayNearestAsync()
+{
+    try
+    {
+        var nearest = _pois.FirstOrDefault();
+        if (nearest == null) return;
+
+        Debug.WriteLine($"[Map] 🎵 Auto play lần đầu: {nearest.Name} ({nearest.Distance:F0}m)");
+
+        bool isOnline = Connectivity.NetworkAccess == NetworkAccess.Internet;
+
+        if (isOnline)
+        {
+            // Online → TTS (giống logic OnPlayAudioClicked)
+            var text = $"{nearest.Name}. {nearest.Description}";
+
+            if (_selectedLanguage == LangVi)
+            {
+                await _ttsService.SpeakAsync(text, LangVi);
+            }
+            else
+            {
+                var translated = await _translateService.TranslateAsync(text, _selectedLanguage);
+                await _ttsService.SpeakAsync(translated, _selectedLanguage);
+            }
+        }
+        else
+        {
+            // Offline → phát file MP3 local
+            await _audioService.PlayAsync(nearest, _selectedLanguage);
+        }
+    }
+    catch (Exception ex)
+    {
+        Debug.WriteLine($"[Map] ❌ AutoPlay lỗi: {ex.Message}");
+    }
+}
 
     private void OnError(object? sender, string err)
     {
@@ -324,7 +374,10 @@ public partial class MapPage : ContentPage
             poi.Distance = _geofenceHelper.CalculateDistance(_userLat, _userLon, poi.Latitude, poi.Longitude);
             poi.IsNear = poi.Distance < 400;
         }
-        _pois = _pois.OrderBy(p => p.Distance).ToList();
+        _pois = _pois
+    .OrderBy(p => p.Distance)
+    .ThenBy(p => p.Id)
+    .ToList();
     }
 
     private void UpdateStatus()
@@ -421,18 +474,28 @@ public partial class MapPage : ContentPage
                     });
 
                     if (location != null)
-                    {
-                        _userLat = location.Latitude;
-                        _userLon = location.Longitude;
-                        UpdatePOIDistances();
+{
+    _userLat = location.Latitude;
+    _userLon = location.Longitude;
+    UpdatePOIDistances();
 
-                        MainThread.BeginInvokeOnMainThread(() =>
-                        {
-                            UpdateChips();
-                            UpdateStatus();
-                            UpdateUserMarker();
-                        });
-                    }
+    MainThread.BeginInvokeOnMainThread(() =>
+    {
+        UpdateChips();
+        UpdateStatus();
+        UpdateUserMarker();
+    });
+
+    Debug.WriteLine($"[Map] 📍 GPS loop — _hasAutoPlayed={_hasAutoPlayed}, _pois.Count={_pois.Count}");
+
+    // Auto play 1 lần duy nhất khi vừa mở app
+    if (!_hasAutoPlayed && _pois.Count > 0)
+    {
+        _hasAutoPlayed = true;
+        Debug.WriteLine($"[Map] 🎵 Trigger AutoPlay!");
+        _ = AutoPlayNearestAsync();
+    }
+}
                 }
                 catch (Exception ex)
                 {
