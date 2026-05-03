@@ -1,4 +1,4 @@
-<api type="debug" assembly-name="POIApp" mvid="1b5c6b56d89b46489ed23ffca24a3a5f">
+<api type="debug" assembly-name="POIApp" mvid="86bcc42791dc4c6a930e4edcca348ea3">
   <java-to-managed>
     <entry java-name="crc64b0ca87d77b03d481/MainActivity" managed-name="POIApp.MainActivity, POIApp" managed-type-token-id="33554447" />
     <entry java-name="crc64b0ca87d77b03d481/MainApplication" managed-name="POIApp.MainApplication, POIApp" managed-type-token-id="33554448" />

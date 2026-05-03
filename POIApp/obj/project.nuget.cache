@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "AEyB2q2Ging=",
+  "dgSpecHash": "6rz63M4OmO8=",
   "success": true,
   "projectFilePath": "D:\\xampp\\htdocs\\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\\POIApp\\POIApp.csproj",
   "expectedPackageFiles": [
@@ -127,11 +127,7 @@
     "C:\\Users\\LOQ\\.nuget\\packages\\microsoft.netcore.app.ref\\10.0.6\\microsoft.netcore.app.ref.10.0.6.nupkg.sha512",
     "C:\\Users\\LOQ\\.nuget\\packages\\microsoft.netcore.app.ref\\10.0.6\\microsoft.netcore.app.ref.10.0.6.nupkg.sha512",
     "C:\\Users\\LOQ\\.nuget\\packages\\microsoft.netcore.app.ref\\10.0.6\\microsoft.netcore.app.ref.10.0.6.nupkg.sha512",
-    "C:\\Users\\LOQ\\.nuget\\packages\\microsoft.netcore.app.crossgen2.win-x64\\10.0.5\\microsoft.netcore.app.crossgen2.win-x64.10.0.5.nupkg.sha512",
-    "C:\\Users\\LOQ\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.57\\microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512",
-    "C:\\Users\\LOQ\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\10.0.5\\microsoft.aspnetcore.app.runtime.win-x64.10.0.5.nupkg.sha512",
-    "C:\\Users\\LOQ\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\10.0.5\\microsoft.windowsdesktop.app.runtime.win-x64.10.0.5.nupkg.sha512",
-    "C:\\Users\\LOQ\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\10.0.5\\microsoft.netcore.app.runtime.win-x64.10.0.5.nupkg.sha512"
+    "C:\\Users\\LOQ\\.nuget\\packages\\microsoft.windows.sdk.net.ref\\10.0.19041.57\\microsoft.windows.sdk.net.ref.10.0.19041.57.nupkg.sha512"
   ],
   "logs": []
 }
