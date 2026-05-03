@@ -4,12 +4,6 @@
         <name>POIApp</name>
     </assembly>
     <members>
-        <member name="M:POIApp.App.GetOrCreateDeviceId">
-            <summary>
-            Tạo và lưu một Device ID cố định (UUID) bằng Preferences.
-            Cùng thiết bị mở nhiều lần → cùng ID, khác lần mở.
-            </summary>
-        </member>
         <member name="T:POIApp.MainPage">
             <summary>
             MainPage - Tích hợp GPS Tracking thời gian thực
@@ -100,33 +94,7 @@
         </member>
         <member name="T:POIApp.Services.AnalyticsService">
             <summary>
-            Theo dõi analytics: số lần nghe POI, lượt truy cập quán, lượt mở app.
-            </summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.#ctor(POIApp.Services.CacheService)">
-            <summary>Dùng khi cần lưu cache (khởi tạo qua DI).</summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.#ctor">
-            <summary>Dùng khi không cần cache (MapPage, App.xaml.cs).</summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.RecordListenAsync(POIApp.Models.POI)">
-            <summary>Ghi nhận một lần nghe POI.</summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.RecordListenAsync(System.Int32,System.String)">
-            <summary>Ghi nhận một lần nghe POI (overload dùng id + tên).</summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.LoadFromCacheAsync">
-            <summary>Tải dữ liệu analytics từ cache khi app khởi động.</summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.RecordVisitAsync(System.Int32,System.Int32,System.Int32)">
-            <summary>
-            Ghi lượt xem + nghe POI khi user tap quán trên map.
-            ⚠️ Chạy trên thiết bị thật: cập nhật IP trong AppSettingsHelper thay vì localhost.
-            </summary>
-        </member>
-        <member name="M:POIApp.Services.AnalyticsService.RecordAppOpenAsync(System.String,System.String,System.String,System.String)">
-            <summary>
-            Ghi lượt mở app — gọi 1 lần duy nhất từ App.xaml.cs khi khởi động.
+            Tracks local listen analytics and sends app/session analytics to the backend.
             </summary>
         </member>
         <member name="T:POIApp.Services.POIDetailResponse">

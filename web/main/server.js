@@ -180,6 +180,24 @@ function toOfflineAudioUrl(languageCode, fileName) {
   return `/offline-audio/${normalizeLanguageCode(languageCode)}/${encodeURIComponent(sanitizeAudioFileName(fileName))}`;
 }
 
+async function ensureOnlineSessionTable() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_online_sessions (
+      session_id VARCHAR(64) NOT NULL PRIMARY KEY,
+      device_id VARCHAR(128) NOT NULL,
+      device_type VARCHAR(255) NULL,
+      app_version VARCHAR(50) NULL,
+      language_code VARCHAR(20) NULL,
+      started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      last_seen DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      ended_at DATETIME NULL,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      INDEX idx_online_active_last_seen (is_active, last_seen),
+      INDEX idx_online_device (device_id)
+    )
+  `);
+}
+
 // ── Stats ───────────────────────────────────────────────────────
 app.get('/api/stats', async (req, res) => {
   try {
@@ -1056,6 +1074,117 @@ app.get('/api/app-opens/stats', async (req, res) => {
   }
 });
 
+// ── Real-time online sessions ────────────────────────────────────
+app.post('/api/online-sessions/start', async (req, res) => {
+  try {
+    await ensureOnlineSessionTable();
+    const { session_id, device_id, device_type, app_version, language_code } = req.body;
+    if (!session_id || !device_id) {
+      return res.status(400).json({ error: 'Thieu session_id hoac device_id' });
+    }
+
+    await pool.query(`
+      INSERT INTO app_online_sessions
+        (session_id, device_id, device_type, app_version, language_code, started_at, last_seen, ended_at, is_active)
+      VALUES (?, ?, ?, ?, ?, NOW(), NOW(), NULL, 1)
+      ON DUPLICATE KEY UPDATE
+        device_id = VALUES(device_id),
+        device_type = VALUES(device_type),
+        app_version = VALUES(app_version),
+        language_code = VALUES(language_code),
+        last_seen = NOW(),
+        ended_at = NULL,
+        is_active = 1
+    `, [session_id, device_id, device_type || null, app_version || null, language_code || null]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Online] start error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/online-sessions/heartbeat', async (req, res) => {
+  try {
+    await ensureOnlineSessionTable();
+    const { session_id, device_id } = req.body;
+    if (!session_id || !device_id) {
+      return res.status(400).json({ error: 'Thieu session_id hoac device_id' });
+    }
+
+    await pool.query(`
+      UPDATE app_online_sessions
+      SET last_seen = NOW(), is_active = 1, ended_at = NULL
+      WHERE session_id = ? AND device_id = ?
+    `, [session_id, device_id]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Online] heartbeat error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/online-sessions/end', async (req, res) => {
+  try {
+    await ensureOnlineSessionTable();
+    const { session_id, device_id } = req.body;
+    if (!session_id || !device_id) {
+      return res.status(400).json({ error: 'Thieu session_id hoac device_id' });
+    }
+
+    await pool.query(`
+      UPDATE app_online_sessions
+      SET is_active = 0, ended_at = NOW(), last_seen = NOW()
+      WHERE session_id = ? AND device_id = ?
+    `, [session_id, device_id]);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Online] end error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/online-sessions/stats', async (req, res) => {
+  try {
+    await ensureOnlineSessionTable();
+
+    await pool.query(`
+      UPDATE app_online_sessions
+      SET is_active = 0, ended_at = COALESCE(ended_at, last_seen)
+      WHERE is_active = 1 AND last_seen < DATE_SUB(NOW(), INTERVAL 90 SECOND)
+    `);
+
+    const [rows] = await pool.query(`
+      SELECT
+        COUNT(*) AS online_count,
+        COUNT(DISTINCT device_id) AS unique_online_devices,
+        MAX(last_seen) AS last_seen,
+        SUM(CASE WHEN device_type LIKE '%Android%' THEN 1 ELSE 0 END) AS android_online,
+        SUM(CASE WHEN device_type LIKE '%iOS%' OR device_type LIKE '%iPhone%' OR device_type LIKE '%iPad%' THEN 1 ELSE 0 END) AS ios_online,
+        SUM(CASE WHEN device_type LIKE '%Windows%' THEN 1 ELSE 0 END) AS windows_online
+      FROM app_online_sessions
+      WHERE is_active = 1
+        AND last_seen >= DATE_SUB(NOW(), INTERVAL 90 SECOND)
+    `);
+
+    const stats = rows[0] || {};
+    res.json({
+      online_count: Number(stats.online_count || 0),
+      unique_online_devices: Number(stats.unique_online_devices || 0),
+      last_seen: stats.last_seen || null,
+      android_online: Number(stats.android_online || 0),
+      ios_online: Number(stats.ios_online || 0),
+      windows_online: Number(stats.windows_online || 0),
+      stale_after_seconds: 90,
+    });
+  } catch (err) {
+    console.error('[Online] stats error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Xóa TOÀN BỘ lượt truy cập POI (Tất cả gian hàng) ─────────────
 app.delete('/api/visits/all', async (req, res) => {
   try {
@@ -1091,6 +1220,7 @@ app.listen(port, async () => {
     const conn = await pool.getConnection();
     await conn.ping();
     conn.release();
+    await ensureOnlineSessionTable();
     console.log('[Server] Database connected successfully');
   } catch (err) {
     console.error('[Server] Database connection failed:', err.message);

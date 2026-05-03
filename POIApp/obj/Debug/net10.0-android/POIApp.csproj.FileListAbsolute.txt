@@ -9766,3 +9766,13 @@ D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\poiapp\obj\Debug\net
 D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\poiapp\obj\Debug\net10.0-android\android\assets\arm64-v8a\_Microsoft.Android.Resource.Designer.dll
 D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\poiapp\obj\Debug\net10.0-android\android\assets\arm64-v8a\_Microsoft.Android.Resource.Designer.jlo.xml
 D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\poiapp\obj\Debug\net10.0-android\android\assets\arm64-v8a\_Microsoft.Android.Resource.Designer.typemap.xml
+D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\POIApp\obj\Debug\net10.0-android\android\typemaps.arm64-v8a.ll
+D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\POIApp\obj\Debug\net10.0-android\android\environment.arm64-v8a.ll
+D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\POIApp\obj\Debug\net10.0-android\android\marshal_methods.arm64-v8a.ll
+D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\POIApp\obj\Debug\net10.0-android\android\compressed_assemblies.arm64-v8a.ll
+D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\POIApp\obj\Debug\net10.0-android\android\typemaps.arm64-v8a.o
+D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\POIApp\obj\Debug\net10.0-android\android\environment.arm64-v8a.o
+D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\POIApp\obj\Debug\net10.0-android\android\compressed_assemblies.arm64-v8a.o
+D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\POIApp\obj\Debug\net10.0-android\android\marshal_methods.arm64-v8a.o
+D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\POIApp\obj\Debug\net10.0-android\android\jni_remap.arm64-v8a.o
+D:\xampp\htdocs\ThuyetMinhTuDongDaNgonNguPhoAmThucVinhKhach\POIApp\obj\Debug\net10.0-android\app_shared_libraries\arm64-v8a\libxamarin-app.so

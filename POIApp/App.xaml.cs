@@ -5,6 +5,8 @@ namespace POIApp;
 
 public partial class App : Application
 {
+    private readonly AnalyticsService _analyticsService = new();
+
     public App()
     {
         InitializeComponent();
@@ -19,5 +21,19 @@ public partial class App : Application
 
         await LanguageService.Instance.InitializeAsync();
         await TTSService.PreloadLocalesAsync();
+        await _analyticsService.RecordAppOpenAsync();
+        await _analyticsService.StartOnlineSessionAsync();
+    }
+
+    protected override async void OnResume()
+    {
+        base.OnResume();
+        await _analyticsService.StartOnlineSessionAsync();
+    }
+
+    protected override async void OnSleep()
+    {
+        await _analyticsService.EndOnlineSessionAsync();
+        base.OnSleep();
     }
 }

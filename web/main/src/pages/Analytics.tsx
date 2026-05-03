@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Search, Users, Eye, Volume2, Clock,
-  Smartphone, MonitorSmartphone, Trash2, AlertTriangle
+  Smartphone, MonitorSmartphone, Trash2, AlertTriangle, Wifi
 } from "lucide-react";
 import { apiUrl } from "@/lib/api";
 
@@ -25,6 +25,16 @@ interface AppOpenStats {
   android_count: number;
   ios_count: number;
   windows_count: number;
+}
+
+interface OnlineStats {
+  online_count: number;
+  unique_online_devices: number;
+  last_seen: string | null;
+  android_online: number;
+  ios_online: number;
+  windows_online: number;
+  stale_after_seconds: number;
 }
 
 interface Restaurant {
@@ -53,9 +63,11 @@ export default function Analytics() {
   const [selected, setSelected]               = useState<Restaurant | null>(null);
   const [stats, setStats]                     = useState<VisitStats | null>(null);
   const [appStats, setAppStats]               = useState<AppOpenStats | null>(null);
+  const [onlineStats, setOnlineStats]         = useState<OnlineStats | null>(null);
   const [loading, setLoading]                 = useState(true);
   const [statsLoading, setStatsLoading]       = useState(false);
   const [appStatsLoading, setAppStatsLoading] = useState(true);
+  const [onlineLoading, setOnlineLoading]     = useState(true);
   const [search, setSearch]                   = useState("");
   const [error, setError]                     = useState("");
   const [clearingVisits, setClearingVisits]   = useState(false);
@@ -71,21 +83,41 @@ export default function Analytics() {
     const init = async () => {
       try {
         setError("");
-        const [restaurantList, appData] = await Promise.all([
+        const [restaurantList, appData, onlineData] = await Promise.all([
           fetchJson<Restaurant[]>(apiUrl("/api/restaurants")),
           fetchJson<AppOpenStats>(apiUrl("/api/app-opens/stats")).catch(() => null),
+          fetchJson<OnlineStats>(apiUrl("/api/online-sessions/stats")).catch(() => null),
         ]);
         setRestaurants(restaurantList);
         if (restaurantList.length > 0) setSelected(restaurantList[0]);
         if (appData) setAppStats(appData);
+        if (onlineData) setOnlineStats(onlineData);
       } catch (e) {
         setError(`Lỗi lấy dữ liệu: ${e instanceof Error ? e.message : String(e)}`);
       } finally {
         setLoading(false);
         setAppStatsLoading(false);
+        setOnlineLoading(false);
       }
     };
     init();
+  }, []);
+
+  useEffect(() => {
+    const fetchOnlineStats = async () => {
+      try {
+        const data = await fetchJson<OnlineStats>(apiUrl("/api/online-sessions/stats"));
+        setOnlineStats(data);
+      } catch {
+        // Keep previous value if a polling request fails.
+      } finally {
+        setOnlineLoading(false);
+      }
+    };
+
+    fetchOnlineStats();
+    const timer = window.setInterval(fetchOnlineStats, 10000);
+    return () => window.clearInterval(timer);
   }, []);
 
   // Lấy thống kê khi chọn quán
@@ -214,6 +246,94 @@ export default function Analytics() {
         )}
 
         {/* ── Lượt mở app ─────────────────────────────────────────── */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Wifi className="h-5 w-5 text-green-500" />
+              Real-time Online Tracking
+            </h2>
+            <p className="text-xs text-muted-foreground">Tự động cập nhật mỗi 10 giây</p>
+          </div>
+
+          {onlineLoading ? (
+            <div className="flex h-32 items-center justify-center rounded-xl border bg-muted/30">
+              <p className="text-sm text-muted-foreground">Đang tải...</p>
+            </div>
+          ) : onlineStats ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Wifi className="h-4 w-4 text-green-500" />
+                    Đang online
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{onlineStats.online_count}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Session còn heartbeat trong {onlineStats.stale_after_seconds}s
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <MonitorSmartphone className="h-4 w-4 text-blue-500" />
+                    Thiết bị online
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-3xl font-bold">{onlineStats.unique_online_devices}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Unique devices</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-amber-500" />
+                    Tín hiệu gần nhất
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm font-medium">
+                    {onlineStats.last_seen
+                      ? new Date(onlineStats.last_seen).toLocaleString("vi-VN")
+                      : "Chưa có"}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Heartbeat mới nhất</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <Smartphone className="h-4 w-4 text-purple-500" />
+                    Nền tảng online
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1.5">
+                  {[
+                    ["Android", onlineStats.android_online],
+                    ["iOS", onlineStats.ios_online],
+                    ["Windows", onlineStats.windows_online],
+                  ].map(([platform, value]) => (
+                    <div key={platform} className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">{platform}</span>
+                      <span className="font-semibold">{value}</span>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <div className="flex h-32 items-center justify-center rounded-xl border bg-muted/30">
+              <p className="text-sm text-muted-foreground">Chưa có dữ liệu online</p>
+            </div>
+          )}
+        </section>
+
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             {/* Nút xóa toàn bộ (Danger Zone) */}
