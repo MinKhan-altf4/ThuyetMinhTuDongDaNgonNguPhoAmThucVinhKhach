@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StatCard } from "@/components/StatCard";
-import { Store, UtensilsCrossed, Eye, Star, Map as MapIcon, Smartphone } from "lucide-react";
+import { Store, UtensilsCrossed, Eye, Star, Map as MapIcon, Smartphone, Wifi } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -82,10 +82,16 @@ interface AppOpenStats {
   unique_devices: number;
 }
 
+interface OnlineStats {
+  online_count: number;
+  unique_online_devices: number;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [data, setData] = useState<DashboardData | null>(null);
   const [appOpenStats, setAppOpenStats] = useState<AppOpenStats>({ total_opens: 0, unique_devices: 0 });
+  const [onlineStats, setOnlineStats] = useState<OnlineStats>({ online_count: 0, unique_online_devices: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -93,10 +99,10 @@ export default function Dashboard() {
     if (!isLoggedIn) navigate("/login");
   }, [navigate]);
 
+  // Lấy dữ liệu dashboard + app opens lần đầu
   useEffect(() => {
     const fetchAll = async () => {
       try {
-        // Gọi song song để nhanh hơn
         const [statsRes, appOpenRes] = await Promise.all([
           fetch(apiUrl("/api/stats")),
           fetch(apiUrl("/api/app-opens/stats")),
@@ -131,6 +137,28 @@ export default function Dashboard() {
     fetchAll();
   }, []);
 
+  // Real-time online tracking — poll mỗi 10 giây
+  useEffect(() => {
+    const fetchOnline = async () => {
+      try {
+        const res = await fetch(apiUrl("/api/online-sessions/stats"));
+        if (res.ok) {
+          const data = await res.json();
+          setOnlineStats({
+            online_count:          data.online_count          || 0,
+            unique_online_devices: data.unique_online_devices || 0,
+          });
+        }
+      } catch {
+        // giữ nguyên giá trị cũ nếu lỗi mạng
+      }
+    };
+
+    fetchOnline();
+    const timer = window.setInterval(fetchOnline, 10000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem("isAdminLoggedIn");
     navigate("/login");
@@ -153,7 +181,7 @@ export default function Dashboard() {
       <div className="space-y-6">
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <StatCard
             title="Gian hàng"
             value={data?.stats.stores || 0}
@@ -186,6 +214,25 @@ export default function Dashboard() {
             icon={Smartphone}
             color="emerald"
           />
+          {/* === REAL-TIME ONLINE === */}
+          <div className="relative rounded-xl border bg-card p-5 shadow-sm overflow-hidden">
+            {/* Pulse indicator */}
+            <div className="absolute top-3 right-3 flex items-center gap-1.5">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+              </span>
+              <span className="text-[10px] text-muted-foreground">Live</span>
+            </div>
+            <div className="flex items-center gap-2 mb-3">
+              <Wifi className="h-4 w-4 text-green-500" />
+              <span className="text-sm font-medium text-muted-foreground">Đang online</span>
+            </div>
+            <div className="text-3xl font-bold text-card-foreground">{onlineStats.online_count}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {onlineStats.unique_online_devices} thiết bị · cập nhật/10s
+            </p>
+          </div>
         </div>
 
         {/* Heatmap */}

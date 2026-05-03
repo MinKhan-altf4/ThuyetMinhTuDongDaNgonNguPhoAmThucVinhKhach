@@ -43,9 +43,6 @@ interface Restaurant {
 }
 
 // ── Helper ───────────────────────────────────────────────────────
-
-// Rồi dùng:
-
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
   if (!res.ok) {
@@ -103,13 +100,14 @@ export default function Analytics() {
     init();
   }, []);
 
+  // Real-time online tracking — poll mỗi 10 giây
   useEffect(() => {
     const fetchOnlineStats = async () => {
       try {
         const data = await fetchJson<OnlineStats>(apiUrl("/api/online-sessions/stats"));
         setOnlineStats(data);
       } catch {
-        // Keep previous value if a polling request fails.
+        // giữ nguyên giá trị cũ nếu lỗi mạng
       } finally {
         setOnlineLoading(false);
       }
@@ -183,11 +181,12 @@ export default function Analytics() {
       setClearingApp(false);
     }
   };
-// Xóa TOÀN BỘ dữ liệu thống kê (App & POI) của toàn hệ thống
+
+  // Xóa TOÀN BỘ dữ liệu thống kê (App & POI) của toàn hệ thống
   const handleClearAllSystemStats = async () => {
     if (!confirm("⚠️ NGUY HIỂM: Bạn có chắc chắn muốn xóa TOÀN BỘ lượt mở App VÀ lượt truy cập POI của TẤT CẢ gian hàng?\n\nThao tác này KHÔNG THỂ hoàn tác!"))
       return;
-      
+
     try {
       setClearingApp(true);
       setClearingVisits(true);
@@ -195,24 +194,22 @@ export default function Analytics() {
 
       const [resApp, resVisits] = await Promise.all([
         fetch(apiUrl("/api/app-opens"), { method: "DELETE" }),
-        fetch(apiUrl("/api/visits/all"), { method: "DELETE" })
+        fetch(apiUrl("/api/visits/all"), { method: "DELETE" }),
       ]);
 
       if (!resApp.ok || !resVisits.ok) {
         throw new Error("Lỗi khi xóa dữ liệu từ máy chủ");
       }
 
-      // Reset UI App Stats
       setAppStats({
         total_opens: 0, unique_devices: 0, last_open: null,
         android_count: 0, ios_count: 0, windows_count: 0,
       });
 
-      // Reset UI POI Stats đang chọn
       if (selected) {
         setStats({ total_visitors: 0, total_visits: 0, total_listens: 0, last_visit_time: null });
       }
-      
+
       alert("Đã xóa toàn bộ dữ liệu thống kê hệ thống thành công!");
     } catch (e) {
       setError(`Lỗi xóa toàn bộ hệ thống: ${e instanceof Error ? e.message : String(e)}`);
@@ -221,6 +218,7 @@ export default function Analytics() {
       setClearingVisits(false);
     }
   };
+
   const filtered = restaurants.filter(r =>
     r.name.toLowerCase().includes(search.toLowerCase())
   );
@@ -237,7 +235,7 @@ export default function Analytics() {
     <AdminLayout title="Thống kê truy cập" onLogout={handleLogout}>
       <div className="space-y-8 animate-fade-in">
 
-        {/* Lỗi */}
+        {/* ── Lỗi ─────────────────────────────────────────────────── */}
         {error && (
           <div className="bg-destructive/10 border border-destructive/30 text-destructive px-4 py-3 rounded-lg">
             <p className="text-sm font-medium">⚠️ {error}</p>
@@ -245,14 +243,20 @@ export default function Analytics() {
           </div>
         )}
 
-        {/* ── Lượt mở app ─────────────────────────────────────────── */}
+        {/* ── Real-time Online Tracking ────────────────────────────── */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Wifi className="h-5 w-5 text-green-500" />
               Real-time Online Tracking
             </h2>
-            <p className="text-xs text-muted-foreground">Tự động cập nhật mỗi 10 giây</p>
+            <div className="flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              </span>
+              <p className="text-xs text-muted-foreground">Tự động cập nhật mỗi 10 giây</p>
+            </div>
           </div>
 
           {onlineLoading ? (
@@ -316,7 +320,7 @@ export default function Analytics() {
                 <CardContent className="space-y-1.5">
                   {[
                     ["Android", onlineStats.android_online],
-                    ["iOS", onlineStats.ios_online],
+                    ["iOS",     onlineStats.ios_online],
                     ["Windows", onlineStats.windows_online],
                   ].map(([platform, value]) => (
                     <div key={platform} className="flex justify-between text-sm">
@@ -334,28 +338,9 @@ export default function Analytics() {
           )}
         </section>
 
+        {/* ── Lượt mở ứng dụng ────────────────────────────────────── */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            {/* Nút xóa toàn bộ (Danger Zone) */}
-        <div className="flex items-center justify-between p-4 border border-destructive/20 bg-destructive/5 rounded-xl">
-          <div>
-            <h3 className="font-semibold text-destructive flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Làm sạch dữ liệu hệ thống
-            </h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              Xóa toàn bộ.
-            </p>
-          </div>
-          <Button
-            variant="destructive"
-            onClick={handleClearAllSystemStats}
-            disabled={clearingApp || clearingVisits}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            {clearingApp || clearingVisits ? "Đang xóa..." : "Xóa tất cả"}
-          </Button>
-        </div>
             <h2 className="text-lg font-semibold">📱 Lượt mở ứng dụng</h2>
             {appStats && appStats.total_opens > 0 && (
               <Button
@@ -614,6 +599,29 @@ export default function Analytics() {
             )}
           </section>
         )}
+
+        {/* ── Danger Zone ─────────────────────────────────────────── */}
+        <section>
+          <div className="flex items-center justify-between p-4 border border-destructive/20 bg-destructive/5 rounded-xl">
+            <div>
+              <h3 className="font-semibold text-destructive flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4" />
+                Làm sạch dữ liệu hệ thống
+              </h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Xóa toàn bộ lượt mở app và lượt truy cập POI của tất cả gian hàng.
+              </p>
+            </div>
+            <Button
+              variant="destructive"
+              onClick={handleClearAllSystemStats}
+              disabled={clearingApp || clearingVisits}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {clearingApp || clearingVisits ? "Đang xóa..." : "Xóa tất cả"}
+            </Button>
+          </div>
+        </section>
 
       </div>
     </AdminLayout>

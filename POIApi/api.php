@@ -704,4 +704,60 @@ function readJsonBody() {
 if (isset($conn)) {
     $conn->close();
 }
+// =====================================================
+// BẢNG active_sessions (chạy 1 lần trên MySQL)
+// =====================================================
+// CREATE TABLE active_sessions (
+//   id INT AUTO_INCREMENT PRIMARY KEY,
+//   device_id VARCHAR(255) UNIQUE NOT NULL,
+//   last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+//   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+// );
+
+// =====================================================
+// ENDPOINT: session/start, session/heartbeat, session/end
+// =====================================================
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$path = str_replace('/api.php', '', $path);
+
+if ($path === '/session/start' || $_GET['action'] === 'session_start') {
+    $input = json_decode(file_get_contents('php://input'), true);
+    $device_id = $input['device_id'] ?? '';
+    if ($device_id) {
+        $stmt = $conn->prepare("INSERT INTO active_sessions (device_id) VALUES (?) ON DUPLICATE KEY UPDATE last_seen = NOW()");
+        $stmt->bind_param("s", $device_id);
+        $stmt->execute();
+        sendJson(true, ['message' => 'Session started']);
+    }
+}
+
+if ($_GET['action'] === 'session_heartbeat') {
+    $input = json_decode(file_get_contents('php://input'), true);
+    $device_id = $input['device_id'] ?? '';
+    if ($device_id) {
+        $stmt = $conn->prepare("INSERT INTO active_sessions (device_id) VALUES (?) ON DUPLICATE KEY UPDATE last_seen = NOW()");
+        $stmt->bind_param("s", $device_id);
+        $stmt->execute();
+        sendJson(true, ['message' => 'Heartbeat ok']);
+    }
+}
+
+if ($_GET['action'] === 'session_end') {
+    $input = json_decode(file_get_contents('php://input'), true);
+    $device_id = $input['device_id'] ?? '';
+    if ($device_id) {
+        $stmt = $conn->prepare("DELETE FROM active_sessions WHERE device_id = ?");
+        $stmt->bind_param("s", $device_id);
+        $stmt->execute();
+        sendJson(true, ['message' => 'Session ended']);
+    }
+}
+
+if ($_GET['action'] === 'online_count') {
+    // Xóa session quá 60 giây không heartbeat
+    $conn->query("DELETE FROM active_sessions WHERE last_seen < NOW() - INTERVAL 60 SECOND");
+    $result = $conn->query("SELECT COUNT(*) as count FROM active_sessions");
+    $row = $result->fetch_assoc();
+    sendJson(true, ['online' => (int)$row['count']]);
+}
 ?>
