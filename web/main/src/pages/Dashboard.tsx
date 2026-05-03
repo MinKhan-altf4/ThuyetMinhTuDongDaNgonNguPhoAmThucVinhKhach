@@ -230,7 +230,7 @@ export default function Dashboard() {
             </div>
             <div className="text-3xl font-bold text-card-foreground">{onlineStats.online_count}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {onlineStats.unique_online_devices} thiết bị · cập nhật/10s
+              {onlineStats.unique_online_devices} thiết bị khác nhau đang hoạt động
             </p>
           </div>
         </div>
