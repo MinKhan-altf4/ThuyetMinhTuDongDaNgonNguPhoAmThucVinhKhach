@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StatCard } from "@/components/StatCard";
-import { Store, UtensilsCrossed, Eye, Star, Map as MapIcon, Smartphone, Wifi } from "lucide-react";
+import { Store, UtensilsCrossed, Star, Map as MapIcon, Smartphone, Wifi } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { MapContainer, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -181,7 +181,7 @@ export default function Dashboard() {
       <div className="space-y-6">
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           <StatCard
             title="Gian hàng"
             value={data?.stats.stores || 0}
@@ -197,14 +197,6 @@ export default function Dashboard() {
             changeType="positive"
             icon={UtensilsCrossed}
             color="amber"
-          />
-          <StatCard
-            title="Tổng lượt truy cập POI"
-            value={data?.stats.totalVisits || 0}
-            change="Từ trước đến nay"
-            changeType="positive"
-            icon={Eye}
-            color="blue"
           />
           <StatCard
             title="Lượt mở app"
