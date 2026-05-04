@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 // ── Thay đường dẫn này bằng ảnh QR thực tế của bạn ──
 // Ví dụ: import qrImage from "@/assets/qr-code.png";
 // Hoặc dùng URL public trong /public folder
-const QR_IMAGE_URL = "/qr-code.png"; // ← đặt ảnh QR vào public/qr-code.png
-const APK_DOWNLOAD_URL = "https://your-qr-link-here.com"; // ← URL khi quét QR
+const QR_IMAGE_URL = "/qrcode.png"; // ← đặt ảnh QR vào public/qr-code.png
+const APK_DOWNLOAD_URL = "https://drive.google.com/file/d/1qxhWOVxIpmqtAd9blp0giXYXISn6Rqc2/view?usp=drivesdk"; // ← URL khi quét QR
 
 export default function QRCodePage() {
   const navigate = useNavigate();
