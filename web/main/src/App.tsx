@@ -13,6 +13,8 @@ import SystemSettings from "./pages/SystemSettings";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login"; // ✅ thêm
 import AddStallOwner from "./components/AddStallOwner";
+import QRCodePage from "./pages/qrcode";
+
 const queryClient = new QueryClient();
 
 // ✅ Component bảo vệ route — chuyển về /login nếu chưa đăng nhập
@@ -41,6 +43,8 @@ const App = () => (
           <Route path="/offline-audio" element={<ProtectedRoute><OfflineAudio /></ProtectedRoute>} />
           <Route path="/permissions" element={<ProtectedRoute><Permissions /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SystemSettings /></ProtectedRoute>} />
+          <Route path="/qrcode" element={<ProtectedRoute><QRCodePage /></ProtectedRoute>} />
+
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
