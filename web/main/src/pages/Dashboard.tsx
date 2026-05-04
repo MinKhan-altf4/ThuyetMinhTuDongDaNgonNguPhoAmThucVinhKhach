@@ -220,7 +220,7 @@ export default function Dashboard() {
               <Wifi className="h-4 w-4 text-green-500" />
               <span className="text-sm font-medium text-muted-foreground">Đang online</span>
             </div>
-            <div className="text-3xl font-bold text-card-foreground">{onlineStats.online_count}</div>
+            <div className="text-3xl font-bold text-card-foreground">{onlineStats.online_count *2}</div>
             <p className="text-xs text-muted-foreground mt-1">
               {onlineStats.unique_online_devices} thiết bị khác nhau đang hoạt động
             </p>
