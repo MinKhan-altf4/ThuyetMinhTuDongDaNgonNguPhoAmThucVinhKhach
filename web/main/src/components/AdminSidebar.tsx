@@ -1,6 +1,6 @@
 import { 
   LayoutDashboard, Users, Store, UtensilsCrossed, ShieldCheck, 
-  Settings, ChevronDown, ExternalLink, Package, BarChart3
+  Settings, ChevronDown, ExternalLink, Package, BarChart3, QrCode
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
@@ -11,11 +11,12 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainItems = [
-  { title: "Tổng quan", url: "/", icon: LayoutDashboard },
-  { title: "Chủ gian hàng", url: "/stall-owners", icon: Users },
-  { title: "Gian hàng", url: "/stalls", icon: Store },
-  { title: "Thống kê truy cập", url: "/analytics", icon: BarChart3 },
-  { title: "Audio offline", url: "/offline-audio", icon: Package },
+  { title: "Tổng quan",          url: "/",              icon: LayoutDashboard },
+  { title: "Chủ gian hàng",      url: "/stall-owners",  icon: Users },
+  { title: "Gian hàng",          url: "/stalls",        icon: Store },
+  { title: "Thống kê truy cập",  url: "/analytics",     icon: BarChart3 },
+  { title: "Audio offline",      url: "/offline-audio", icon: Package },
+  { title: "Tải ứng dụng",       url: "/qrcode",        icon: QrCode },
 ];
 
 export function AdminSidebar() {
@@ -34,7 +35,6 @@ export function AdminSidebar() {
             </div>
             <div>
               <h2 className="text-sm font-semibold text-sidebar-primary-foreground">Quản trị viên</h2>
-              
             </div>
           </div>
         ) : (
@@ -75,9 +75,8 @@ export function AdminSidebar() {
       <SidebarFooter className="sidebar-gradient border-t border-sidebar-border p-3">
         {!collapsed && (
           <a
-            /* Thay đổi URL dưới đây cho đúng với cấu trúc thư mục của bạn trên XAMPP */
-            href="https://adorable-determination-production-d7c3.up.railway.app/" 
-            target="_blank" 
+            href="https://adorable-determination-production-d7c3.up.railway.app/"
+            target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-2 rounded-md px-3 py-2 text-xs text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
